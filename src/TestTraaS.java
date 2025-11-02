@@ -7,7 +7,7 @@ public class TestTraaS {
             // For Linux, use the Linux executable (no .exe extension)
             SumoTraciConnection conn = new SumoTraciConnection(
                 "sumo-gui",  // or "sumo" for non-GUI version
-                "src/TestTraaS.java"  // Full path to config
+                "resource/simulation.sumocfg"  // Full path to config
             );
             conn.addOption("start", "true");
             conn.runServer();
