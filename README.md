@@ -1,6 +1,17 @@
 # TraaSh Traffic Simulator
 
-An intermediate-level Java application that simulates traffic using SUMO (Simulation of Urban Mobility) through the TraaS library.
+An Java application that simulates traffic using SUMO (Simulation of Urban Mobility) through the TraaS library.
+
+## Table of Contents
+1. [Project Structure](#project-structure)
+2. [Dependencies](#dependencies)
+3. [Resource Files](#resource-files)
+4. [Compilation and Running](#compilation-and-running)
+5. [Source Code Overview](#source-code-overview)
+6. [Current Results](#current-results)
+7. [Next Steps: Custom JavaFX Visualization](#next-steps-custom-javafx-visualization)
+8. [Development Roadmap](#development-roadmap)
+
 
 ## Project Structure
 ```
@@ -28,7 +39,7 @@ TraaShTrafficSimulator/
 - **Functionality**: Enables Java programs to control and monitor SUMO simulations in real-time
 - **Key Classes**: `SumoTraciConnection`, `Simulation`, `Vehicle`, etc.
 
-## Resource Files
+## Resource Files (*Please Reference /docs/Insight.md*)
 
 ### network.net.xml
 - **What it is**: An XML file containing the complete road network topology for the simulation
@@ -179,3 +190,10 @@ The next phase is to build a custom 2D visualization using JavaFX to replace the
 - [ ] Plot vehicles in real-time
 - [ ] Add interactive controls
 - [ ] Implement visualization features
+
+## References
+- [SUMO Documentation - Eclipse SUMO](https://sumo.dlr.de/docs/index.html)
+- [Abstract Network Generation - SUMO Documentation](https://sumo.dlr.de/docs/Networks/Abstract_Network_Generation.html)
+- [TraaS Java Documentation - Index](https://sumo.dlr.de/javadoc/traas/)
+- [TraaS Java Documentation - Package de.tudresden.sumo.objects](https://sumo.dlr.de/javadoc/traas/de/tudresden/sumo/objects/package-summary.html)
+- [TraaS Java Documentation - Package de.tudresden.sumo.cmd](https://sumo.dlr.de/javadoc/traas/de/tudresden/sumo/cmd/package-summary.html)
