@@ -29,6 +29,11 @@ public class TraaSAdapter {
         return new double[]{p.x, p.y};
     }
 
+    public double getVehicleAngle(String id) throws Exception {
+        // Angle in degrees as provided by SUMO (0 = east, 90 = north)
+        return ((Number) conn.do_job_get(Vehicle.getAngle(id))).doubleValue();
+    }
+
     public List<String> getTrafficLightIds() throws Exception {
         return (List<String>) conn.do_job_get(Trafficlight.getIDList());
     }
@@ -39,7 +44,9 @@ public class TraaSAdapter {
 
     public static String interpretTrafficLightColor(String state){
         if(state == null || state.isEmpty()) return "RED";
+        // Precedence: any GREEN -> GREEN; else any RED -> RED; else any YELLOW -> YELLOW; else RED
         if(state.indexOf('g')>=0 || state.indexOf('G')>=0) return "GREEN";
+        if(state.indexOf('r')>=0 || state.indexOf('R')>=0) return "RED";
         if(state.indexOf('y')>=0 || state.indexOf('Y')>=0) return "YELLOW";
         return "RED";
     }

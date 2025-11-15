@@ -38,7 +38,10 @@ public class SimulationRunner implements Runnable {
                 // remove vehicles no longer present
                 vehiclePositions.keySet().removeIf(id -> !ids.contains(id));
                 for(String id: ids){
-                    vehiclePositions.put(id, adapter.getVehiclePosition(id));
+                    double[] p = adapter.getVehiclePosition(id);
+                    double ang = 0.0;
+                    try { ang = adapter.getVehicleAngle(id); } catch (Exception ignore) {}
+                    vehiclePositions.put(id, new double[]{p[0], p[1], ang});
                 }
                 // update traffic lights
                 for(String tl: tlIds){
