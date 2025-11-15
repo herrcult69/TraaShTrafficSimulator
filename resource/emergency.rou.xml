@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2025-11-12 15:45:25.752776 by randomTrips.py v1_24_0+0000-b72eb3fabc8
+<configuration>
+    <net-file value="resource/network.net.xml"/>
+    <route-file value="resource/emergency.rou.xml"/>
+    <prefix value="ambulance"/>
+    <trip-attributes value="departLane=&quot;best&quot; departSpeed=&quot;max&quot; color=&quot;1,1,0&quot;"/>
+    <vehicle-class value="emergency"/>
+    <fringe-factor value="5"/>
+    <min-distance value="600.0"/>
+    <period value="900.0"/>
+</configuration>
+-->
+
+<!-- generated on 2025-11-12 15:45:25 by Eclipse SUMO duarouter Version 1.24.0
+<duarouterConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/duarouterConfiguration.xsd">
+
+    <input>
+        <net-file value="resource/network.net.xml"/>
+        <route-files value="trips.trips.xml"/>
+    </input>
+
+    <output>
+        <output-file value="resource/emergency.rou.xml"/>
+        <alternatives-output value="NUL"/>
+    </output>
+
+    <time>
+        <begin value="0"/>
+        <end value="3600.0"/>
+    </time>
+
+    <report>
+        <no-warnings value="true"/>
+        <ignore-errors value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</duarouterConfiguration>
+-->
+
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+</routes>
