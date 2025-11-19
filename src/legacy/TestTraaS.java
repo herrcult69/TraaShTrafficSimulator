@@ -1,3 +1,4 @@
+package legacy;
 import it.polito.appeal.traci.SumoTraciConnection;
 import de.tudresden.sumo.cmd.Simulation;
 import java.util.List;

@@ -25,3 +25,6 @@ replay_pid*
 
 # Unused trip files
 *.trips.xml
+
+# JavaFx libs
+lib/javafx/
