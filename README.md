@@ -70,11 +70,11 @@ SUMO and JavaFX use different angle conventions, requiring mathematical conversi
 // Y-axis flip affects rotation direction
 
 double sumoAngle = vehicleData[2];           // From SUMO
-double javaFXAngle = -(90.0 - sumoAngle);   // Convert for JavaFX
+double javaFXAngle = sumoAngle - 90;   // Convert for JavaFX
 ```
 
 **Angle Mapping Examples:**
-- SUMO North (0°) → JavaFX (-90°) = West
+- SUMO North (0°) → JavaFX (-90°) = North
 - SUMO East (90°) → JavaFX (0°) = East  
 - SUMO South (180°) → JavaFX (90°) = South
 - SUMO West (270°) → JavaFX (180°) = West
