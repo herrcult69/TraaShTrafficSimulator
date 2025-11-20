@@ -4,16 +4,16 @@ import javafx.geometry.Rectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 
-public class VisualLane {
+public class Lane {
     private String id;
-    private VisualEdge parentEdge;
+    private Edge parentEdge;
     private double x1, y1, x2, y2;  // Lane center line in world coordinates
     private double width;           // Lane width in world units (3.2m)
     private int index;              // Lane index (0, 1, 2...)
     private double offsetFromCenter; // Distance from road center line
-    private List<VisualVehicle> vehicles;
+    private List<Vehicle> vehicles;
     
-    public VisualLane(String id, VisualEdge parentEdge, double width, int index, double offsetFromCenter) {
+    public Lane(String id, Edge parentEdge, double width, int index, double offsetFromCenter) {
         this.id = id;
         this.parentEdge = parentEdge;
         this.width = width;
@@ -67,11 +67,11 @@ public class VisualLane {
         return t >= -0.1 && t <= 1.1; // Small tolerance
     }
     
-    public void addVehicle(VisualVehicle vehicle) {
+    public void addVehicle(Vehicle vehicle) {
         vehicles.add(vehicle);
     }
     
-    public void removeVehicle(VisualVehicle vehicle) {
+    public void removeVehicle(Vehicle vehicle) {
         vehicles.remove(vehicle);
     }
     
@@ -90,10 +90,10 @@ public class VisualLane {
     
     // Getters
     public String getId() { return id; }
-    public VisualEdge getParentEdge() { return parentEdge; }
+    public Edge getParentEdge() { return parentEdge; }
     public double getWidth() { return width; }
     public int getIndex() { return index; }
-    public List<VisualVehicle> getVehicles() { return vehicles; }
+    public List<Vehicle> getVehicles() { return vehicles; }
     public double getCenterX1() { return x1; }
     public double getCenterY1() { return y1; }
     public double getCenterX2() { return x2; }

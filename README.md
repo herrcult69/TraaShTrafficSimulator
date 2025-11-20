@@ -1,68 +1,150 @@
-# 🚦 TraaShTrafficSimulator
+# TraaShTrafficSimulator
 
-A sophisticated real-time traffic simulation visualizer built with JavaFX and SUMO, featuring advanced coordinate transformation, interactive navigation, and object-oriented architecture designed for extensibility and performance.
+A real-time traffic simulation visualizer built with JavaFX and SUMO (Simulation of Urban Mobility). This application provides an interactive interface for viewing and analyzing traffic flow patterns with object-oriented architecture designed for extensibility.
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Java](https://img.shields.io/badge/Java-17+-orange.svg)
-![JavaFX](https://img.shields.io/badge/JavaFX-21+-green.svg)
-![SUMO](https://img.shields.io/badge/SUMO-1.15+-red.svg)
+## 🚀 Features
 
-## 🌟 Features
-
-### 🎯 Core Visualization
-- **Real-time Traffic Display**: Live visualization of SUMO simulation data at 60 FPS
-- **Multi-lane Road Rendering**: Accurate bidirectional roads with proper lane markings
-- **Vehicle Type Distinction**: Visual differentiation between cars, trucks, buses, motorcycles
-- **Professional UI**: Dark theme with intuitive controls
-
-### 🔧 Interactive Navigation
-- **Smooth Pan & Zoom**: Mouse-driven navigation with momentum-based feel
-- **Zoom-to-Point**: Intelligent zoom that maintains cursor position
-- **Reset View**: One-click return to optimal network view
+### Core Functionality
+- **Real-time Visualization**: Live display of SUMO traffic simulation data
+- **Interactive Navigation**: Pan, zoom, and reset view controls with smooth transitions
+- **Multi-lane Roads**: Accurate representation of bidirectional roads with proper lane markings
+- **Vehicle Types**: Visual distinction between cars, trucks, buses, and motorcycles
 - **Click Detection**: Interactive selection of lanes and vehicles
 
-### 🏗️ Technical Excellence
-- **Object-Oriented Architecture**: Clean separation of concerns with visual objects
-- **Coordinate Transformation System**: Sophisticated world-to-screen conversion
-- **Performance Optimized**: Efficient rendering with culling and caching
-- **Extensible Design**: Easy addition of new features and vehicle types
+### Technical Highlights
+- **Object-Oriented Architecture**: Clean separation between data, visual objects, and UI
+- **Scalable Rendering**: Coordinate transformation system with proper scaling at all zoom levels
+- **Performance Optimized**: Efficient rendering with culling and minimum size constraints
+- **Extensible Design**: Easy to add new vehicle types, road elements, and interaction features
 
-## 🔬 Technical Architecture
+## 🏗️ Architecture
 
-### 📐 Coordinate System Mathematics
+### Class Structure
 
-The application handles complex coordinate transformations between different systems:
-
-#### **1. SUMO World Coordinates**
 ```
-Origin: Bottom-left (0,0)
-X-Axis: Increases rightward
-Y-Axis: Increases upward
-Units: Meters
-```
-
-#### **2. JavaFX Screen Coordinates**
-```
-Origin: Top-left (0,0)
-X-Axis: Increases rightward  
-Y-Axis: Increases downward
-Units: Pixels
+TrafficSimulatorApp (Main Application)
+├── NetworkParser (SUMO XML Parsing)
+├── SimulationRunner (SUMO Integration)  
+├── TrafficScene (Scene Graph Manager)
+├── CoordinateTransform (Coordinate System)
+├── Visual Objects
+├── VisualEdge (Roads)
+├── VisualLane (Individual Lanes)
+└── VisualVehicle (Vehicles)
 ```
 
-#### **3. Transformation Pipeline**
-```mathematica
-# World to Screen Transformation
-screenX = (worldX * baseScale * zoom) + baseOffset.x + userPan.x
-screenY = canvasHeight - ((worldY * baseScale * zoom) + baseOffset.y + userPan.y)
+### Key Components
 
-# Screen to World Transformation  
-worldX = (screenX - baseOffset.x - userPan.x) / (baseScale * zoom)
-worldY = ((canvasHeight - screenY) - baseOffset.y - userPan.y) / (baseScale * zoom)
+#### **TrafficSimulatorApp**
+- Main JavaFX application class handling UI events and animation loop
+- Manages zoom, pan, and coordinate transformation
+- Coordinates between all subsystems with 60fps rendering
+
+#### **NetworkParser**
+- Parses SUMO network XML files (`.net.xml`)
+- Extracts junctions, edges, and lane information
+- Provides structured network data with bounds calculation
+
+#### **SimulationRunner** 
+- Interfaces with SUMO via TraaS library
+- Manages simulation lifecycle and real-time data retrieval
+- Provides vehicle position updates in background thread
+
+#### **TrafficScene**
+- Scene graph managing all visual objects
+- Handles click detection and object selection
+- Coordinates vehicle updates from simulation data
+
+#### **Visual Objects**
+- **VisualEdge**: Roads with multi-lane rendering and click detection
+- **VisualLane**: Individual lanes with precise hit testing
+- **VisualVehicle**: Interactive vehicles with type-specific appearance and behavior
+
+#### **CoordinateTransform**
+- Handles world-to-screen coordinate conversion with Y-axis flip
+- Manages multi-level scaling: base scale + user zoom + pan offset
+- Ensures consistent positioning across all visual objects
+
+## 🎯 Coordinate System & Algorithms
+
+### **Coordinate Transformation**
+
+The application handles coordinate conversion between SUMO's world coordinates and JavaFX screen coordinates:
+
+#### **SUMO Coordinate System**:
+- **Origin**: Arbitrary world position
+- **Units**: Meters
+- **Y-Axis**: Up (North = positive Y)
+- **Range**: Real-world coordinates (e.g., 1000-5000m)
+
+#### **JavaFX Screen Coordinates**:
+- **Origin**: Top-left corner (0,0)
+- **Units**: Pixels
+- **Y-Axis**: Down (South = positive Y)
+- **Range**: Canvas size (e.g., 0-800 pixels)
+
+#### **Multi-Level Transformation**:
+```java
+// World → Screen conversion with 3 levels:
+screenX = (worldX * scale * zoom) + offsetX + panX
+screenY = canvasHeight - ((worldY * scale * zoom) + offsetY + panY)
+
+// Components:
+// scale:   Base scaling to fit network (calculated once)
+// zoom:    User zoom level (0.1x to 10x)
+// offset:  Centering offset (calculated once)  
+// pan:     User drag offset (updated on mouse drag)
 ```
 
-### 🚗 Vehicle Angle Conversion
+### **Zoom-to-Point Algorithm**
 
-SUMO and JavaFX use different angle conventions, requiring mathematical conversion:
+The application implements intelligent zoom that keeps the point under the cursor/center stationary:
+
+#### **Algorithm Steps**:
+
+1. **Capture World Point** (before zoom change):
+   ```java
+   double oldScale = scale * zoom;
+   double worldX = (targetX - offsetX - panX) / oldScale;
+   double worldY = (targetY - offsetY - panY) / oldScale;
+   ```
+
+2. **Apply New Zoom Level**:
+   ```java
+   zoom = Math.max(0.1, Math.min(10.0, zoom * factor));
+   double newScale = scale * zoom;
+   ```
+
+3. **Calculate Pan Adjustment**:
+   ```java
+   // Keep world point fixed at target screen position
+   panX = targetX - offsetX - worldX * newScale;
+   panY = targetY - offsetY - worldY * newScale;
+   ```
+
+#### **Zoom Behaviors**:
+
+- **🖱️ Mouse Wheel**: Zooms toward cursor position (`e.getX(), e.getY()`)
+- **🔘 Button Clicks**: Zooms toward screen center (`canvas.width/2, canvas.height/2`)
+- **📐 Mathematics**: Same algorithm, different target points
+
+### **Pan Algorithm**
+
+Simple relative movement tracking:
+
+```java
+// On mouse press: capture starting positions
+dragStartPanX = panX;
+dragStartPanY = panY;
+
+// On mouse drag: calculate relative movement
+panX = dragStartPanX + (currentMouseX - dragStartMouseX);
+panY = dragStartPanY - (currentMouseY - dragStartMouseY);  // Y-flip for natural panning
+```
+
+### **Vehicle Angle Correction**
+
+SUMO and JavaFX use different angle conventions:
 
 ```java
 // SUMO: 0° = North, 90° = East, clockwise
@@ -70,11 +152,11 @@ SUMO and JavaFX use different angle conventions, requiring mathematical conversi
 // Y-axis flip affects rotation direction
 
 double sumoAngle = vehicleData[2];           // From SUMO
-double javaFXAngle = sumoAngle - 90;   // Convert for JavaFX
+double javaFXAngle = -(90.0 - sumoAngle);   // Convert for JavaFX
 ```
 
 **Angle Mapping Examples:**
-- SUMO North (0°) → JavaFX (-90°) = North
+- SUMO North (0°) → JavaFX (-90°) = West
 - SUMO East (90°) → JavaFX (0°) = East  
 - SUMO South (180°) → JavaFX (90°) = South
 - SUMO West (270°) → JavaFX (180°) = West
@@ -94,356 +176,183 @@ double javaFXAngle = sumoAngle - 90;   // Convert for JavaFX
 
 1. **Clone Repository**
    ```bash
-   git clone https://github.com/herrcult69/TraaShTrafficSimulator.git
+   git clone <repository-url>
    cd TraaShTrafficSimulator
    ```
 
-2. **Install SUMO**
+2. **Install SUMO:**
    ```bash
    # Ubuntu/Debian
-   sudo apt update
    sudo apt install sumo sumo-tools sumo-doc
    
-   # Verify installation
-   sumo --version
+   # Or download from https://sumo.dlr.de/docs/Installing/index.html
    ```
 
-3. **Setup JavaFX**
-   ```bash
-   # Download JavaFX SDK from https://openjfx.io/
-   # Extract to lib/javafx/ directory
-   ```
+3. **Setup JavaFX:**
+   - Download JavaFX SDK from https://openjfx.io/
+   - Extract to `lib/javafx/` directory
 
-4. **Verify Project Structure**
+4. **Verify directory structure:**
    ```
    TraaShTrafficSimulator/
-   ├── src/                      # Java source files
-   │   ├── TrafficSimulatorApp.java
-   │   ├── NetworkParser.java
-   │   ├── SimulationRunner.java
-   │   ├── TrafficScene.java
-   │   ├── CoordinateTransform.java
-   │   ├── VisualEdge.java
-   │   ├── VisualLane.java
-   │   └── VisualVehicle.java
+   ├── src/                    # Source code
    ├── lib/
-   │   ├── javafx/              # JavaFX libraries
-   │   └── TraaS.jar           # SUMO-Java integration
-   ├── resource/               # SUMO configuration
-   │   ├── network.net.xml     # Road network
-   │   └── simulation.sumocfg  # Simulation settings
-   └── bin/                    # Compiled classes
+   │   ├── javafx/            # JavaFX libraries
+   │   └── TraaS.jar          # SUMO integration
+   ├── resource/              # SUMO configuration files
+   │   ├── network.net.xml    # Network definition
+   │   └── simulation.sumocfg # Simulation config
+   └── bin/                   # Compiled classes
    ```
 
-## 🎮 Usage
+## 🚀 Usage
 
-### 🔨 Compilation
+### Compilation
 ```bash
-# Compile all source files with proper classpath
+# Compile all Java source files
 javac -cp ".:lib/*:lib/javafx/*" -d bin src/*.java
 ```
 
-### ▶️ Execution
+### Running the Application
 ```bash
-# Launch with full JavaFX module path
+# Launch the traffic simulator
 java -cp "bin:lib/javafx/*:lib/TraaS.jar" \
      --module-path lib/javafx \
      --add-modules javafx.controls,javafx.fxml \
      TrafficSimulatorApp
 ```
 
-### 🎛️ Controls
+### Controls
+- **Mouse Wheel**: Zoom in/out toward cursor position
+- **Mouse Drag**: Pan the view in natural direction
+- **Mouse Click**: Select vehicles and lanes (see console output)
+- **+ Button**: Zoom in toward screen center
+- **- Button**: Zoom out toward screen center  
+- **Reset Button**: Fit entire network to window with optimal scaling
 
-| Action | Input | Description |
-|--------|-------|-------------|
-| **Pan** | Mouse Drag | Move view around network |
-| **Zoom In** | Mouse Wheel Up | Zoom toward cursor position |
-| **Zoom Out** | Mouse Wheel Down | Zoom away from cursor position |
-| **Zoom In** | + Button | Zoom 20% toward center |
-| **Zoom Out** | - Button | Zoom 20% away from center |
-| **Reset View** | Reset Button | Fit entire network optimally |
-| **Select Object** | Mouse Click | Identify vehicles/lanes (console output) |
+## 🎯 Interaction Features
 
-## 🏗️ Architecture Deep Dive
+### Current Functionality
+- **Vehicle Selection**: Click on vehicles to see ID and type information
+- **Lane Detection**: Click on lanes to see lane identification
+- **Real-time Updates**: Vehicle positions update from SUMO simulation at 60fps
+- **Smooth Navigation**: Professional-quality zoom and pan with proper point-fixing
 
-### 📊 Class Hierarchy
+### Planned Features
+- **Add Vehicle Dialog**: Click lane → choose vehicle type → inject into simulation
+- **Lane Highlighting**: Hover effects for better interaction feedback
+- **Vehicle Editing**: Modify vehicle properties (speed, route, destination)
+- **Traffic Light Control**: Interactive traffic signal management
+- **Route Visualization**: Display vehicle routes and destinations
+
+## 📁 File Structure
 
 ```
-TrafficSimulatorApp (JavaFX Application)
-├── NetworkParser (XML Processing)
-├── SimulationRunner (SUMO Integration)
-├── TrafficScene (Scene Graph Manager)
-├── CoordinateTransform (Math Operations)
-└── Visual Objects (Renderable Components)
-    ├── VisualEdge (Road Rendering)
-    ├── VisualLane (Lane Hit Detection)
-    └── VisualVehicle (Vehicle Animation)
+src/
+├── TrafficSimulatorApp.java    # Main application with UI and event handling
+├── NetworkParser.java          # SUMO XML parser and data structures
+├── SimulationRunner.java       # SUMO simulation interface via TraaS
+├── TrafficScene.java          # Scene graph manager and hit detection
+├── CoordinateTransform.java   # Coordinate system and transformations
+├── VisualEdge.java            # Road visual representation with lanes
+├── VisualLane.java            # Lane visual representation and interaction
+├── VisualVehicle.java         # Vehicle visual representation and behavior
+└── legacy/                    # Archived old implementation
+
+resource/
+├── network.net.xml            # SUMO network definition
+└── simulation.sumocfg         # SUMO simulation configuration
+
+lib/
+├── javafx/                    # JavaFX runtime libraries
+└── TraaS.jar                  # SUMO TraCI integration library
 ```
 
-### 🎨 Key Algorithms
+## 🔧 Configuration
 
-#### **1. Network Fitting Algorithm**
-```java
-// Calculate optimal scale to fit network with margins
-scale = min((canvasWidth - 2*margin) / networkWidth, 
-           (canvasHeight - 2*margin) / networkHeight);
+### SUMO Network Files
+- Place your `.net.xml` and `.sumocfg` files in the `resource/` directory
+- Update file paths in `TrafficSimulatorApp.java` if needed:
+  ```java
+  private static final String NETWORK_FILE = "resource/your-network.net.xml";
+  private static final String CONFIG_FILE = "resource/your-config.sumocfg";
+  ```
 
-// Center network on canvas
-offsetX = (canvasWidth - networkWidth*scale)/2 - networkMinX*scale;
-offsetY = (canvasHeight - networkHeight*scale)/2 - networkMinY*scale;
-```
+### Display Settings
+- Canvas size: 1000x800 pixels (configurable in `start()` method)
+- Background color: Dark theme (RGB 20, 24, 28)
+- Lane width: 3.2m (SUMO standard, configurable in VisualEdge)
+- Zoom limits: 0.1x to 10x (configurable in zoom methods)
 
-#### **2. Zoom-to-Point Transformation**
-```java
-// Convert mouse position to world coordinates
-worldX = (mouseX - offsetX - panX) / (scale * zoom);
-worldY = ((canvasHeight - mouseY) - offsetY - panY) / (scale * zoom);
+## 🐛 Troubleshooting
 
-// Apply zoom and adjust pan to keep point stationary
-zoom *= factor;
-panX += mouseX - ((worldX * scale * zoom) + offsetX + panX);
-panY += mouseY - (canvasHeight - ((worldY * scale * zoom) + offsetY + panY));
-```
+### Common Issues
 
-#### **3. Vehicle Angle Compensation**
-```java
-// SUMO uses Y-up coordinate system, JavaFX uses Y-down
-// Vehicle angles need Y-axis flip compensation to appear correct
-double displayAngle = -sumoAngle;  // Negate to flip Y-axis
+**"Module javafx.controls not found"**
+- Ensure JavaFX is properly installed in `lib/javafx/`
+- Verify module path includes JavaFX directory
+- Check JavaFX version compatibility with Java version
 
-// Rotate vehicle rendering context for proper orientation
-gc.save();
-gc.translate(screenX, screenY);
-gc.rotate(Math.toDegrees(displayAngle));
-gc.fillRect(-width/2, -height/2, width, height);  // Draw centered
-gc.restore();
-```
+**"TraaS connection failed" or simulation not starting**
+- Verify SUMO is installed and accessible in system PATH
+- Check SUMO configuration files are valid XML
+- Ensure network file path matches simulation config
+- Test SUMO independently: `sumo-gui -c resource/simulation.sumocfg`
 
-#### **4. Lane Spacing Distribution**
-```java
-// Distribute lanes evenly across edge width with proper spacing
-double laneWidth = 3.2;  // Standard SUMO lane width in meters
-double totalWidth = edge.getLanes().size() * laneWidth;
+**"Network file not found"**
+- Verify `.net.xml` file exists in `resource/` directory
+- Check file permissions are readable
+- Verify file path matches `NETWORK_FILE` constant
 
-for (int i = 0; i < numLanes; i++) {
-    // Calculate lane center offset from edge centerline
-    double laneOffset = (i - (numLanes - 1) / 2.0) * laneWidth;
-    
-    // Apply perpendicular offset to edge direction vector
-    double laneX = edgeCenterX + laneOffset * perpendicularX;
-    double laneY = edgeCenterY + laneOffset * perpendicularY;
-}
-```
+**Zoom/Pan not working smoothly**
+- Check mouse wheel scroll direction settings
+- Verify canvas has proper focus for events
+- Test with different zoom factors if behavior seems off
 
-## 🔧 Configuration Files
-
-### 🗺️ network.net.xml
-**Purpose**: Defines the complete road network topology including junctions, edges, lanes, and traffic rules.
-
-**Key Components**:
-- **Junctions**: Intersection nodes with coordinates and traffic logic
-- **Edges**: Road segments connecting junctions with geometry and lane specifications
-- **Lanes**: Individual traffic lanes with speed limits, length, and shape definitions
-- **Connections**: Define allowed turns and traffic flow between lanes
-
-**Mathematical Properties**:
-- Coordinates use SUMO's metric system (meters)
-- Y-axis points upward (mathematical convention)
-- Junction positions define network bounds for auto-fitting
-- Lane shapes defined as sequences of (x,y) coordinate points
-
-### 🚗 Route Files (*.rou.xml)
-**Purpose**: Define vehicle types, spawning patterns, and route assignments.
-
-**File Structure**:
-- `cars.rou.xml`: Red passenger cars, spawn rate 1/200s
-- `trucks.rou.xml`: Blue freight vehicles, spawn rate 1/300s  
-- `motorcycles.rou.xml`: Black bikes, spawn rate 1/150s
-- `buses.rou.xml`: Green public transit, spawn rate 1/400s
-- `emergency.rou.xml`: Yellow ambulances/fire trucks, spawn rate 1/500s
-
-**Vehicle Properties**:
-```xml
-<vType id="car" accel="2.6" decel="4.5" sigma="0.5" 
-       length="5" maxSpeed="55.56" color="red"/>
-```
-
-### ⚙️ simulation.sumocfg
-**Purpose**: Master configuration orchestrating all simulation components.
-
-**Critical Settings**:
-- **Time Window**: `<time begin="0" end="3600"/>` (1 hour simulation)
-- **Step Length**: `<step-length value="0.1"/>` (100ms precision)
-- **Network**: References `network.net.xml` for topology
-- **Routes**: Includes all vehicle type and route definitions
-- **Output**: Configures data export and logging options
-
-## 🚀 Build & Run Instructions
-
-### 📋 Prerequisites
-```bash
-# Java Development Kit 17+
-java --version
-
-# SUMO Traffic Simulator
-sudo apt install sumo sumo-tools sumo-doc
-echo 'export SUMO_HOME="/usr/share/sumo"' >> ~/.bashrc
-
-# JavaFX SDK (if not bundled with JDK)
-# Download from https://openjfx.io/ and extract to lib/javafx/
-```
-
-### 🔨 Compilation
-```bash
-cd TraaShTrafficSimulator
-
-# Compile with full classpath
-javac -cp ".:lib/*:lib/javafx/*" -d bin src/*.java
-
-# Alternative: Compile individual components
-javac -cp "lib/TraaS.jar" -d bin src/{NetworkParser,SimulationRunner,TraaSAdapter}.java
-javac -cp "bin:lib/TraaS.jar:lib/javafx/*" -d bin src/{CoordinateTransform,TrafficScene}.java
-javac -cp "bin:lib/TraaS.jar:lib/javafx/*" -d bin src/{VisualEdge,VisualLane,VisualVehicle}.java
-javac -cp "bin:lib/TraaS.jar:lib/javafx/*" -d bin src/TrafficSimulatorApp.java
-```
-
-### ▶️ Execution
-```bash
-# Launch JavaFX application with full module support
-java -cp "bin:lib/javafx/*:lib/TraaS.jar" \
-     --module-path lib/javafx \
-     --add-modules javafx.controls,javafx.fxml \
-     TrafficSimulatorApp
-
-# Alternative: Direct Java execution (if JavaFX bundled)
-java -cp "bin:lib/TraaS.jar" TrafficSimulatorApp
-```
-
-## 🛠️ Troubleshooting
-
-### 🔍 Common Issues
-
-**❌ ClassNotFoundException: TrafficSimulatorApp**
-```bash
-# Ensure proper compilation and classpath
-ls -la bin/  # Check compiled classes exist
-java -cp "bin:lib/TraaS.jar" -XshowSettings:class TrafficSimulatorApp
-```
-
-**❌ JavaFX Runtime Components Missing**
-```bash
-# Install OpenJFX
-sudo apt install openjfx
-
-# Or download and configure JavaFX SDK
-export JAVAFX_HOME="/path/to/javafx-sdk"
-export PATH="$JAVAFX_HOME/bin:$PATH"
-```
-
-**❌ SUMO Connection Failed**
-```bash
-# Verify SUMO installation
-which sumo
-sumo --version
-
-# Check TraCI port availability
-netstat -ln | grep 8813
-```
-
-**❌ Network Parsing Errors**
-```bash
-# Validate SUMO network file
-sumo-gui -n resource/network.net.xml --quit-on-end
-
-# Check XML syntax
-xmllint --noout resource/network.net.xml
-```
-
-### 📊 Performance Optimization
-
-**Memory Management**:
-- Increase heap size: `-Xmx2g -Xms512m`
-- Optimize GC: `-XX:+UseG1GC -XX:MaxGCPauseMillis=100`
-
-**Rendering Performance**:
-- Reduce update frequency: `Timeline.setRate(0.5)` for 2Hz updates
-- Enable hardware acceleration: `-Dprism.order=hw`
-- Limit visible vehicle count: Filter based on screen bounds
+**Visual rendering issues**
+- Try "Reset" button to recalibrate view and scaling
+- Check network coordinate bounds are reasonable (not extremely large/small)
+- Verify lane width and scaling calculations for your network size
 
 ## 🤝 Contributing
 
-### 🏗️ Development Setup
+### Development Setup
+1. Fork the repository
+2. Follow the installation steps above
+3. Test with provided sample network or your own SUMO files
+4. Follow the existing code style and architecture patterns
 
-1. **Fork and Clone**
-   ```bash
-   git clone https://github.com/yourusername/TraaShTrafficSimulator.git
-   cd TraaShTrafficSimulator
-   ```
+### Code Style Guidelines
+- **Object-oriented design**: Keep visual objects separate from data objects
+- **Clean methods**: Prefer shorter methods with clear single responsibilities  
+- **Consistent naming**: Use descriptive variable names matching the domain
+- **Documentation**: Add comments for complex algorithms (coordinate transforms, etc.)
 
-2. **IDE Configuration**
-   - **VS Code**: Install "Extension Pack for Java" and "JavaFX Support"
-   - **IntelliJ**: Enable JavaFX plugin and configure module path
-   - **Eclipse**: Install e(fx)clipse plugin for JavaFX support
+### Contribution Process
+1. Create a feature branch (`git checkout -b feature/amazing-feature`)
+2. Make your changes following the architecture patterns
+3. Test thoroughly with zoom, pan, and click interactions
+4. Commit your changes (`git commit -m 'Add amazing feature'`)
+5. Push to the branch (`git push origin feature/amazing-feature`)
+6. Open a Pull Request with description of changes and testing done
 
-3. **Code Style**
-   - Follow Java naming conventions (camelCase, PascalCase)
-   - Document all public methods with JavaDoc
-   - Include mathematical formulas in comments where applicable
-   - Use meaningful variable names describing coordinate systems
+## 📄 License
 
-### 🎯 Architecture Guidelines
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-**Adding New Visual Objects**:
-1. Extend base functionality with `contains()` and `render()` methods
-2. Implement coordinate transformation using `CoordinateTransform`
-3. Handle both SUMO world coordinates and JavaFX screen coordinates
-4. Include proper Y-axis flip compensation for angles
+## 🙏 Acknowledgments
 
-**Performance Considerations**:
-- Cache transformed coordinates when possible
-- Use efficient hit-testing algorithms (bounding boxes before detailed checks)
-- Batch rendering operations to minimize JavaFX calls
-- Profile memory usage during long-running simulations
+- **SUMO Development Team** - For the excellent traffic simulation platform and documentation
+- **TraaS Project Contributors** - For providing reliable SUMO-Java integration
+- **JavaFX Community** - For the powerful graphics framework and examples
+- **Open Source Community** - For inspiration and best practices in traffic simulation visualization
 
-## 📈 Future Enhancements
+## 📞 Contact & Support
 
-### 🎨 Visualization Features
-- **Traffic Light States**: Render junction signals with realistic timing
-- **Lane Markings**: Detailed road striping and signage
-- **Vehicle Details**: Speed indicators, turn signals, brake lights
-- **Network Analysis**: Heat maps for traffic density and flow patterns
-
-### 🔧 Technical Improvements
-- **Multi-Threading**: Separate rendering and simulation threads
-- **Config Management**: GUI-based parameter adjustment
-- **Data Export**: CSV/JSON export for analysis tools
-- **Plugin Architecture**: Extensible visualization components
-
-### 🚀 Advanced Algorithms
-- **Predictive Rendering**: Pre-calculate vehicle paths for smooth animation
-- **Spatial Indexing**: Quadtree/octree for efficient object queries
-- **Dynamic LOD**: Level-of-detail based on zoom level
-- **Smart Culling**: Only render objects within viewport
-
-## 📚 References & Documentation
-
-### 📖 Technical Resources
-- **[SUMO Documentation](https://sumo.dlr.de/docs/)**: Comprehensive traffic simulation guide
-- **[TraaS JavaDoc](https://sumo.dlr.de/javadoc/traas/)**: Java API for SUMO integration
-- **[JavaFX Documentation](https://openjfx.io/javadoc/17/)**: GUI framework reference
-- **[SUMO Network Format](https://sumo.dlr.de/docs/Networks/SUMO_Road_Networks.html)**: XML schema documentation
-
-### 🧮 Mathematical Background  
-- **Coordinate Transformations**: Linear algebra for 2D projections and rotations
-- **Affine Transformations**: Pan, zoom, and scale operations in computer graphics
-- **Traffic Flow Theory**: Fundamental diagrams and microscopic simulation principles
-- **Spatial Algorithms**: Computational geometry for intersection detection
+- **Issues**: Report bugs and feature requests via GitHub Issues
+- **Documentation**: See inline code documentation for technical details  
+- **SUMO Support**: Visit https://sumo.dlr.de/ for SUMO-specific questions
 
 ---
 
-**License**: MIT  
-**Version**: 2.0.0  
-**Author**: Traffic Simulation Team  
-**Last Updated**: 2024
-
-*For questions, issues, or contributions, please visit our [GitHub repository](https://github.com/yourusername/TraaShTrafficSimulator).*
+*Built with ❤️ for traffic simulation visualization and analysis*

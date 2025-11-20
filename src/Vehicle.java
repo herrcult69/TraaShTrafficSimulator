@@ -2,16 +2,16 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.geometry.Rectangle2D;
 
-public class VisualVehicle {
+public class Vehicle {
     private String id;
     private String type;
     private double worldX, worldY;
     private double angle;
     private double length, width;
-    private VisualLane currentLane;
+    private Lane currentLane;
     private Rectangle2D bounds;
     
-    public VisualVehicle(String id, double worldX, double worldY, double angle) {
+    public Vehicle(String id, double worldX, double worldY, double angle) {
         this.id = id;
         this.worldX = worldX;
         this.worldY = worldY;
@@ -101,7 +101,7 @@ public class VisualVehicle {
         };
     }
     
-    public void setCurrentLane(VisualLane lane) {
+    public void setCurrentLane(Lane lane) {
         if (currentLane != null) {
             currentLane.removeVehicle(this);
         }
@@ -117,6 +117,6 @@ public class VisualVehicle {
     public double getWorldX() { return worldX; }
     public double getWorldY() { return worldY; }
     public double getAngle() { return angle; }
-    public VisualLane getCurrentLane() { return currentLane; }
+    public Lane getCurrentLane() { return currentLane; }
     public Rectangle2D getBounds() { return bounds; }
 }
