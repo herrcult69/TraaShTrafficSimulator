@@ -1,5 +1,3 @@
-
-
 import it.polito.appeal.traci.SumoTraciConnection;
 import java.util.List;
 import java.util.Map;
