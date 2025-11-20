@@ -152,20 +152,24 @@ public class TrafficSimulatorApp extends Application {
 
     /** Zoom to specific point (for scroll wheel at cursor) */
     private void zoomToPoint(double factor, double targetX, double targetY) {
-        // Calculate current world coordinates at target point (simplified approach)
-        double oldScale = scale * zoom;
-        double worldX = (targetX - offsetX - panX) / oldScale;
-        double worldY = (targetY - offsetY - panY) / oldScale;
+        // Use your existing CoordinateTransform methods
+        double worldX = transform.screenToWorldX(targetX);
+        double worldY = transform.screenToWorldY(targetY);
         
         // Apply new zoom level
         zoom = Math.max(0.1, Math.min(10.0, zoom * factor));
-        double newScale = scale * zoom;
+        updateTransform(); // Update transform with new zoom
         
-        // Reposition offsets so the world point stays under the cursor
-        panX = targetX - offsetX - worldX * newScale;
-        panY = targetY - offsetY - worldY * newScale;
+        // Calculate where that world point appears now
+        double newScreenX = transform.worldToScreenX(worldX);
+        double newScreenY = transform.worldToScreenY(worldY);
         
-        updateTransform();
+        // Adjust pan to keep the world point under the cursor
+        panX += (targetX - newScreenX);
+        // FIX: The Y adjustment needs to account for the flipped coordinate system
+        panY -= (targetY - newScreenY);
+        
+        updateTransform(); // Update again with new pan
     }
     
     private void updateTransform() {
