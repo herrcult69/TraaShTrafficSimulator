@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2025-11-12 15:45:24.848810 by randomTrips.py v1_24_0+0000-b72eb3fabc8
+<!-- generated on 2025-11-20 14:43:40.898859 by randomTrips.py UNKNOWN
 <configuration>
     <net-file value="resource/network.net.xml"/>
     <route-file value="resource/motorcycles.rou.xml"/>
@@ -13,7 +13,7 @@
 </configuration>
 -->
 
-<!-- generated on 2025-11-12 15:45:24 by Eclipse SUMO duarouter Version 1.24.0
+<!-- generated on 2025-11-20 14:43:40 by Eclipse SUMO duarouter Version 1.24.0
 <duarouterConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/duarouterConfiguration.xsd">
 
     <input>
@@ -43,15 +43,15 @@
 <routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
     <vType id="moto_motorcycle" vClass="motorcycle" color="red"/>
     <vehicle id="moto0" type="moto_motorcycle" depart="0.00" departLane="best" departSpeed="max">
-        <route edges="-23 -7 3 -3"/>
+        <route edges="-36 -11 9 26 -25"/>
     </vehicle>
     <vehicle id="moto1" type="moto_motorcycle" depart="1000.00" departLane="best" departSpeed="max">
-        <route edges="-47 23"/>
+        <route edges="-21 -7 3 19"/>
     </vehicle>
     <vehicle id="moto2" type="moto_motorcycle" depart="2000.00" departLane="best" departSpeed="max">
-        <route edges="-9 11"/>
+        <route edges="-40 -11 9 30"/>
     </vehicle>
     <vehicle id="moto3" type="moto_motorcycle" depart="3000.00" departLane="best" departSpeed="max">
-        <route edges="-21 -7"/>
+        <route edges="-9 7 -7"/>
     </vehicle>
 </routes>

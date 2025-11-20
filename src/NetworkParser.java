@@ -23,15 +23,43 @@ public class NetworkParser {
         }
     }
 
+    public static class Lane {
+        public final String id;
+        public final int index;
+        public final double speed;    // Max speed in m/s
+        public final double length;   // Lane length in meters
+        public final double width;    // Lane width in meters (default 3.2m in SUMO)
+
+        public Lane(String id, int index, double speed, double length, double width) {
+            this.id = id;
+            this.index = index;
+            this.speed = speed;
+            this.length = length;
+            this.width = width;
+        }
+    }
+
     public static class Edge {
         public final String id;
         public final String from;
         public final String to;
+        public final List<Lane> lanes;  // List of lanes in this edge
 
-        public Edge(String id, String from, String to) {
+        public Edge(String id, String from, String to, List<Lane> lanes) {
             this.id = id;
             this.from = from;
             this.to = to;
+            this.lanes = lanes;
+        }
+        
+        // Helper method to get total number of lanes
+        public int getNumLanes() {
+            return lanes.size();
+        }
+        
+        // Helper method to get total edge width
+        public double getTotalWidth() {
+            return lanes.stream().mapToDouble(l -> l.width).sum();
         }
     }
 
@@ -62,6 +90,7 @@ public class NetworkParser {
         dbf.setIgnoringComments(true);
         doc.getDocumentElement().normalize();
 
+        // Parse junctions
         NodeList junctionNodes = doc.getElementsByTagName("junction");
         List<Junction> junctions = new ArrayList<>();
         double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE, maxX = -Double.MAX_VALUE, maxY = -Double.MAX_VALUE;
@@ -82,18 +111,55 @@ public class NetworkParser {
                     maxY = y;
             }
         }
+        
+        // Parse edges with lanes
         NodeList edgeNodes = doc.getElementsByTagName("edge");
         List<Edge> edges = new ArrayList<>();
         for (int i = 0; i < edgeNodes.getLength(); i++) {
-            Element e = (Element) edgeNodes.item(i);
-            if (!e.hasAttribute("from") || !e.hasAttribute("to"))
+            Element edgeElem = (Element) edgeNodes.item(i);
+            if (!edgeElem.hasAttribute("from") || !edgeElem.hasAttribute("to"))
                 continue;
-            // skip internal edges often having function="internal"
-            if (e.hasAttribute("function") && e.getAttribute("function").equals("internal"))
+            // Skip internal edges (intersection connectors)
+            if (edgeElem.hasAttribute("function") && edgeElem.getAttribute("function").equals("internal"))
                 continue;
-            String id = e.getAttribute("id");
-            edges.add(new Edge(id, e.getAttribute("from"), e.getAttribute("to")));
+            
+            String edgeId = edgeElem.getAttribute("id");
+            String from = edgeElem.getAttribute("from");
+            String to = edgeElem.getAttribute("to");
+            
+            // Parse lanes within this edge
+            NodeList laneNodes = edgeElem.getElementsByTagName("lane");
+            List<Lane> lanes = new ArrayList<>();
+            for (int j = 0; j < laneNodes.getLength(); j++) {
+                Element laneElem = (Element) laneNodes.item(j);
+                String laneId = laneElem.getAttribute("id");
+                
+                // Parse lane attributes with defaults
+                int index = laneElem.hasAttribute("index") 
+                    ? Integer.parseInt(laneElem.getAttribute("index")) 
+                    : j;
+                
+                double speed = laneElem.hasAttribute("speed") 
+                    ? Double.parseDouble(laneElem.getAttribute("speed")) 
+                    : 13.89;  // Default ~50 km/h in m/s
+                
+                double length = laneElem.hasAttribute("length") 
+                    ? Double.parseDouble(laneElem.getAttribute("length")) 
+                    : 0.0;
+                
+                double width = laneElem.hasAttribute("width") 
+                    ? Double.parseDouble(laneElem.getAttribute("width")) 
+                    : 3.2;  // SUMO default lane width
+                
+                lanes.add(new Lane(laneId, index, speed, length, width));
+            }
+            
+            // Only add edges that have lanes
+            if (!lanes.isEmpty()) {
+                edges.add(new Edge(edgeId, from, to, lanes));
+            }
         }
+        
         return new NetworkData(junctions, edges, minX, maxX, minY, maxY);
     }
 }

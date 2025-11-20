@@ -45,8 +45,8 @@ CONFIG_FILE="$RESOURCE_DIR/simulation.sumocfg"
 SIMULATION_TIME=3600  # 1 hour in seconds
 
 # Network parameters (RANDOM NETWORK)
-RAND_ITERATIONS=10      # Number of random network iterations
-RAND_MAX_DISTANCE=100   # Maximum edge length in meters
+RAND_ITERATIONS=15      # Number of random network iterations
+RAND_MAX_DISTANCE=120   # Maximum edge length in meters
 RAND_MIN_DISTANCE=70    # Minimum edge length in meters
 DEFAULT_SPEED=10.89      # m/s
 NUM_TRIES=200 
@@ -122,7 +122,7 @@ echo "  - Generating trucks (period: ${TRUCK_PERIOD}s)..."
     -e "$SIMULATION_TIME" \
     --period "$TRUCK_PERIOD" \
     --fringe-factor 5 \
-    --min-distance 500 \
+    --min-distance 300 \
     --vehicle-class truck \
     --prefix truck \
     --trip-attributes="departLane=\"best\" departSpeed=\"max\" color=\"0,0,1\"" \
@@ -149,8 +149,8 @@ echo "  - Generating buses (period: ${BUS_PERIOD}s)..."
     -r "$RESOURCE_DIR/buses.rou.xml" \
     -e "$SIMULATION_TIME" \
     --period "$BUS_PERIOD" \
-    --fringe-factor 5 \
-    --min-distance 500 \
+    --fringe-factor 10 \
+    --min-distance 250 \
     --vehicle-class bus \
     --prefix bus \
     --trip-attributes="departLane=\"best\" departSpeed=\"max\" color=\"0,1,0\"" \

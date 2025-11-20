@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2025-11-12 15:45:25.752776 by randomTrips.py v1_24_0+0000-b72eb3fabc8
+<!-- generated on 2025-11-20 14:43:41.252815 by randomTrips.py UNKNOWN
 <configuration>
     <net-file value="resource/network.net.xml"/>
     <route-file value="resource/emergency.rou.xml"/>
@@ -13,7 +13,7 @@
 </configuration>
 -->
 
-<!-- generated on 2025-11-12 15:45:25 by Eclipse SUMO duarouter Version 1.24.0
+<!-- generated on 2025-11-20 14:43:41 by Eclipse SUMO duarouter Version 1.24.0
 <duarouterConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/duarouterConfiguration.xsd">
 
     <input>
@@ -41,4 +41,14 @@
 -->
 
 <routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <vType id="ambulance_emergency" vClass="emergency" color="yellow"/>
+    <vehicle id="ambulance0" type="ambulance_emergency" depart="900.00" departLane="best" departSpeed="max">
+        <route edges="-15 -3 7 25 -26 -9 3 15"/>
+    </vehicle>
+    <vehicle id="ambulance1" type="ambulance_emergency" depart="1800.00" departLane="best" departSpeed="max">
+        <route edges="-15 -3 9 26 -25 -7 3 15"/>
+    </vehicle>
+    <vehicle id="ambulance2" type="ambulance_emergency" depart="2700.00" departLane="best" departSpeed="max">
+        <route edges="-15 -3 7 25 -26 -9 3 19"/>
+    </vehicle>
 </routes>
