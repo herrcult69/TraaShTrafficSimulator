@@ -4,12 +4,12 @@ import java.util.Map;
 import java.util.HashMap;
 import javafx.scene.canvas.GraphicsContext;
 
-public class TrafficScene {
-    private List<VisualEdge> edges;
-    private Map<String, VisualVehicle> vehicles;
+public class TrafficManager {
+    private List<Edge> edges;
+    private Map<String, Vehicle> vehicles;
     private Map<String, NetworkParser.Junction> junctionIndex;
     
-    public TrafficScene() {
+    public TrafficManager() {
         this.edges = new ArrayList<>();
         this.vehicles = new HashMap<>();
         this.junctionIndex = new HashMap<>();
@@ -26,7 +26,7 @@ public class TrafficScene {
             NetworkParser.Junction from = junctionIndex.get(edge.from);
             NetworkParser.Junction to = junctionIndex.get(edge.to);
             if (from != null && to != null) {
-                VisualEdge visualEdge = new VisualEdge(edge, from, to);
+                Edge visualEdge = new Edge(edge, from, to);
                 edges.add(visualEdge);
             }
         }
@@ -38,10 +38,10 @@ public class TrafficScene {
             String vehicleId = entry.getKey();
             double[] position = entry.getValue();
             
-            VisualVehicle vehicle = vehicles.get(vehicleId);
+            Vehicle vehicle = vehicles.get(vehicleId);
             if (vehicle == null) {
                 // Create new vehicle
-                vehicle = new VisualVehicle(vehicleId, position[0], position[1], 
+                vehicle = new Vehicle(vehicleId, position[0], position[1], 
                     position.length > 2 ? position[2] : 0.0);
                 vehicles.put(vehicleId, vehicle);
             } else {
@@ -56,22 +56,22 @@ public class TrafficScene {
     
     public Object getElementAt(double screenX, double screenY, CoordinateTransform transform) {
         // Check vehicles first (top layer)
-        for (VisualVehicle vehicle : vehicles.values()) {
+        for (Vehicle vehicle : vehicles.values()) {
             if (vehicle.contains(screenX, screenY, transform)) {
                 return vehicle;
             }
         }
         
         // Check lanes
-        for (VisualEdge edge : edges) {
-            VisualLane lane = edge.getLaneAt(screenX, screenY, transform);
+        for (Edge edge : edges) {
+            Lane lane = edge.getLaneAt(screenX, screenY, transform);
             if (lane != null) {
                 return lane;
             }
         }
         
         // Check edges
-        for (VisualEdge edge : edges) {
+        for (Edge edge : edges) {
             if (edge.contains(screenX, screenY, transform)) {
                 return edge;
             }
@@ -82,17 +82,17 @@ public class TrafficScene {
     
     public void render(GraphicsContext g, CoordinateTransform transform) {
         // Render edges (roads and lane markings)
-        for (VisualEdge edge : edges) {
+        for (Edge edge : edges) {
             edge.render(g, transform);
         }
         
         // Render vehicles
-        for (VisualVehicle vehicle : vehicles.values()) {
+        for (Vehicle vehicle : vehicles.values()) {
             vehicle.render(g, transform);
         }
     }
     
     // Getters
-    public List<VisualEdge> getEdges() { return edges; }
-    public Map<String, VisualVehicle> getVehicles() { return vehicles; }
+    public List<Edge> getEdges() { return edges; }
+    public Map<String, Vehicle> getVehicles() { return vehicles; }
 }

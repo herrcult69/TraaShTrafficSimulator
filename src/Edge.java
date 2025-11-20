@@ -4,13 +4,13 @@ import javafx.geometry.Rectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 
-public class VisualEdge {
+public class Edge {
     private NetworkParser.Edge networkEdge;
     private double fromX, fromY, toX, toY;  // World coordinates
-    private List<VisualLane> lanes;
+    private List<Lane> lanes;
     private Rectangle2D bounds;
     
-    public VisualEdge(NetworkParser.Edge networkEdge, NetworkParser.Junction from, NetworkParser.Junction to) {
+    public Edge(NetworkParser.Edge networkEdge, NetworkParser.Junction from, NetworkParser.Junction to) {
         this.networkEdge = networkEdge;
         this.fromX = from.x;
         this.fromY = from.y;
@@ -31,7 +31,7 @@ public class VisualEdge {
         for (int i = 0; i < numLanes; i++) {
             double offset = -laneWidth * (i + 0.5);
             String laneId = networkEdge.id + "_dir1_lane" + i;
-            VisualLane lane = new VisualLane(laneId, this, laneWidth, i, offset);
+            Lane lane = new Lane(laneId, this, laneWidth, i, offset);
             lanes.add(lane);
         }
         
@@ -39,7 +39,7 @@ public class VisualEdge {
         for (int i = 0; i < numLanes; i++) {
             double offset = laneWidth * (i + 0.5);
             String laneId = networkEdge.id + "_dir2_lane" + i;
-            VisualLane lane = new VisualLane(laneId, this, laneWidth, i + numLanes, offset);
+            Lane lane = new Lane(laneId, this, laneWidth, i + numLanes, offset);
             lanes.add(lane);
         }
     }
@@ -60,8 +60,8 @@ public class VisualEdge {
         return bounds.contains(worldX, worldY);
     }
     
-    public VisualLane getLaneAt(double screenX, double screenY, CoordinateTransform transform) {
-        for (VisualLane lane : lanes) {
+    public Lane getLaneAt(double screenX, double screenY, CoordinateTransform transform) {
+        for (Lane lane : lanes) {
             if (lane.contains(screenX, screenY, transform)) {
                 return lane;
             }
@@ -157,7 +157,7 @@ public class VisualEdge {
     
     // Getters
     public NetworkParser.Edge getNetworkEdge() { return networkEdge; }
-    public List<VisualLane> getLanes() { return lanes; }
+    public List<Lane> getLanes() { return lanes; }
     public double getFromX() { return fromX; }
     public double getFromY() { return fromY; }
     public double getToX() { return toX; }
