@@ -10,7 +10,7 @@ die() {
     echo "ERROR: $*" 1>&2
     exit 1
 }
-
+#
 # Choose a python executable (prefer python3)
 if command -v python3 >/dev/null 2>&1; then
     PYTHON=python3
