@@ -5,28 +5,38 @@ import java.util.HashMap;
 import javafx.scene.canvas.GraphicsContext;
 
 public class TrafficManager {
+    private List<Junction> junctions;
     private List<Edge> edges;
     private Map<String, Vehicle> vehicles;
     private Map<String, NetworkParser.Junction> junctionIndex;
+    private Map<String, Junction> visualJunctionIndex;
     
     public TrafficManager() {
+        this.junctions = new ArrayList<>();
         this.edges = new ArrayList<>();
         this.vehicles = new HashMap<>();
         this.junctionIndex = new HashMap<>();
+        this.visualJunctionIndex = new HashMap<>();
     }
     
     public void initializeFromNetwork(NetworkParser.NetworkData network) {
-        // Build junction index
+        // Build junction index and create visual junctions
         for (NetworkParser.Junction junction : network.junctions) {
             junctionIndex.put(junction.id, junction);
+            Junction visualJunction = new Junction(junction);
+            junctions.add(visualJunction);
+            visualJunctionIndex.put(junction.id, visualJunction);
         }
         
-        // Create visual edges
+        // Create visual edges with junction references
         for (NetworkParser.Edge edge : network.edges) {
             NetworkParser.Junction from = junctionIndex.get(edge.from);
             NetworkParser.Junction to = junctionIndex.get(edge.to);
-            if (from != null && to != null) {
-                Edge visualEdge = new Edge(edge, from, to);
+            Junction fromJunc = visualJunctionIndex.get(edge.from);
+            Junction toJunc = visualJunctionIndex.get(edge.to);
+            
+            if (from != null && to != null && fromJunc != null && toJunc != null) {
+                Edge visualEdge = new Edge(edge, from, to, fromJunc, toJunc);
                 edges.add(visualEdge);
             }
         }
@@ -62,6 +72,13 @@ public class TrafficManager {
             }
         }
         
+        // Check junctions
+        for (Junction junction : junctions) {
+            if (junction.contains(screenX, screenY, transform)) {
+                return junction;
+            }
+        }
+        
         // Check lanes
         for (Edge edge : edges) {
             Lane lane = edge.getLaneAt(screenX, screenY, transform);
@@ -84,6 +101,11 @@ public class TrafficManager {
         // Render edges (roads and lane markings)
         for (Edge edge : edges) {
             edge.render(g, transform);
+        }
+        
+        // Render junctions (between roads and vehicles for proper layering)
+        for (Junction junction : junctions) {
+            junction.render(g, transform);
         }
         
         // Render vehicles

@@ -7,15 +7,20 @@ import java.util.List;
 public class Edge {
     private NetworkParser.Edge networkEdge;
     private double fromX, fromY, toX, toY;  // World coordinates
+    private Junction fromJunction;
+    private Junction toJunction;
     private List<Lane> lanes;
     private Rectangle2D bounds;
+    private static final double JUNCTION_MARGIN = 1.0; // meters
     
-    public Edge(NetworkParser.Edge networkEdge, NetworkParser.Junction from, NetworkParser.Junction to) {
+    public Edge(NetworkParser.Edge networkEdge, NetworkParser.Junction from, NetworkParser.Junction to, Junction fromJunc, Junction toJunc) {
         this.networkEdge = networkEdge;
         this.fromX = from.x;
         this.fromY = from.y;
         this.toX = to.x;
         this.toY = to.y;
+        this.fromJunction = fromJunc;
+        this.toJunction = toJunc;
         this.lanes = new ArrayList<>();
         
         createLanes();
@@ -70,10 +75,37 @@ public class Edge {
     }
     
     public void render(GraphicsContext g, CoordinateTransform transform) {
-        double x1 = transform.worldToScreenX(fromX);
-        double y1 = transform.worldToScreenY(fromY);
-        double x2 = transform.worldToScreenX(toX);
-        double y2 = transform.worldToScreenY(toY);
+        // Calculate edge direction
+        double dx = toX - fromX;
+        double dy = toY - fromY;
+        double length = Math.sqrt(dx * dx + dy * dy);
+        
+        if (length < 0.001) return;
+        
+        // Normalize direction
+        double dirX = dx / length;
+        double dirY = dy / length;
+    
+        // Get junction radii with smaller margin for smooth connection
+        double fromRadius = fromJunction != null ? 
+            fromJunction.getRadiusInDirection(dirX, dirY) + JUNCTION_MARGIN : 0.0;
+        double toRadius = toJunction != null ? 
+            toJunction.getRadiusInDirection(-dirX, -dirY) + JUNCTION_MARGIN : 0.0;
+        
+        // Clip edge at junction boundaries
+        double startX = fromX + fromRadius * dirX;
+        double startY = fromY + fromRadius * dirY;
+        double endX = toX - toRadius * dirX;
+        double endY = toY - toRadius * dirY;
+        
+        // Check if edge is too short after clipping
+        double clippedLength = length - fromRadius - toRadius;
+        if (clippedLength < 1.0) return;
+        
+        double x1 = transform.worldToScreenX(startX);
+        double y1 = transform.worldToScreenY(startY);
+        double x2 = transform.worldToScreenX(endX);
+        double y2 = transform.worldToScreenY(endY);
         
         // Skip tiny edges
         if (Math.sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1)) < 1) return;
@@ -81,18 +113,19 @@ public class Edge {
         double totalWidth = networkEdge.getTotalWidth() * 2; // Bidirectional
         double screenWidth = transform.worldToScreenSize(totalWidth);
         
-        // Draw road surface
-        g.setStroke(Color.rgb(60, 66, 72));
+        // Draw road surface (darker than junctions)
+        g.setStroke(Color.rgb(55, 60, 65));
         g.setLineWidth(screenWidth);
         g.strokeLine(x1, y1, x2, y2);
         
-        // Draw lane markings
-        renderLaneMarkings(g, transform);
+        // Draw lane markings using clipped coordinates
+        renderLaneMarkings(g, transform, startX, startY, endX, endY);
     }
     
-    private void renderLaneMarkings(GraphicsContext g, CoordinateTransform transform) {
-        double dx = toX - fromX;
-        double dy = toY - fromY;
+    private void renderLaneMarkings(GraphicsContext g, CoordinateTransform transform,
+                                    double startX, double startY, double endX, double endY) {
+        double dx = endX - startX;
+        double dy = endY - startY;
         double length = Math.sqrt(dx * dx + dy * dy);
         if (length < 0.001) return;
         
@@ -107,25 +140,25 @@ public class Edge {
         g.setStroke(Color.rgb(180, 180, 180));
         g.setLineWidth(Math.max(2, transform.worldToScreenSize(0.15)));
         
-        double edgeX1 = fromX - halfWidth * perpX;
-        double edgeY1 = fromY - halfWidth * perpY;
-        double edgeX2 = toX - halfWidth * perpX;
-        double edgeY2 = toY - halfWidth * perpY;
+        double edgeX1 = startX - halfWidth * perpX;
+        double edgeY1 = startY - halfWidth * perpY;
+        double edgeX2 = endX - halfWidth * perpX;
+        double edgeY2 = endY - halfWidth * perpY;
         g.strokeLine(transform.worldToScreenX(edgeX1), transform.worldToScreenY(edgeY1),
                      transform.worldToScreenX(edgeX2), transform.worldToScreenY(edgeY2));
         
-        edgeX1 = fromX + halfWidth * perpX;
-        edgeY1 = fromY + halfWidth * perpY;
-        edgeX2 = toX + halfWidth * perpX;
-        edgeY2 = toY + halfWidth * perpY;
+        edgeX1 = startX + halfWidth * perpX;
+        edgeY1 = startY + halfWidth * perpY;
+        edgeX2 = endX + halfWidth * perpX;
+        edgeY2 = endY + halfWidth * perpY;
         g.strokeLine(transform.worldToScreenX(edgeX1), transform.worldToScreenY(edgeY1),
                      transform.worldToScreenX(edgeX2), transform.worldToScreenY(edgeY2));
         
         // Center line (yellow)
         g.setStroke(Color.rgb(255, 220, 50));
         g.setLineWidth(Math.max(2, transform.worldToScreenSize(0.15)));
-        g.strokeLine(transform.worldToScreenX(fromX), transform.worldToScreenY(fromY),
-                     transform.worldToScreenX(toX), transform.worldToScreenY(toY));
+        g.strokeLine(transform.worldToScreenX(startX), transform.worldToScreenY(startY),
+                     transform.worldToScreenX(endX), transform.worldToScreenY(endY));
         
         // Lane dividers (white dashed)
         g.setStroke(Color.WHITE);
@@ -137,18 +170,18 @@ public class Edge {
         for (int i = 1; i < numLanes; i++) {
             double offset = laneWidth * i;
             // Left side
-            double divX1 = fromX - offset * perpX;
-            double divY1 = fromY - offset * perpY;
-            double divX2 = toX - offset * perpX;
-            double divY2 = toY - offset * perpY;
+            double divX1 = startX - offset * perpX;
+            double divY1 = startY - offset * perpY;
+            double divX2 = endX - offset * perpX;
+            double divY2 = endY - offset * perpY;
             g.strokeLine(transform.worldToScreenX(divX1), transform.worldToScreenY(divY1),
                          transform.worldToScreenX(divX2), transform.worldToScreenY(divY2));
             
             // Right side
-            divX1 = fromX + offset * perpX;
-            divY1 = fromY + offset * perpY;
-            divX2 = toX + offset * perpX;
-            divY2 = toY + offset * perpY;
+            divX1 = startX + offset * perpX;
+            divY1 = startY + offset * perpY;
+            divX2 = endX + offset * perpX;
+            divY2 = endY + offset * perpY;
             g.strokeLine(transform.worldToScreenX(divX1), transform.worldToScreenY(divY1),
                          transform.worldToScreenX(divX2), transform.worldToScreenY(divY2));
         }
