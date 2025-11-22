@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2025-11-20 14:43:41.082380 by randomTrips.py UNKNOWN
+<configuration>
+    <net-file value="resource/network.net.xml"/>
+    <route-file value="resource/buses.rou.xml"/>
+    <prefix value="bus"/>
+    <trip-attributes value="departLane=&quot;best&quot; departSpeed=&quot;max&quot; color=&quot;0,1,0&quot;"/>
+    <vehicle-class value="bus"/>
+    <fringe-factor value="10"/>
+    <min-distance value="250.0"/>
+    <period value="650.0"/>
+</configuration>
+-->
+
+<!-- generated on 2025-11-20 14:43:41 by Eclipse SUMO duarouter Version 1.24.0
+<duarouterConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/duarouterConfiguration.xsd">
+
+    <input>
+        <net-file value="resource/network.net.xml"/>
+        <route-files value="trips.trips.xml"/>
+    </input>
+
+    <output>
+        <output-file value="resource/buses.rou.xml"/>
+        <alternatives-output value="NUL"/>
+    </output>
+
+    <time>
+        <begin value="0"/>
+        <end value="3600.0"/>
+    </time>
+
+    <report>
+        <no-warnings value="true"/>
+        <ignore-errors value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</duarouterConfiguration>
+-->
+
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <vType id="bus_bus" vClass="bus" color="green"/>
+    <vehicle id="bus0" type="bus_bus" depart="0.00" departLane="best" departSpeed="max">
+        <route edges="-21 -7 3 19"/>
+    </vehicle>
+    <vehicle id="bus1" type="bus_bus" depart="650.00" departLane="best" departSpeed="max">
+        <route edges="-40 -11 9 30"/>
+    </vehicle>
+    <vehicle id="bus2" type="bus_bus" depart="1300.00" departLane="best" departSpeed="max">
+        <route edges="-50 -11 3 15"/>
+    </vehicle>
+    <vehicle id="bus3" type="bus_bus" depart="1950.00" departLane="best" departSpeed="max">
+        <route edges="-21 25 -26 28"/>
+    </vehicle>
+    <vehicle id="bus4" type="bus_bus" depart="2600.00" departLane="best" departSpeed="max">
+        <route edges="-36 -11 9 28"/>
+    </vehicle>
+    <vehicle id="bus5" type="bus_bus" depart="3250.00" departLane="best" departSpeed="max">
+        <route edges="-21 25 -26 30"/>
+    </vehicle>
+</routes>

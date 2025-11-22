@@ -1,9 +1,43 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # SUMO Network and Traffic Generation Script
 # Generates a complete simulation setup with mixed vehicle types
 
-set -e  # Exit on error
+set -euo pipefail  # Exit on error, treat unset vars as errors, fail on pipe errors
+
+# helper for errors
+die() {
+    echo "ERROR: $*" 1>&2
+    exit 1
+}
+#
+# Choose a python executable (prefer python3)
+if command -v python3 >/dev/null 2>&1; then
+    PYTHON=python3
+elif command -v python >/dev/null 2>&1; then
+    PYTHON=python
+else
+    die "No python executable found (need python or python3 in PATH)"
+fi
+
+# If SUMO_HOME not set, try a common Windows path (works in Git Bash)
+if [ -z "${SUMO_HOME:-}" ]; then
+    if [ -d "/c/Program Files (x86)/Eclipse/Sumo" ]; then
+        SUMO_HOME="/c/Program Files (x86)/Eclipse/Sumo"
+        export SUMO_HOME
+    fi
+fi
+
+if [ -z "${SUMO_HOME:-}" ]; then
+    die "SUMO_HOME is not set. Please set SUMO_HOME to your SUMO installation root."
+fi
+
+if [ ! -f "$SUMO_HOME/tools/randomTrips.py" ]; then
+    die "randomTrips.py not found at $SUMO_HOME/tools/randomTrips.py"
+fi
+
+# Make sure SUMO tools are on PYTHONPATH so randomTrips can import sumolib/traci
+export PYTHONPATH="$SUMO_HOME/tools:${PYTHONPATH:-}"
 
 RESOURCE_DIR="resource"
 NETWORK_FILE="$RESOURCE_DIR/network.net.xml"
@@ -11,17 +45,17 @@ CONFIG_FILE="$RESOURCE_DIR/simulation.sumocfg"
 SIMULATION_TIME=3600  # 1 hour in seconds
 
 # Network parameters (RANDOM NETWORK)
-RAND_ITERATIONS=10      # Number of random network iterations
-RAND_MAX_DISTANCE=100   # Maximum edge length in meters
+RAND_ITERATIONS=15      # Number of random network iterations
+RAND_MAX_DISTANCE=120   # Maximum edge length in meters
 RAND_MIN_DISTANCE=70    # Minimum edge length in meters
 DEFAULT_SPEED=10.89      # m/s
 NUM_TRIES=200 
 # Traffic density (seconds between vehicles)
-CAR_PERIOD=200    
-TRUCK_PERIOD=300    
-MOTORCYCLE_PERIOD=100 
-BUS_PERIOD=250       
-EMERGENCY_PERIOD=700 
+CAR_PERIOD=100    
+TRUCK_PERIOD=6000    
+MOTORCYCLE_PERIOD=1000 
+BUS_PERIOD=650       
+EMERGENCY_PERIOD=900 
 
 # Create resource directory
 
@@ -68,73 +102,73 @@ echo "[2/4] Generating traffic routes..."
 
 # Cars
 echo "  - Generating cars (period: ${CAR_PERIOD}s)..."
-python3 $SUMO_HOME/tools/randomTrips.py \
+"$PYTHON" "$SUMO_HOME/tools/randomTrips.py" \
     -n "$NETWORK_FILE" \
     -r "$RESOURCE_DIR/cars.rou.xml" \
-    -e $SIMULATION_TIME \
-    --period $CAR_PERIOD \
+    -e "$SIMULATION_TIME" \
+    --period "$CAR_PERIOD" \
     --fringe-factor 10 \
-    --min-distance 550 \
+    --min-distance 250 \
     --vehicle-class passenger \
     --prefix car \
     --trip-attributes="departLane=\"best\" departSpeed=\"max\" color=\"1,0,0\"" \
-    --validate 2>/dev/null
+    --validate
 
 # Trucks
 echo "  - Generating trucks (period: ${TRUCK_PERIOD}s)..."
-python3 $SUMO_HOME/tools/randomTrips.py \
+"$PYTHON" "$SUMO_HOME/tools/randomTrips.py" \
     -n "$NETWORK_FILE" \
     -r "$RESOURCE_DIR/trucks.rou.xml" \
-    -e $SIMULATION_TIME \
-    --period $TRUCK_PERIOD \
+    -e "$SIMULATION_TIME" \
+    --period "$TRUCK_PERIOD" \
     --fringe-factor 5 \
-    --min-distance 500 \
+    --min-distance 300 \
     --vehicle-class truck \
     --prefix truck \
     --trip-attributes="departLane=\"best\" departSpeed=\"max\" color=\"0,0,1\"" \
-    --validate 2>/dev/null
+    --validate
 
 # Motorcycles
 echo "  - Generating motorcycles (period: ${MOTORCYCLE_PERIOD}s)..."
-python3 $SUMO_HOME/tools/randomTrips.py \
+"$PYTHON" "$SUMO_HOME/tools/randomTrips.py" \
     -n "$NETWORK_FILE" \
     -r "$RESOURCE_DIR/motorcycles.rou.xml" \
-    -e $SIMULATION_TIME \
-    --period $MOTORCYCLE_PERIOD \
+    -e "$SIMULATION_TIME" \
+    --period "$MOTORCYCLE_PERIOD" \
     --fringe-factor 5 \
-    --min-distance 400 \
+    --min-distance 100 \
     --vehicle-class motorcycle \
     --prefix moto \
     --trip-attributes="departLane=\"best\" departSpeed=\"max\" color=\"1,0,0\"" \
-    --validate 2>/dev/null
+    --validate
 
 # Buses
 echo "  - Generating buses (period: ${BUS_PERIOD}s)..."
-python3 $SUMO_HOME/tools/randomTrips.py \
+"$PYTHON" "$SUMO_HOME/tools/randomTrips.py" \
     -n "$NETWORK_FILE" \
     -r "$RESOURCE_DIR/buses.rou.xml" \
-    -e $SIMULATION_TIME \
-    --period $BUS_PERIOD \
-    --fringe-factor 5 \
-    --min-distance 500 \
+    -e "$SIMULATION_TIME" \
+    --period "$BUS_PERIOD" \
+    --fringe-factor 10 \
+    --min-distance 250 \
     --vehicle-class bus \
     --prefix bus \
     --trip-attributes="departLane=\"best\" departSpeed=\"max\" color=\"0,1,0\"" \
-    --validate 2>/dev/null
+    --validate
 
 # Emergency vehicles
 echo "  - Generating emergency vehicles (period: ${EMERGENCY_PERIOD}s)..."
-python3 $SUMO_HOME/tools/randomTrips.py \
+"$PYTHON" "$SUMO_HOME/tools/randomTrips.py" \
     -n "$NETWORK_FILE" \
     -r "$RESOURCE_DIR/emergency.rou.xml" \
-    -e $SIMULATION_TIME \
-    --period $EMERGENCY_PERIOD \
+    -e "$SIMULATION_TIME" \
+    --period "$EMERGENCY_PERIOD" \
     --fringe-factor 5 \
     --min-distance 600 \
     --vehicle-class emergency \
     --prefix ambulance \
     --trip-attributes="departLane=\"best\" departSpeed=\"max\" color=\"1,1,0\"" \
-    --validate 2>/dev/null
+    --validate
 
 echo "Traffic routes generated"
 
