@@ -15,11 +15,16 @@ public class NetworkParser {
         public final String id;
         public final double x;
         public final double y;
+        public final String type;
+        public final String shape;
 
-        public Junction(String id, double x, double y) {
+
+        public Junction(String id, double x, double y, String type, String shape) {
             this.id = id;
             this.x = x;
             this.y = y;
+            this.type = type;
+            this.shape = shape;
         }
     }
 
@@ -100,7 +105,9 @@ public class NetworkParser {
                 String id = e.getAttribute("id");
                 double x = Double.parseDouble(e.getAttribute("x"));
                 double y = Double.parseDouble(e.getAttribute("y"));
-                junctions.add(new Junction(id, x, y));
+                String type = e.hasAttribute("type") ? e.getAttribute("type") : "priority";
+                String shape = e.hasAttribute("shape") ? e.getAttribute("shape") : null;
+                junctions.add(new Junction(id, x, y, type, shape));
                 if (x < minX)
                     minX = x;
                 if (x > maxX)

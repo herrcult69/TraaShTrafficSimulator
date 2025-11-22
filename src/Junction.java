@@ -82,7 +82,7 @@ public class Junction {
         
         if (shape != null && shape.size() >= 3) {
             renderPolygonJunction(g, transform);
-            renderCrosswalks(g, transform);
+            //renderCrosswalks(g, transform);
         } else {
             renderCircularJunction(g, transform);
         }
@@ -103,13 +103,13 @@ public class Junction {
         }
         
         // Fill junction area (slightly lighter than road for visibility)
-        g.setFill(Color.rgb(65, 70, 75));
+        g.setFill(Color.rgb(55, 60, 65));
         g.fillPolygon(xPoints, yPoints, shape.size());
         
         // Subtle border to distinguish from roads
         g.setStroke(Color.rgb(80, 85, 90));
         g.setLineWidth(Math.max(1, transform.worldToScreenSize(0.3)));
-        g.strokePolygon(xPoints, yPoints, shape.size());
+        //g.strokePolygon(xPoints, yPoints, shape.size());
     }
     
     /**

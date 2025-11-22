@@ -11,7 +11,7 @@ public class Edge {
     private Junction toJunction;
     private List<Lane> lanes;
     private Rectangle2D bounds;
-    private static final double JUNCTION_MARGIN = 1.0; // meters
+    private static final double JUNCTION_MARGIN = 0.0; // meters
     
     public Edge(NetworkParser.Edge networkEdge, NetworkParser.Junction from, NetworkParser.Junction to, Junction fromJunc, Junction toJunc) {
         this.networkEdge = networkEdge;
@@ -113,7 +113,7 @@ public class Edge {
         double totalWidth = networkEdge.getTotalWidth() * 2; // Bidirectional
         double screenWidth = transform.worldToScreenSize(totalWidth);
         
-        // Draw road surface (darker than junctions)
+        // Draw road surface (similar as junctions)
         g.setStroke(Color.rgb(55, 60, 65));
         g.setLineWidth(screenWidth);
         g.strokeLine(x1, y1, x2, y2);
