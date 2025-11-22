@@ -12,6 +12,7 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
 import java.util.concurrent.Executors;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -183,7 +184,25 @@ public class TrafficSimulatorApp extends Application {
         g.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
         scene.updateVehicles(runner.getVehiclePositions());
-        scene.render(g, transform);
+        scene.render(g, transform, runner.getTrafficLightStates());
+
+        /* 
+        // Get live traffic light states from SimulationRunner
+        Map<String, String> trafficLightStates = runner.getTrafficLightStates();
+
+        
+        // Render traffic lights for each junction
+        for (Junction junction : scene.getJunctions()) {
+            // Skip internal junctions (ids starting with ":")
+            if (junction.getId().startsWith(":")) continue;
+            // Only render if type is "trafficlight"
+            if (!"trafficlight".equals(junction.getType())) continue;
+            String tlState = runner.getTrafficLightStates().get(junction.getId());
+            if (tlState == null) continue;
+            junction.renderTrafficLight(g, transform, tlState);
+        }
+        */
+        
     }
 
     public static void main(String[] args) { 

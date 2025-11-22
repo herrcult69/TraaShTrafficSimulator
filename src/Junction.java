@@ -87,6 +87,29 @@ public class Junction {
             renderCircularJunction(g, transform);
         }
     }
+
+    // Render the traffic light
+    public void renderTrafficLight(GraphicsContext g, CoordinateTransform transform, String tlState) {
+        if (tlState == null || tlState.length() == 0) {
+            System.out.println("No signal state for junction " + id);
+            return;
+        }
+        double screenX = transform.worldToScreenX(x);
+        double screenY = transform.worldToScreenY(y);
+
+        // Draw a circle for the signal color of the first lane (expand as needed)
+        char signal = tlState.charAt(0);
+        Color color;
+        switch(signal){
+            case 'G': color = Color.GREEN; break;
+            case 'r': color = Color.RED; break;
+            case 'y': color = Color.YELLOW; break;
+            default: color = Color.GRAY; break;
+        }
+
+        g.setFill(color);
+        g.fillOval(screenX - 5, screenY - 18, 10, 10 );
+    }
     
     /**
      * Renders junction with proper polygon shape from SUMO

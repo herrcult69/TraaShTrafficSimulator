@@ -9,6 +9,9 @@ public class SimulationRunner implements Runnable {
     private final boolean gui;
     private final Map<String,double[]> vehiclePositions = new ConcurrentHashMap<>();
     private final Map<String,String> trafficLightColors = new ConcurrentHashMap<>();
+    // Store current phase index and timer per traffic light
+    private Map<String, Integer> trafficLightPhaseIndex = new ConcurrentHashMap<>();
+    private Map<String, Double> trafficLightPhaseTimer = new ConcurrentHashMap<>();
     private volatile boolean running = true;
     private TraaSAdapter adapter;
 
@@ -20,6 +23,9 @@ public class SimulationRunner implements Runnable {
     public Map<String,String> getTrafficLightColors(){return trafficLightColors;}
 
     public void stop(){running = false;}
+
+    private final Map<String, String> trafficLightStates = new ConcurrentHashMap<>();
+
 
     @Override
     public void run() {
@@ -52,5 +58,12 @@ public class SimulationRunner implements Runnable {
         } catch(Exception e){
             e.printStackTrace();
         }
+    }
+    public Map<String, String> getTrafficLightStates() {
+    return trafficLightStates;
+}
+
+    public String getTrafficLightState(String junctionId) {
+        return trafficLightStates.get(junctionId);
     }
 }

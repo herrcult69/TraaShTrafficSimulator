@@ -10,6 +10,7 @@ public class TrafficManager {
     private Map<String, Vehicle> vehicles;
     private Map<String, NetworkParser.Junction> junctionIndex;
     private Map<String, Junction> visualJunctionIndex;
+    private Map<String, NetworkParser.TrafficLight> trafficLights;
     
     public TrafficManager() {
         this.junctions = new ArrayList<>();
@@ -17,6 +18,7 @@ public class TrafficManager {
         this.vehicles = new HashMap<>();
         this.junctionIndex = new HashMap<>();
         this.visualJunctionIndex = new HashMap<>();
+        this.trafficLights = new HashMap<>();
     }
     
     public void initializeFromNetwork(NetworkParser.NetworkData network) {
@@ -39,6 +41,11 @@ public class TrafficManager {
                 Edge visualEdge = new Edge(edge, from, to, fromJunc, toJunc);
                 edges.add(visualEdge);
             }
+        }
+
+        // Store and provide access to traffic lights
+        for (NetworkParser.TrafficLight tl : network.trafficLights){
+            trafficLights.put(tl.id, tl);
         }
     }
     
@@ -97,24 +104,55 @@ public class TrafficManager {
         return null;
     }
     
+    /* 
     public void render(GraphicsContext g, CoordinateTransform transform) {
         // Render edges (roads and lane markings)
         for (Edge edge : edges) {
             edge.render(g, transform);
         }
         
-        // Render junctions (between roads and vehicles for proper layering)
+        // Render junctions (between roads and vehicles for proper layering) and also traffic lights
         for (Junction junction : junctions) {
             junction.render(g, transform);
+
         }
-        
+
         // Render vehicles
         for (Vehicle vehicle : vehicles.values()) {
             vehicle.render(g, transform);
         }
     }
+    */
+
+public void render(GraphicsContext g, CoordinateTransform transform, Map<String, String> trafficLightStates) {
+    // Render edges
+    for (Edge edge : edges) {
+        edge.render(g, transform);
+    }
+
+    // Render junctions and traffic lights
+    for (Junction junction : junctions) {
+        junction.render(g, transform);
+
+       if (trafficLights.containsKey(junction.getId())) {
+            String tlState = trafficLightStates.get(junction.getId());
+            if (tlState != null && !tlState.isEmpty()){
+                junction.renderTrafficLight(g, transform, tlState);
+            }
+        }
+    
+    }
+
+    // Render vehicles
+    for (Vehicle vehicle : vehicles.values()) {
+        vehicle.render(g, transform);
+    }
+}
+
     
     // Getters
     public List<Edge> getEdges() { return edges; }
     public Map<String, Vehicle> getVehicles() { return vehicles; }
+    public List<Junction> getJunctions() {return junctions; }
+    public Map<String, NetworkParser.TrafficLight> getTrafficLights(){return trafficLights; }
 }

@@ -11,6 +11,26 @@ import java.util.*;
  */
 
 public class NetworkParser {
+    public static class TrafficLightPhase {
+        public final String state;  // like "GGrr", R/y/g per lane
+        public final double duration;
+
+        public TrafficLightPhase(String state, double duration){
+            this.state = state;
+            this.duration = duration;
+        }
+    }
+    
+    public static class TrafficLight{
+        public final String id;
+        public final List<TrafficLightPhase> phases;
+
+        public TrafficLight(String id, List<TrafficLightPhase> phases){
+            this.id = id;
+            this.phases = phases;
+        }
+    }
+
     public static class Junction {
         public final String id;
         public final double x;
@@ -71,11 +91,13 @@ public class NetworkParser {
     public static class NetworkData {
         public final List<Junction> junctions;
         public final List<Edge> edges;
+        public final List<TrafficLight> trafficLights;
         public final double minX, maxX, minY, maxY;
 
-        public NetworkData(List<Junction> js, List<Edge> es, double minX, double maxX, double minY, double maxY) {
+        public NetworkData(List<Junction> js, List<Edge> es, List<TrafficLight> tls, double minX, double maxX, double minY, double maxY) {
             this.junctions = js;
             this.edges = es;
+            this.trafficLights = tls;
             this.minX = minX;
             this.maxX = maxX;
             this.minY = minY;
@@ -166,7 +188,24 @@ public class NetworkParser {
                 edges.add(new Edge(edgeId, from, to, lanes));
             }
         }
+
+        // Parse traffic lights
+        NodeList tlLogics = doc.getElementsByTagName("tlLogic");
+        List<TrafficLight> trafficLights = new ArrayList<>();
+        for (int i = 0; i < tlLogics.getLength(); i++){
+            Element tlElem = (Element) tlLogics.item(i);
+            String tlId = tlElem.getAttribute("id");
+            NodeList phaseNodes = tlElem.getElementsByTagName("phase");
+            List<TrafficLightPhase> phases = new ArrayList<>();
+            for (int j = 0; j < phaseNodes.getLength(); j++){
+                Element pElem = (Element) phaseNodes.item(j);
+                String state = pElem.getAttribute("state");
+                double dur = pElem.hasAttribute("duration") ? Double.parseDouble(pElem.getAttribute("duration")) : 10.0;
+                phases.add(new TrafficLightPhase(state, dur));
+            }
+            trafficLights.add(new TrafficLight(tlId, phases));
+        }
         
-        return new NetworkData(junctions, edges, minX, maxX, minY, maxY);
+        return new NetworkData(junctions, edges, trafficLights, minX, maxX, minY, maxY);
     }
 }
