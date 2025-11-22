@@ -12,7 +12,6 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
 import java.util.concurrent.Executors;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -155,21 +154,25 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /** Zoom to specific point (for scroll wheel at cursor) */
-    private void zoomToPoint(double factor, double targetX, double targetY) {
-        // Calculate current world coordinates at target point (simplified approach)
-        double oldScale = scale * zoom;
-        double worldX = (targetX - offsetX - panX) / oldScale;
-        double worldY = (targetY - offsetY - panY) / oldScale;
+     private void zoomToPoint(double factor, double targetX, double targetY) {
+        // Use your existing CoordinateTransform methods
+        double worldX = transform.screenToWorldX(targetX);
+        double worldY = transform.screenToWorldY(targetY);
         
         // Apply new zoom level
         zoom = Math.max(0.1, Math.min(10.0, zoom * factor));
-        double newScale = scale * zoom;
+        updateTransform(); // Update transform with new zoom
         
-        // Reposition offsets so the world point stays under the cursor
-        panX = targetX - offsetX - worldX * newScale;
-        panY = targetY - offsetY - worldY * newScale;
+        // Calculate where that world point appears now
+        double newScreenX = transform.worldToScreenX(worldX);
+        double newScreenY = transform.worldToScreenY(worldY);
         
-        updateTransform();
+        // Adjust pan to keep the world point under the cursor
+        panX += (targetX - newScreenX);
+        // FIX: The Y adjustment needs to account for the flipped coordinate system
+        panY -= (targetY - newScreenY);
+        
+        updateTransform(); // Update again with new pan
     }
     
     private void updateTransform() {
@@ -184,25 +187,7 @@ public class TrafficSimulatorApp extends Application {
         g.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
         scene.updateVehicles(runner.getVehiclePositions());
-        scene.render(g, transform, runner.getTrafficLightStates());
-
-        /* 
-        // Get live traffic light states from SimulationRunner
-        Map<String, String> trafficLightStates = runner.getTrafficLightStates();
-
-        
-        // Render traffic lights for each junction
-        for (Junction junction : scene.getJunctions()) {
-            // Skip internal junctions (ids starting with ":")
-            if (junction.getId().startsWith(":")) continue;
-            // Only render if type is "trafficlight"
-            if (!"trafficlight".equals(junction.getType())) continue;
-            String tlState = runner.getTrafficLightStates().get(junction.getId());
-            if (tlState == null) continue;
-            junction.renderTrafficLight(g, transform, tlState);
-        }
-        */
-        
+        scene.render(g, transform);
     }
 
     public static void main(String[] args) { 

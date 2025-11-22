@@ -10,7 +10,6 @@ public class TrafficManager {
     private Map<String, Vehicle> vehicles;
     private Map<String, NetworkParser.Junction> junctionIndex;
     private Map<String, Junction> visualJunctionIndex;
-    private Map<String, NetworkParser.TrafficLight> trafficLights;
     
     public TrafficManager() {
         this.junctions = new ArrayList<>();
@@ -18,7 +17,6 @@ public class TrafficManager {
         this.vehicles = new HashMap<>();
         this.junctionIndex = new HashMap<>();
         this.visualJunctionIndex = new HashMap<>();
-        this.trafficLights = new HashMap<>();
     }
     
     public void initializeFromNetwork(NetworkParser.NetworkData network) {
@@ -41,11 +39,6 @@ public class TrafficManager {
                 Edge visualEdge = new Edge(edge, from, to, fromJunc, toJunc);
                 edges.add(visualEdge);
             }
-        }
-
-        // Store and provide access to traffic lights
-        for (NetworkParser.TrafficLight tl : network.trafficLights){
-            trafficLights.put(tl.id, tl);
         }
     }
     
@@ -124,23 +117,15 @@ public class TrafficManager {
     }
     */
 
-public void render(GraphicsContext g, CoordinateTransform transform, Map<String, String> trafficLightStates) {
+public void render(GraphicsContext g, CoordinateTransform transform) {
     // Render edges
     for (Edge edge : edges) {
         edge.render(g, transform);
     }
 
-    // Render junctions and traffic lights
+    // Render junctions
     for (Junction junction : junctions) {
         junction.render(g, transform);
-
-       if (trafficLights.containsKey(junction.getId())) {
-            String tlState = trafficLightStates.get(junction.getId());
-            if (tlState != null && !tlState.isEmpty()){
-                junction.renderTrafficLight(g, transform, tlState);
-            }
-        }
-    
     }
 
     // Render vehicles
@@ -154,5 +139,4 @@ public void render(GraphicsContext g, CoordinateTransform transform, Map<String,
     public List<Edge> getEdges() { return edges; }
     public Map<String, Vehicle> getVehicles() { return vehicles; }
     public List<Junction> getJunctions() {return junctions; }
-    public Map<String, NetworkParser.TrafficLight> getTrafficLights(){return trafficLights; }
 }
