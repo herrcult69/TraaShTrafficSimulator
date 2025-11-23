@@ -75,7 +75,7 @@ public class TrafficSimulatorApp extends Application {
         stage.show();
 
         // Start simulation
-        runner = new SimulationRunner(CONFIG_FILE, false);
+        runner = new SimulationRunner(CONFIG_FILE, true);
         exec = Executors.newSingleThreadExecutor();
         exec.submit(runner);
 

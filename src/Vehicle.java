@@ -29,16 +29,20 @@ public class Vehicle {
             width = 1.8;
         } else if (id.startsWith("truck")) {
             type = "truck";
-            length = 12.0;
+            length = 8.0;
             width = 2.5;
         } else if (id.startsWith("bus")) {
             type = "bus";
-            length = 12.0;
+            length = 10.0;
             width = 2.5;
         } else if (id.startsWith("moto")) {
             type = "motorcycle";
             length = 2.0;
             width = 0.8;
+        } else if (id.startsWith("ambu")) {
+            type = "emergency";
+            length = 6.0;
+            width = 2.5;
         } else {
             type = "unknown";
             length = 4.5;
@@ -96,8 +100,9 @@ public class Vehicle {
             case "car" -> Color.rgb(220, 70, 70);
             case "truck" -> Color.rgb(70, 120, 230);
             case "bus" -> Color.rgb(80, 200, 120);
-            case "motorcycle" -> Color.rgb(230, 230, 230);
-            default -> Color.WHITE;
+            case "motorcycle" -> Color.rgb(243, 141, 9);
+            case "emergency" -> Color.rgb(225, 206, 206);
+            default -> Color.PURPLE;
         };
     }
     
