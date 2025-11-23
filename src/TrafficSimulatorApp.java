@@ -156,10 +156,13 @@ public class TrafficSimulatorApp extends Application {
         stopBtn.setOnAction(e -> {
             if (runner != null) {
                 runner.stop();
-                exec.shutdownNow();
-                System.out.println("Simulation stopped - Exiting application");
             }
+            if (exec != null) {
+                exec.shutdownNow();
+            }
+            System.out.println("Simulation stopped - Exiting application");
             Platform.exit();
+            System.exit(0);
         });
         
         Separator sep1 = new Separator();
