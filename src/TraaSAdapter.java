@@ -34,6 +34,10 @@ public class TraaSAdapter {
         return ((Number) conn.do_job_get(Vehicle.getAngle(id))).doubleValue();
     }
 
+    public double getVehicleSpeed(String id) throws Exception {
+        return ((Number) conn.do_job_get(Vehicle.getSpeed(id))).doubleValue();
+    }
+
     public List<String> getTrafficLightIds() throws Exception {
         return (List<String>) conn.do_job_get(Trafficlight.getIDList());
     }

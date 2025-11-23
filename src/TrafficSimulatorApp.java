@@ -12,6 +12,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import javafx.scene.control.ScrollPane;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
@@ -47,6 +48,12 @@ public class TrafficSimulatorApp extends Application {
     // Mouse drag state
     private double dragStartX, dragStartY, dragStartPanX, dragStartPanY;
 
+    // Dashboard fiels
+    private DashBoard dashboard;
+    private long lastFrameTime = System.nanoTime();
+    private double fps = 0.0;
+    private double simTime = 0.0;
+
     @Override
     public void start(Stage stage) throws Exception {
         // Initialize components
@@ -59,18 +66,41 @@ public class TrafficSimulatorApp extends Application {
         scene.initializeFromNetwork(network);
         initializeView();
 
+        // Create dashboard
+        dashboard = new DashBoard();
+
         // UI setup - Control Panel
         VBox controlPanel = createControlPanel();
-        controlPanel.setPadding(new Insets(15));
-        controlPanel.setSpacing(10);
+        controlPanel.getChildren().add(dashboard);
+        controlPanel.setPadding(new Insets(10));
+        controlPanel.setSpacing(8);
         controlPanel.setStyle("-fx-background-color: #2b2b2b;");
-        controlPanel.setMinWidth(200);
+        controlPanel.setMinWidth(300);
+        controlPanel.setMaxWidth(300);
+
+        // Wrap in ScrollPane for vertical scrolling only
+        ScrollPane scrollPane = new ScrollPane(controlPanel);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollPane.setMinWidth(300);
+        scrollPane.setMaxWidth(300);
+        scrollPane.setStyle("-fx-background: #2b2b2b; -fx-background-color: #2b2b2b;");
 
         BorderPane root = new BorderPane();
         root.setCenter(canvas);
-        root.setRight(controlPanel);
+        root.setRight(scrollPane);
 
-        stage.setScene(new Scene(root, 1200, 800));
+        // Make canvas fill the available space (subtract fixed right panel width)
+        canvas.widthProperty().bind(root.widthProperty().subtract(300));
+        canvas.heightProperty().bind(root.heightProperty());
+        
+        // Update view when canvas size changes
+        canvas.widthProperty().addListener((obs, oldVal, newVal) -> initializeView());
+        canvas.heightProperty().addListener((obs, oldVal, newVal) -> initializeView());
+
+        Scene mainScene = new Scene(root, 1400, 900);
+        stage.setScene(mainScene);
         stage.setTitle("Traffic Simulator - OOP Architecture");
         stage.show();
 
@@ -135,9 +165,9 @@ public class TrafficSimulatorApp extends Application {
         Button pauseBtn = new Button("⏸ Pause");
         Button stopBtn = new Button("⏹ Stop");
         
-        playBtn.setPrefWidth(160);
-        pauseBtn.setPrefWidth(160);
-        stopBtn.setPrefWidth(160);
+        playBtn.setPrefWidth(250);
+        pauseBtn.setPrefWidth(250);
+        stopBtn.setPrefWidth(250);
         
         playBtn.setOnAction(e -> {
             if (runner != null) {
@@ -156,10 +186,13 @@ public class TrafficSimulatorApp extends Application {
         stopBtn.setOnAction(e -> {
             if (runner != null) {
                 runner.stop();
-                exec.shutdownNow();
-                System.out.println("Simulation stopped - Exiting application");
             }
+            if (exec != null) {
+                exec.shutdownNow();
+            }
+            System.out.println("Simulation stopped - Exiting application");
             Platform.exit();
+            System.exit(0);
         });
         
         Separator sep1 = new Separator();
@@ -172,9 +205,9 @@ public class TrafficSimulatorApp extends Application {
         Button zoomOut = new Button("− Zoom Out");
         Button reset = new Button("⟲ Reset View");
         
-        zoomIn.setPrefWidth(160);
-        zoomOut.setPrefWidth(160);
-        reset.setPrefWidth(160);
+        zoomIn.setPrefWidth(250);
+        zoomOut.setPrefWidth(250);
+        reset.setPrefWidth(250);
         
         zoomIn.setOnAction(e -> zoomToCenter(1.2));
         zoomOut.setOnAction(e -> zoomToCenter(0.8));
@@ -275,6 +308,59 @@ public class TrafficSimulatorApp extends Application {
 
         scene.updateVehicles(runner.getVehiclePositions());
         scene.render(g, transform);
+
+        // Calculate FPS
+        long currentTime = System.nanoTime();
+        double deltaTime = (currentTime - lastFrameTime) / 1_000_000_000.0;
+        fps = 1.0/deltaTime;
+        lastFrameTime = currentTime;
+
+        // Increment simulation time
+        simTime += deltaTime;
+
+        // Update dashboard
+        updateDashboard();
+    }
+
+    // Collect metrics and update dashboard
+    private void updateDashboard() {
+        DashBoard.DashBoardData data = new DashBoard.DashBoardData();
+
+        var positions = runner.getVehiclePositions();
+        var speeds = runner.getVehicleSpeeds();
+
+        data.activeVehicles = positions.size();
+
+        double totalSpeed = 0.0;
+        int stoppedCount = 0;
+        int carCount = 0, truckCount = 0, busCount = 0, motoCount = 0;
+
+        for (var entry : positions.entrySet()) {
+            String id = entry.getKey();
+            
+            // Count vehicle types
+            if (id.startsWith("car")) carCount++;
+            else if (id.startsWith("truck")) truckCount++;
+            else if (id.startsWith("bus")) busCount++;
+            else if (id.startsWith("moto")) motoCount++;
+
+            // Get speed
+            double speed = speeds.getOrDefault(id, 0.0);
+            totalSpeed += speed;
+
+            if (speed < 0.5) stoppedCount++;
+        }
+
+        data.simTime = simTime;
+        data.totalVehicles = data.activeVehicles;
+        data.avgSpeed = data.activeVehicles > 0 ? totalSpeed / data.activeVehicles : 0.0;
+        data.stoppedVehicles = stoppedCount;
+        data.carCount = carCount;
+        data.truckCount = truckCount;
+        data.busCount = busCount;
+        data.motorcycleCount = motoCount;
+        data.fps = fps;
+        dashboard.update(data);
     }
 
     public static void main(String[] args) { 
