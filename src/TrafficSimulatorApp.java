@@ -6,8 +6,10 @@ import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.Separator;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
@@ -57,17 +59,18 @@ public class TrafficSimulatorApp extends Application {
         scene.initializeFromNetwork(network);
         initializeView();
 
-        // UI setup
-        Button zoomIn = new Button("+"), zoomOut = new Button("-"), reset = new Button("Reset");
-        zoomIn.setOnAction(e -> zoomToCenter(1.2));
-        zoomOut.setOnAction(e -> zoomToCenter(0.8));
-        reset.setOnAction(e -> initializeView());
+        // UI setup - Control Panel
+        VBox controlPanel = createControlPanel();
+        controlPanel.setPadding(new Insets(15));
+        controlPanel.setSpacing(10);
+        controlPanel.setStyle("-fx-background-color: #2b2b2b;");
+        controlPanel.setMinWidth(200);
 
-        HBox controls = new HBox(10, zoomOut, zoomIn, reset);
-        controls.setAlignment(Pos.CENTER);
-        controls.setPadding(new Insets(10));
+        BorderPane root = new BorderPane();
+        root.setCenter(canvas);
+        root.setRight(controlPanel);
 
-        stage.setScene(new Scene(new BorderPane(canvas, null, null, controls, null)));
+        stage.setScene(new Scene(root, 1200, 800));
         stage.setTitle("Traffic Simulator - OOP Architecture");
         stage.show();
 
@@ -119,6 +122,90 @@ public class TrafficSimulatorApp extends Application {
         });
     }
 
+    /** Create control panel with simulation and view controls */
+    private VBox createControlPanel() {
+        VBox panel = new VBox(10);
+        panel.setAlignment(Pos.TOP_CENTER);
+        
+        // Simulation Controls Section
+        Label simLabel = new Label("═══ SIMULATION ═══");
+        simLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14;");
+        
+        Button playBtn = new Button("▶ Play");
+        Button pauseBtn = new Button("⏸ Pause");
+        Button stopBtn = new Button("⏹ Stop");
+        
+        playBtn.setPrefWidth(160);
+        pauseBtn.setPrefWidth(160);
+        stopBtn.setPrefWidth(160);
+        
+        playBtn.setOnAction(e -> {
+            if (runner != null) {
+                runner.resume();
+                System.out.println("Simulation resumed");
+            }
+        });
+        
+        pauseBtn.setOnAction(e -> {
+            if (runner != null) {
+                runner.pause();
+                System.out.println("Simulation paused");
+            }
+        });
+        
+        stopBtn.setOnAction(e -> {
+            if (runner != null) {
+                runner.stop();
+                exec.shutdownNow();
+                System.out.println("Simulation stopped - Exiting application");
+            }
+            Platform.exit();
+        });
+        
+        Separator sep1 = new Separator();
+        
+        // View Controls Section
+        Label viewLabel = new Label("═══ VIEW ═══");
+        viewLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14;");
+        
+        Button zoomIn = new Button("+ Zoom In");
+        Button zoomOut = new Button("− Zoom Out");
+        Button reset = new Button("⟲ Reset View");
+        
+        zoomIn.setPrefWidth(160);
+        zoomOut.setPrefWidth(160);
+        reset.setPrefWidth(160);
+        
+        zoomIn.setOnAction(e -> zoomToCenter(1.2));
+        zoomOut.setOnAction(e -> zoomToCenter(0.8));
+        reset.setOnAction(e -> initializeView());
+        
+        // Style buttons
+        String buttonStyle = "-fx-background-color: #3c3f41; -fx-text-fill: white; " +
+                           "-fx-font-size: 12; -fx-padding: 8;";
+        String buttonHoverStyle = buttonStyle + "-fx-background-color: #4c4f51;";
+        
+        for (Button btn : new Button[]{playBtn, pauseBtn, stopBtn, zoomIn, zoomOut, reset}) {
+            btn.setStyle(buttonStyle);
+            btn.setOnMouseEntered(e -> btn.setStyle(buttonHoverStyle));
+            btn.setOnMouseExited(e -> btn.setStyle(buttonStyle));
+        }
+        
+        panel.getChildren().addAll(
+            simLabel,
+            playBtn,
+            pauseBtn,
+            stopBtn,
+            sep1,
+            viewLabel,
+            zoomIn,
+            zoomOut,
+            reset
+        );
+        
+        return panel;
+    }
+    
     /** Fit entire network to canvas with margins and reset zoom/pan */
     private void initializeView() {
         double margin = 50;

@@ -9,6 +9,7 @@ public class SimulationRunner implements Runnable {
     private final boolean gui;
     private final Map<String,double[]> vehiclePositions = new ConcurrentHashMap<>();
     private volatile boolean running = true;
+    private volatile boolean paused = false;
     private TraaSAdapter adapter;
 
     public SimulationRunner(String configFile, boolean gui){
@@ -18,6 +19,14 @@ public class SimulationRunner implements Runnable {
     public Map<String,double[]> getVehiclePositions(){return vehiclePositions;}
 
     public void stop(){running = false;}
+    
+    public void pause(){paused = true;}
+    
+    public void resume(){paused = false;}
+    
+    public boolean isPaused(){return paused;}
+    
+    public boolean isRunning(){return running;}
 
 
     @Override
@@ -29,15 +38,17 @@ public class SimulationRunner implements Runnable {
             conn.runServer();
             adapter = new TraaSAdapter(conn);
             while(running){
-                conn.do_timestep();
-                List<String> ids = adapter.getVehicleIds();
-                // remove vehicles no longer present
-                vehiclePositions.keySet().removeIf(id -> !ids.contains(id));
-                for(String id: ids){
-                    double[] p = adapter.getVehiclePosition(id);
-                    double ang = 0.0;
-                    try { ang = adapter.getVehicleAngle(id); } catch (Exception ignore) {}
-                    vehiclePositions.put(id, new double[]{p[0], p[1], ang});
+                if (!paused) {
+                    conn.do_timestep();
+                    List<String> ids = adapter.getVehicleIds();
+                    // remove vehicles no longer present
+                    vehiclePositions.keySet().removeIf(id -> !ids.contains(id));
+                    for(String id: ids){
+                        double[] p = adapter.getVehiclePosition(id);
+                        double ang = 0.0;
+                        try { ang = adapter.getVehicleAngle(id); } catch (Exception ignore) {}
+                        vehiclePositions.put(id, new double[]{p[0], p[1], ang});
+                    }
                 }
                 Thread.sleep(100); // 10 steps per second approx if SUMO step-length=1
             }

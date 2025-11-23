@@ -56,10 +56,10 @@ public class Vehicle {
     }
     
     private void updateBounds() {
-        double halfLength = length / 2;
         double halfWidth = width / 2;
+        // Bounds with head at (worldX, worldY) extending backward
         bounds = new Rectangle2D(
-            worldX - halfLength, worldY - halfWidth,
+            worldX - length, worldY - halfWidth,
             length, width
         );
     }
@@ -80,13 +80,13 @@ public class Vehicle {
         g.translate(screenX, screenY);
         g.rotate(angle);
         
-        // Draw vehicle shape based on type
+        // Draw vehicle with head at origin (worldX, worldY), extending backward
         g.setFill(getVehicleColor());
-        g.fillRect(-screenLength/2, -screenWidth/2, screenLength, screenWidth);
+        g.fillRect(-screenLength, -screenWidth/2, screenLength, screenWidth);
         
         g.setStroke(Color.BLACK);
         g.setLineWidth(1);
-        g.strokeRect(-screenLength/2, -screenWidth/2, screenLength, screenWidth);
+        g.strokeRect(-screenLength, -screenWidth/2, screenLength, screenWidth);
         
         g.restore();
     }

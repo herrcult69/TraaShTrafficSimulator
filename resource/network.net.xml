@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2025-11-20 14:43:40 by Eclipse SUMO netgenerate Version 1.24.0
-<netgenerateConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netgenerateConfiguration.xsd">
+<!-- generated on 2025-11-23 13:40:22 by Eclipse SUMO netgenerate Version 1.20.0
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netgenerateConfiguration.xsd">
 
     <random_network>
         <rand value="true"/>
@@ -30,7 +30,7 @@
         <junctions.join-dist value="10"/>
     </junctions>
 
-</netgenerateConfiguration>
+</configuration>
 -->
 
 <net version="1.20" junctionCornerDetail="5" limitTurnSpeed="5.50" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/net_file.xsd">
@@ -603,7 +603,7 @@
     <junction id="14" type="priority" x="112.78" y="25.72" incLanes="15_0 15_1" intLanes=":14_0_0" shape="112.78,25.72 106.93,28.31 112.78,25.72">
         <request index="0" response="0" foes="0" cont="0"/>
     </junction>
-    <junction id="18" type="priority" x="200.31" y="0.00" incLanes="19_0 19_1" intLanes=":18_0_0" shape="200.31,0.00 194.59,-2.88 200.31,-0.00">
+    <junction id="18" type="priority" x="200.31" y="0.00" incLanes="19_0 19_1" intLanes=":18_0_0" shape="200.31,-0.00 194.59,-2.88 200.31,-0.00">
         <request index="0" response="0" foes="0" cont="0"/>
     </junction>
     <junction id="2" type="priority" x="147.67" y="104.43" incLanes="3_0 3_1 -19_0 -19_1 -15_0 -15_1" intLanes=":2_0_0 :2_0_1 :2_12_0 :2_13_0 :2_4_0 :2_4_1 :2_6_0 :2_7_0 :2_8_0 :2_9_0 :2_9_1 :2_14_0" shape="142.93,112.10 155.37,109.11 154.77,105.28 155.02,102.44 155.96,100.12 157.42,97.85 159.24,95.19 161.27,91.67 149.84,85.91 148.66,87.48 148.08,87.67 147.52,87.46 146.96,86.84 146.42,85.82 134.72,91.01 136.73,95.40 138.29,98.63 139.55,101.31 140.64,104.04 141.72,107.43">
