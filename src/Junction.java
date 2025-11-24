@@ -1,7 +1,6 @@
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.geometry.Point2D;
-import javafx.geometry.Rectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,7 +13,6 @@ public class Junction {
     private double x, y;  // Center position in world coordinates
     private String type;
     private List<Point2D> shape;  // Junction boundary polygon
-    private Rectangle2D bounds;
     
     public Junction(NetworkParser.Junction networkJunction) {
         this.networkJunction = networkJunction;
@@ -28,8 +26,6 @@ public class Junction {
         if (networkJunction.shape != null && !networkJunction.shape.isEmpty()) {
             parseShape(networkJunction.shape);
         }
-        
-        calculateBounds();
     }
     
     private void parseShape(String shapeStr) {
@@ -47,28 +43,6 @@ public class Junction {
                 }
             }
         }
-    }
-    
-    private void calculateBounds() {
-        if (shape.isEmpty()) {
-            // Default circular boundary
-            double radius = 10.0;
-            bounds = new Rectangle2D(x - radius, y - radius, radius * 2, radius * 2);
-            return;
-        }
-        
-        // Calculate bounding box from shape
-        double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE;
-        double maxX = Double.MIN_VALUE, maxY = Double.MIN_VALUE;
-        
-        for (Point2D p : shape) {
-            minX = Math.min(minX, p.getX());
-            maxX = Math.max(maxX, p.getX());
-            minY = Math.min(minY, p.getY());
-            maxY = Math.max(maxY, p.getY());
-        }
-        
-        bounds = new Rectangle2D(minX, minY, maxX - minX, maxY - minY);
     }
     
     /**
@@ -164,67 +138,11 @@ public class Junction {
         return maxDist > 0 ? maxDist : 8.0;
     }
     
-    /**
-     * Checks if a screen coordinate point is inside the junction (for clicking)
-     */
-    public boolean contains(double screenX, double screenY, CoordinateTransform transform) {
-        double worldX = transform.screenToWorldX(screenX);
-        double worldY = transform.screenToWorldY(screenY);
-        
-        if (shape.isEmpty()) {
-            // Use circular bounds
-            double dx = worldX - x;
-            double dy = worldY - y;
-            return Math.sqrt(dx * dx + dy * dy) <= 8.0;
-        }
-        
-        // Use ray casting algorithm for polygon containment
-        return isPointInPolygon(worldX, worldY);
-    }
-    
-    /**
-     * Ray casting algorithm to check if point is inside polygon
-     */
-    private boolean isPointInPolygon(double x, double y) {
-        int intersections = 0;
-        int n = shape.size();
-        
-        for (int i = 0; i < n; i++) {
-            Point2D p1 = shape.get(i);
-            Point2D p2 = shape.get((i + 1) % n);
-            
-            if (p1.getY() > y != p2.getY() > y) {
-                double xIntersect = (p2.getX() - p1.getX()) * (y - p1.getY()) / 
-                                   (p2.getY() - p1.getY()) + p1.getX();
-                if (x < xIntersect) {
-                    intersections++;
-                }
-            }
-        }
-        
-        return (intersections % 2) == 1;
-    }
-    
-    /**
-     * Checks if a world coordinate point is inside the junction
-     */
-    public boolean containsPoint(double worldX, double worldY) {
-        if (shape.isEmpty()) {
-            // Use circular bounds
-            double dx = worldX - x;
-            double dy = worldY - y;
-            return Math.sqrt(dx * dx + dy * dy) <= 8.0;
-        }
-        
-        return bounds.contains(worldX, worldY);
-    }
-    
     // Getters
     public String getId() { return id; }
     public double getX() { return x; }
     public double getY() { return y; }
     public String getType() { return type; }
-    public Rectangle2D getBounds() { return bounds; }
     public List<Point2D> getShape() { return new ArrayList<>(shape); }
     public NetworkParser.Junction getNetworkJunction() { return networkJunction; }
 }

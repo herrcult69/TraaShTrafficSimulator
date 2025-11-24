@@ -97,15 +97,12 @@ public class TrafficSimulatorApp extends Application {
             updateTransform();
         });
         
-        // Click detection (for future interaction features)
+        // Click detection for vehicles and lanes only
         canvas.setOnMouseClicked(e -> {
             Object clickedElement = scene.getElementAt(e.getX(), e.getY(), transform);
             if (clickedElement != null) {
                 System.out.println("Clicked: " + clickedElement.getClass().getSimpleName());
-                if (clickedElement instanceof Junction) {
-                    Junction junction = (Junction) clickedElement;
-                    System.out.println("Junction ID: " + junction.getId() + " Type: " + junction.getType());
-                } else if (clickedElement instanceof Lane) {
+                if (clickedElement instanceof Lane) {
                     Lane lane = (Lane) clickedElement;
                     System.out.println("Lane ID: " + lane.getId());
                 } else if (clickedElement instanceof Vehicle) {

@@ -72,25 +72,11 @@ public class TrafficManager {
             }
         }
         
-        // Check junctions
-        for (Junction junction : junctions) {
-            if (junction.contains(screenX, screenY, transform)) {
-                return junction;
-            }
-        }
-        
         // Check lanes
         for (Edge edge : edges) {
             Lane lane = edge.getLaneAt(screenX, screenY, transform);
             if (lane != null) {
                 return lane;
-            }
-        }
-        
-        // Check edges
-        for (Edge edge : edges) {
-            if (edge.contains(screenX, screenY, transform)) {
-                return edge;
             }
         }
         

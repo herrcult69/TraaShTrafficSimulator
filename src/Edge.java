@@ -1,6 +1,5 @@
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
-import javafx.geometry.Rectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -10,7 +9,6 @@ public class Edge {
     private Junction fromJunction;
     private Junction toJunction;
     private List<Lane> lanes;
-    private Rectangle2D bounds;
     private static final double JUNCTION_MARGIN = 0.0; // meters
     
     public Edge(NetworkParser.Edge networkEdge, NetworkParser.Junction from, NetworkParser.Junction to, Junction fromJunc, Junction toJunc) {
@@ -24,7 +22,6 @@ public class Edge {
         this.lanes = new ArrayList<>();
         
         createLanes();
-        calculateBounds();
     }
     
     private void createLanes() {
@@ -52,22 +49,6 @@ public class Edge {
             lanes.add(lane);
             cumulativeOffset += laneWidth;
         }
-    }
-    
-    private void calculateBounds() {
-        double totalWidth = networkEdge.getTotalWidth() * 2; // Bidirectional
-        double minX = Math.min(fromX, toX) - totalWidth/2;
-        double maxX = Math.max(fromX, toX) + totalWidth/2;
-        double minY = Math.min(fromY, toY) - totalWidth/2;
-        double maxY = Math.max(fromY, toY) + totalWidth/2;
-        
-        bounds = new Rectangle2D(minX, minY, maxX - minX, maxY - minY);
-    }
-    
-    public boolean contains(double screenX, double screenY, CoordinateTransform transform) {
-        double worldX = transform.screenToWorldX(screenX);
-        double worldY = transform.screenToWorldY(screenY);
-        return bounds.contains(worldX, worldY);
     }
     
     public Lane getLaneAt(double screenX, double screenY, CoordinateTransform transform) {
@@ -202,5 +183,4 @@ public class Edge {
     public double getFromY() { return fromY; }
     public double getToX() { return toX; }
     public double getToY() { return toY; }
-    public Rectangle2D getBounds() { return bounds; }
 }

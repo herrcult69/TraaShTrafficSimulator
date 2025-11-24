@@ -69,10 +69,18 @@ public class Vehicle {
     }
     
     public boolean contains(double screenX, double screenY, CoordinateTransform transform) {
-        double worldX = transform.screenToWorldX(screenX);
-        double worldY = transform.screenToWorldY(screenY);
-        return bounds.contains(worldX, worldY);
+        double clickWorldX = transform.screenToWorldX(screenX);
+        double clickWorldY = transform.screenToWorldY(screenY);
+        
+        double dx = clickWorldX - worldX;
+        double dy = clickWorldY - worldY;
+        double distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // The circle should be a little bit bigger than the half the width
+        double radius = width / 1.5;
+        return distance <= radius;
     }
+    
     
     public void render(GraphicsContext g, CoordinateTransform transform) {
         double screenX = transform.worldToScreenX(worldX);
