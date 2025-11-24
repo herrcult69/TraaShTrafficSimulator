@@ -28,3 +28,8 @@ replay_pid*
 
 # JavaFx libs
 lib/javafx/
+
+# SUMO simulation files
+resource/*.rou.xml
+resource/*.net.xml
+resource/*.sumocfg
