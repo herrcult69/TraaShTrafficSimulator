@@ -81,34 +81,9 @@ public class Junction {
         g.setFill(Color.rgb(55, 60, 65));
         g.fillPolygon(xPoints, yPoints, shape.size());
         
-        // Subtle border to distinguish from roads
-        g.setStroke(Color.rgb(80, 85, 90));
-        g.setLineWidth(Math.max(1, transform.worldToScreenSize(0.3)));
-        //g.strokePolygon(xPoints, yPoints, shape.size());
+
+
     }
-    
-    
-    /**
-     * Fallback: render as circle if no shape data
-     */
-    // private void renderCircularJunction(GraphicsContext g, CoordinateTransform transform) {
-    //     double screenX = transform.worldToScreenX(x);
-    //     double screenY = transform.worldToScreenY(y);
-    //     double radius = Math.max(6, transform.worldToScreenSize(5));
-        
-    //     // Junction circle (slightly darker)
-    //     g.setFill(Color.rgb(45, 48, 52));
-    //     g.fillOval(screenX - radius, screenY - radius, radius * 2, radius * 2);
-        
-    //     // Subtle border
-    //     g.setStroke(Color.rgb(60, 65, 70));
-    //     g.setLineWidth(1);
-    //     g.strokeOval(screenX - radius, screenY - radius, radius * 2, radius * 2);
-    // }
-    
-    /**
-     * Gets the distance from junction center to boundary in a given direction
-     */
     public double getRadiusInDirection(double dirX, double dirY) {
         if (shape.isEmpty()) {
             return 8.0; // Default radius
@@ -130,7 +105,7 @@ public class Junction {
             if (dist > 0.1) {
                 double dotProduct = (dx * dirX + dy * dirY) / dist;
                 if (dotProduct > 0.5) { // Point is in the forward direction
-                    maxDist = Math.max(maxDist, dist);
+                    maxDist = Math.max(maxDist, dist) - .5;
                 }
             }
         }
