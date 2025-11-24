@@ -32,4 +32,4 @@ lib/javafx/
 # SUMO simulation files
 resource/*.rou.xml
 resource/*.net.xml
-resouce/*.sumocfg
+resource/*.sumocfg
