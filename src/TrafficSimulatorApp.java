@@ -75,7 +75,7 @@ public class TrafficSimulatorApp extends Application {
         stage.show();
 
         // Start simulation
-        runner = new SimulationRunner(CONFIG_FILE, true);
+        runner = new SimulationRunner(CONFIG_FILE, false);
         exec = Executors.newSingleThreadExecutor();
         exec.submit(runner);
 
@@ -132,8 +132,8 @@ public class TrafficSimulatorApp extends Application {
         simLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14;");
         
         Button playBtn = new Button("▶ Play");
-        Button pauseBtn = new Button("⏸ Pause");
-        Button stopBtn = new Button("⏹ Stop");
+        Button pauseBtn = new Button("|| Pause");
+        Button stopBtn = new Button("[] Stop");
         
         playBtn.setPrefWidth(160);
         pauseBtn.setPrefWidth(160);

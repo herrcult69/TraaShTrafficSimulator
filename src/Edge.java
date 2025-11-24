@@ -29,23 +29,28 @@ public class Edge {
     
     private void createLanes() {
         int numLanes = networkEdge.lanes.size();
-        double laneWidth = 3.2; // Standard SUMO lane width
         
         // Create lanes for both directions (bidirectional road)
-        // Direction 1 (negative offsets)
+        // Direction 1 (negative offsets - left side)
+        double cumulativeOffset = 0;
         for (int i = 0; i < numLanes; i++) {
-            double offset = -laneWidth * (i + 0.5);
+            double laneWidth = networkEdge.lanes.get(i).width;
+            double offset = -(cumulativeOffset + laneWidth / 2.0);
             String laneId = networkEdge.id + "_dir1_lane" + i;
             Lane lane = new Lane(laneId, this, laneWidth, i, offset);
             lanes.add(lane);
+            cumulativeOffset += laneWidth;
         }
         
-        // Direction 2 (positive offsets)
+        // Direction 2 (positive offsets - right side)
+        cumulativeOffset = 0;
         for (int i = 0; i < numLanes; i++) {
-            double offset = laneWidth * (i + 0.5);
+            double laneWidth = networkEdge.lanes.get(i).width;
+            double offset = cumulativeOffset + laneWidth / 2.0;
             String laneId = networkEdge.id + "_dir2_lane" + i;
             Lane lane = new Lane(laneId, this, laneWidth, i + numLanes, offset);
             lanes.add(lane);
+            cumulativeOffset += laneWidth;
         }
     }
     
@@ -133,8 +138,7 @@ public class Edge {
         double perpY = -dx / length;
         
         int numLanes = networkEdge.lanes.size();
-        double laneWidth = 3.2;
-        double halfWidth = numLanes * laneWidth;
+        double halfWidth = networkEdge.getTotalWidth();
         
         // Road edges (gray)
         g.setStroke(Color.rgb(180, 180, 180));
@@ -167,21 +171,24 @@ public class Edge {
         double gapSize = Math.max(6, transform.worldToScreenSize(2));
         g.setLineDashes(dashSize, gapSize);
         
-        for (int i = 1; i < numLanes; i++) {
-            double offset = laneWidth * i;
+        // Draw dividers between lanes using cumulative offsets
+        double cumulativeOffset = 0;
+        for (int i = 0; i < numLanes - 1; i++) {
+            cumulativeOffset += networkEdge.lanes.get(i).width;
+            
             // Left side
-            double divX1 = startX - offset * perpX;
-            double divY1 = startY - offset * perpY;
-            double divX2 = endX - offset * perpX;
-            double divY2 = endY - offset * perpY;
+            double divX1 = startX - cumulativeOffset * perpX;
+            double divY1 = startY - cumulativeOffset * perpY;
+            double divX2 = endX - cumulativeOffset * perpX;
+            double divY2 = endY - cumulativeOffset * perpY;
             g.strokeLine(transform.worldToScreenX(divX1), transform.worldToScreenY(divY1),
                          transform.worldToScreenX(divX2), transform.worldToScreenY(divY2));
             
             // Right side
-            divX1 = startX + offset * perpX;
-            divY1 = startY + offset * perpY;
-            divX2 = endX + offset * perpX;
-            divY2 = endY + offset * perpY;
+            divX1 = startX + cumulativeOffset * perpX;
+            divY1 = startY + cumulativeOffset * perpY;
+            divX2 = endX + cumulativeOffset * perpX;
+            divY2 = endY + cumulativeOffset * perpY;
             g.strokeLine(transform.worldToScreenX(divX1), transform.worldToScreenY(divY1),
                          transform.worldToScreenX(divX2), transform.worldToScreenY(divY2));
         }

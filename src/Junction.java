@@ -83,9 +83,10 @@ public class Junction {
         if (shape != null && shape.size() >= 3) {
             renderPolygonJunction(g, transform);
             //renderCrosswalks(g, transform);
-        } else {
-            renderCircularJunction(g, transform);
-        }
+        } 
+        // else {
+        //     renderCircularJunction(g, transform);
+        // }
     }
     
     /**
@@ -112,119 +113,24 @@ public class Junction {
         //g.strokePolygon(xPoints, yPoints, shape.size());
     }
     
-    /**
-     * Renders crosswalk patterns on junction edges
-     */
-    private void renderCrosswalks(GraphicsContext g, CoordinateTransform transform) {
-        if (shape == null || shape.size() < 3) return;
-        
-        // Draw crosswalk stripes on each edge of the junction
-        int numEdges = shape.size();
-        for (int i = 0; i < numEdges; i++) {
-            Point2D p1 = shape.get(i);
-            Point2D p2 = shape.get((i + 1) % numEdges);
-            
-            double edgeLength = p1.distance(p2);
-            
-            // Only draw crosswalks on edges longer than 8 meters
-            if (edgeLength > 8.0) {
-                drawCrosswalkStripes(g, transform, p1, p2);
-            }
-        }
-    }
-    
-    /**
-     * Draws zebra crossing stripes between two points
-     */
-    private void drawCrosswalkStripes(GraphicsContext g, CoordinateTransform transform, 
-                                      Point2D p1, Point2D p2) {
-        double dx = p2.getX() - p1.getX();
-        double dy = p2.getY() - p1.getY();
-        double length = Math.sqrt(dx * dx + dy * dy);
-        
-        if (length < 0.1) return;
-        
-        // Normalize direction
-        dx /= length;
-        dy /= length;
-        
-        // Perpendicular direction (for stripe width)
-        double perpX = -dy;
-        double perpY = dx;
-        
-        double stripeWidth = 0.5;  // meters
-        double stripeSpacing = 1.0; // meters
-        double crosswalkWidth = 3.0; // meters
-        
-        // Draw stripes along the edge
-        g.setFill(Color.rgb(240, 240, 240)); // White stripes
-        
-        double offset = 2.0; // Start 2 meters from edge
-        for (double d = offset; d < length - offset; d += stripeSpacing) {
-            // Calculate stripe center
-            double cx = p1.getX() + dx * d;
-            double cy = p1.getY() + dy * d;
-            
-            // Draw stripe perpendicular to edge
-            double x1 = cx - perpX * crosswalkWidth / 2;
-            double y1 = cy - perpY * crosswalkWidth / 2;
-            double x2 = cx + perpX * crosswalkWidth / 2;
-            double y2 = cy + perpY * crosswalkWidth / 2;
-            
-            double sx1 = transform.worldToScreenX(x1);
-            double sy1 = transform.worldToScreenY(y1);
-            double sx2 = transform.worldToScreenX(x2);
-            double sy2 = transform.worldToScreenY(y2);
-            
-            g.setLineWidth(Math.max(2, transform.worldToScreenSize(stripeWidth)));
-            g.setStroke(Color.rgb(240, 240, 240));
-            g.strokeLine(sx1, sy1, sx2, sy2);
-        }
-        
-        // Add yellow warning lines on sides
-        g.setStroke(Color.rgb(255, 220, 0));
-        g.setLineWidth(Math.max(1, transform.worldToScreenSize(0.15)));
-        
-        // Left side yellow line
-        double lx1 = p1.getX() - perpX * crosswalkWidth / 2;
-        double ly1 = p1.getY() - perpY * crosswalkWidth / 2;
-        double lx2 = p2.getX() - perpX * crosswalkWidth / 2;
-        double ly2 = p2.getY() - perpY * crosswalkWidth / 2;
-        
-        g.strokeLine(
-            transform.worldToScreenX(lx1), transform.worldToScreenY(ly1),
-            transform.worldToScreenX(lx2), transform.worldToScreenY(ly2)
-        );
-        
-        // Right side yellow line
-        double rx1 = p1.getX() + perpX * crosswalkWidth / 2;
-        double ry1 = p1.getY() + perpY * crosswalkWidth / 2;
-        double rx2 = p2.getX() + perpX * crosswalkWidth / 2;
-        double ry2 = p2.getY() + perpY * crosswalkWidth / 2;
-        
-        g.strokeLine(
-            transform.worldToScreenX(rx1), transform.worldToScreenY(ry1),
-            transform.worldToScreenX(rx2), transform.worldToScreenY(ry2)
-        );
-    }
     
     /**
      * Fallback: render as circle if no shape data
      */
-    private void renderCircularJunction(GraphicsContext g, CoordinateTransform transform) {
-        double screenX = transform.worldToScreenX(x);
-        double screenY = transform.worldToScreenY(y);
-        double radius = Math.max(6, transform.worldToScreenSize(5));
+    // private void renderCircularJunction(GraphicsContext g, CoordinateTransform transform) {
+    //     double screenX = transform.worldToScreenX(x);
+    //     double screenY = transform.worldToScreenY(y);
+    //     double radius = Math.max(6, transform.worldToScreenSize(5));
         
-        // Junction circle (slightly darker)
-        g.setFill(Color.rgb(45, 48, 52));
-        g.fillOval(screenX - radius, screenY - radius, radius * 2, radius * 2);
+    //     // Junction circle (slightly darker)
+    //     g.setFill(Color.rgb(45, 48, 52));
+    //     g.fillOval(screenX - radius, screenY - radius, radius * 2, radius * 2);
         
-        // Subtle border
-        g.setStroke(Color.rgb(60, 65, 70));
-        g.setLineWidth(1);
-        g.strokeOval(screenX - radius, screenY - radius, radius * 2, radius * 2);
-    }
+    //     // Subtle border
+    //     g.setStroke(Color.rgb(60, 65, 70));
+    //     g.setLineWidth(1);
+    //     g.strokeOval(screenX - radius, screenY - radius, radius * 2, radius * 2);
+    // }
     
     /**
      * Gets the distance from junction center to boundary in a given direction

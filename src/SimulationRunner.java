@@ -50,7 +50,7 @@ public class SimulationRunner implements Runnable {
                         vehiclePositions.put(id, new double[]{p[0], p[1], ang});
                     }
                 }
-                Thread.sleep(100); // 10 steps per second approx if SUMO step-length=1
+                Thread.sleep(50); // 10 steps per second approx if SUMO step-length=1
             }
             conn.close();
         } catch(Exception e){

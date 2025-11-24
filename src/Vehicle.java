@@ -89,7 +89,7 @@ public class Vehicle {
         g.fillRect(-screenLength, -screenWidth/2, screenLength, screenWidth);
         
         g.setStroke(Color.BLACK);
-        g.setLineWidth(1);
+        g.setLineWidth(1.5);
         g.strokeRect(-screenLength, -screenWidth/2, screenLength, screenWidth);
         
         g.restore();
