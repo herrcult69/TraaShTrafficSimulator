@@ -75,8 +75,8 @@ public class Vehicle {
         double dy = clickWorldY - worldY;
         double distance = Math.sqrt(dx * dx + dy * dy);
 
-        // The circle should be a little bit bigger than the half the width
-        double radius = width / 1.5;
+        // The circle should be a little bit smaller than the width
+        double radius = width * .90 ;
         return distance <= radius;
     }
 

@@ -12,6 +12,7 @@ public class SimulationRunner implements Runnable {
     private volatile boolean paused = false;
     private TraaSAdapter adapter;
     private final Map<String, Double> vehicleSpeeds = new ConcurrentHashMap<>();
+    private volatile double simulationTime = 0.0;
 
     public SimulationRunner(String configFile, boolean gui) {
         this.configFile = configFile;
@@ -21,6 +22,8 @@ public class SimulationRunner implements Runnable {
     public Map<String, Double> getVehicleSpeeds(){return vehicleSpeeds;}
 
     public Map<String,double[]> getVehiclePositions(){return vehiclePositions;}
+    
+    public double getSimulationTime(){return simulationTime;}
 
     public void stop() {
         running = false;
@@ -53,6 +56,7 @@ public class SimulationRunner implements Runnable {
             while (running) {
                 if (!paused) {
                     conn.do_timestep();
+                    simulationTime = adapter.getSimulationTime();
                     List<String> ids = adapter.getVehicleIds();
                     // remove vehicles no longer present
                     vehiclePositions.keySet().removeIf(id -> !ids.contains(id));
