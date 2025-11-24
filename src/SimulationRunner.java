@@ -7,53 +7,68 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SimulationRunner implements Runnable {
     private final String configFile;
     private final boolean gui;
-    private final Map<String,double[]> vehiclePositions = new ConcurrentHashMap<>();
+    private final Map<String, double[]> vehiclePositions = new ConcurrentHashMap<>();
     private volatile boolean running = true;
     private volatile boolean paused = false;
     private TraaSAdapter adapter;
 
-    public SimulationRunner(String configFile, boolean gui){
-        this.configFile = configFile; this.gui = gui;
+    public SimulationRunner(String configFile, boolean gui) {
+        this.configFile = configFile;
+        this.gui = gui;
     }
 
-    public Map<String,double[]> getVehiclePositions(){return vehiclePositions;}
+    public Map<String, double[]> getVehiclePositions() {
+        return vehiclePositions;
+    }
 
-    public void stop(){running = false;}
-    
-    public void pause(){paused = true;}
-    
-    public void resume(){paused = false;}
-    
-    public boolean isPaused(){return paused;}
-    
-    public boolean isRunning(){return running;}
+    public void stop() {
+        running = false;
+    }
 
+    public void pause() {
+        paused = true;
+    }
+
+    public void resume() {
+        paused = false;
+    }
+
+    public boolean isPaused() {
+        return paused;
+    }
+
+    public boolean isRunning() {
+        return running;
+    }
 
     @Override
     public void run() {
         String binary = gui ? "sumo-gui" : "sumo";
         try {
             SumoTraciConnection conn = new SumoTraciConnection(binary, configFile);
-            conn.addOption("start","true");
+            conn.addOption("start", "true");
             conn.runServer();
             adapter = new TraaSAdapter(conn);
-            while(running){
+            while (running) {
                 if (!paused) {
                     conn.do_timestep();
                     List<String> ids = adapter.getVehicleIds();
                     // remove vehicles no longer present
                     vehiclePositions.keySet().removeIf(id -> !ids.contains(id));
-                    for(String id: ids){
+                    for (String id : ids) {
                         double[] p = adapter.getVehiclePosition(id);
                         double ang = 0.0;
-                        try { ang = adapter.getVehicleAngle(id); } catch (Exception ignore) {}
-                        vehiclePositions.put(id, new double[]{p[0], p[1], ang});
+                        try {
+                            ang = adapter.getVehicleAngle(id);
+                        } catch (Exception ignore) {
+                        }
+                        vehiclePositions.put(id, new double[] { p[0], p[1], ang });
                     }
                 }
                 Thread.sleep(50); // 10 steps per second approx if SUMO step-length=1
             }
             conn.close();
-        } catch(Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }

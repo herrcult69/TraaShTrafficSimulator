@@ -10,18 +10,18 @@ public class Vehicle {
     private double length, width;
     private Lane currentLane;
     private Rectangle2D bounds;
-    
+
     public Vehicle(String id, double worldX, double worldY, double angle) {
         this.id = id;
         this.worldX = worldX;
         this.worldY = worldY;
         this.angle = angle;
-        
+
         // Determine vehicle type and dimensions from ID
         determineTypeFromId();
         updateBounds();
     }
-    
+
     private void determineTypeFromId() {
         if (id.startsWith("car")) {
             type = "car";
@@ -49,7 +49,7 @@ public class Vehicle {
             width = 1.8;
         }
     }
-    
+
     public void updatePosition(double[] sumoData) {
         this.worldX = sumoData[0];
         this.worldY = sumoData[1];
@@ -58,51 +58,49 @@ public class Vehicle {
         }
         updateBounds();
     }
-    
+
     private void updateBounds() {
         double halfWidth = width / 2;
         // Bounds with head at (worldX, worldY) extending backward
         bounds = new Rectangle2D(
-            worldX - length, worldY - halfWidth,
-            length, width
-        );
+                worldX - length, worldY - halfWidth,
+                length, width);
     }
-    
+
     public boolean contains(double screenX, double screenY, CoordinateTransform transform) {
         double clickWorldX = transform.screenToWorldX(screenX);
         double clickWorldY = transform.screenToWorldY(screenY);
-        
+
         double dx = clickWorldX - worldX;
         double dy = clickWorldY - worldY;
         double distance = Math.sqrt(dx * dx + dy * dy);
-        
+
         // The circle should be a little bit bigger than the half the width
         double radius = width / 1.5;
         return distance <= radius;
     }
-    
-    
+
     public void render(GraphicsContext g, CoordinateTransform transform) {
         double screenX = transform.worldToScreenX(worldX);
         double screenY = transform.worldToScreenY(worldY);
         double screenLength = Math.max(transform.worldToScreenSize(length), 6);
         double screenWidth = Math.max(transform.worldToScreenSize(width), 3);
-        
+
         g.save();
         g.translate(screenX, screenY);
         g.rotate(angle);
-        
+
         // Draw vehicle with head at origin (worldX, worldY), extending backward
         g.setFill(getVehicleColor());
-        g.fillRect(-screenLength, -screenWidth/2, screenLength, screenWidth);
-        
+        g.fillRect(-screenLength, -screenWidth / 2, screenLength, screenWidth);
+
         g.setStroke(Color.BLACK);
         g.setLineWidth(1.5);
-        g.strokeRect(-screenLength, -screenWidth/2, screenLength, screenWidth);
-        
+        g.strokeRect(-screenLength, -screenWidth / 2, screenLength, screenWidth);
+
         g.restore();
     }
-    
+
     private Color getVehicleColor() {
         return switch (type) {
             case "car" -> Color.rgb(220, 70, 70);
@@ -113,7 +111,7 @@ public class Vehicle {
             default -> Color.PURPLE;
         };
     }
-    
+
     public void setCurrentLane(Lane lane) {
         if (currentLane != null) {
             currentLane.removeVehicle(this);
@@ -123,13 +121,33 @@ public class Vehicle {
             lane.addVehicle(this);
         }
     }
-    
+
     // Getters
-    public String getId() { return id; }
-    public String getType() { return type; }
-    public double getWorldX() { return worldX; }
-    public double getWorldY() { return worldY; }
-    public double getAngle() { return angle; }
-    public Lane getCurrentLane() { return currentLane; }
-    public Rectangle2D getBounds() { return bounds; }
+    public String getId() {
+        return id;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public double getWorldX() {
+        return worldX;
+    }
+
+    public double getWorldY() {
+        return worldY;
+    }
+
+    public double getAngle() {
+        return angle;
+    }
+
+    public Lane getCurrentLane() {
+        return currentLane;
+    }
+
+    public Rectangle2D getBounds() {
+        return bounds;
+    }
 }
