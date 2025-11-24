@@ -1,15 +1,9 @@
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.Separator;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.scene.control.ScrollPane;
@@ -36,79 +30,73 @@ public class TrafficSimulatorApp extends Application {
     private Canvas canvas;
     private TrafficManager scene;
     private CoordinateTransform transform;
+    private ViewManager viewManager;
 
-    // View transformation state
-    private double scale = 1.0; // Base scaling to fit network
-    private double offsetX = 0.0; // Center network horizontally
-    private double offsetY = 0.0; // Center network vertically
-    private double zoom = 1.0; // User zoom level (0.1 - 10.0)
-    private double panX = 0.0; // Horizontal pan offset
-    private double panY = 0.0; // Vertical pan offset
-
-    // Mouse drag state
-    private double dragStartX, dragStartY, dragStartPanX, dragStartPanY;
-
-    // Dashboard fiels
+    // Dashboard fields
     private DashBoard dashboard;
-    private long lastFrameTime = System.nanoTime();
-    private double fps = 0.0;
-    private double simTime = 0.0;
+    private long lastDashboardUpdate = System.nanoTime();
+    private static final double DASHBOARD_UPDATE_INTERVAL = 0.5; // Update every 0.5 seconds
 
     @Override
     public void start(Stage stage) throws Exception {
         // Initialize components
         network = NetworkParser.parse(NETWORK_FILE);
-        canvas = new Canvas(1700, 1060);
+        canvas = new Canvas();
         scene = new TrafficManager();
-        transform = new CoordinateTransform(canvas.getHeight());
+        transform = new CoordinateTransform(900);
 
         // Initialize scene from network data
         scene.initializeFromNetwork(network);
-        initializeView();
+
+        // Create view manager
+        viewManager = new ViewManager(canvas, transform, network);
 
         // Create dashboard
         dashboard = new DashBoard();
+        
+        // Start simulation
+        runner = new SimulationRunner(CONFIG_FILE, false);
+        exec = Executors.newSingleThreadExecutor();
+        exec.submit(runner);
 
-        // UI setup - Control Panel
-        VBox controlPanel = createControlPanel();
-        controlPanel.getChildren().add(dashboard);
-        controlPanel.setPadding(new Insets(10));
-        controlPanel.setSpacing(8);
-        controlPanel.setStyle("-fx-background-color: #2b2b2b;");
-        controlPanel.setMinWidth(300);
-        controlPanel.setMaxWidth(300);
-
-        // Wrap in ScrollPane for vertical scrolling only
-        ScrollPane scrollPane = new ScrollPane(controlPanel);
-        scrollPane.setFitToWidth(true);
-        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        scrollPane.setMinWidth(300);
-        scrollPane.setMaxWidth(300);
-        scrollPane.setStyle("-fx-background: #2b2b2b; -fx-background-color: #2b2b2b;");
+        // Create control panel with all UI components
+        ControlPanel controlPanel = new ControlPanel(runner, viewManager, dashboard);
+        ScrollPane scrollPane = controlPanel.getScrollPane();
 
         BorderPane root = new BorderPane();
         root.setCenter(canvas);
         root.setRight(scrollPane);
 
-        stage.setScene(new Scene(root, 1920, 1080));
+        Scene mainScene = new Scene(root, 1400, 900);
+        stage.setScene(mainScene);
+        stage.setTitle("Traffic Simulator - OOP Architecture");
+        
         // Make canvas fill the available space (subtract fixed right panel width)
         canvas.widthProperty().bind(root.widthProperty().subtract(300));
         canvas.heightProperty().bind(root.heightProperty());
         
         // Update view when canvas size changes
-        canvas.widthProperty().addListener((obs, oldVal, newVal) -> initializeView());
-        canvas.heightProperty().addListener((obs, oldVal, newVal) -> initializeView());
-
-        Scene mainScene = new Scene(root, 1400, 900);
-        stage.setScene(mainScene);
-        stage.setTitle("Traffic Simulator - OOP Architecture");
+        canvas.widthProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal.doubleValue() > 0 && canvas.getHeight() > 0) {
+                viewManager.resetView();
+            }
+        });
+        canvas.heightProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal.doubleValue() > 0 && canvas.getWidth() > 0) {
+                transform = new CoordinateTransform(newVal.doubleValue());
+                viewManager.setTransform(transform);
+                viewManager.resetView();
+            }
+        });
+        
         stage.show();
-
-        // Start simulation
-        runner = new SimulationRunner(CONFIG_FILE, false);
-        exec = Executors.newSingleThreadExecutor();
-        exec.submit(runner);
+        
+        // Initialize view after stage is shown and canvas has proper size
+        Platform.runLater(() -> {
+            if (canvas.getWidth() > 0 && canvas.getHeight() > 0) {
+                viewManager.resetView();
+            }
+        });
 
         // Animation and interactions
         new javafx.animation.AnimationTimer() {
@@ -117,22 +105,13 @@ public class TrafficSimulatorApp extends Application {
             }
         }.start();
 
-        canvas.setOnScroll(e -> zoomToPoint(e.getDeltaY() > 0 ? 1.1 : 0.9, e.getX(), e.getY()));
-        canvas.setOnMousePressed(e -> {
-            dragStartX = e.getX();
-            dragStartY = e.getY();
-            dragStartPanX = panX;
-            dragStartPanY = panY;
-        });
-        canvas.setOnMouseDragged(e -> {
-            panX = dragStartPanX + e.getX() - dragStartX;
-            panY = dragStartPanY - (e.getY() - dragStartY);
-            updateTransform();
-        });
+        canvas.setOnScroll(e -> viewManager.zoomToPoint(e.getDeltaY() > 0 ? 1.1 : 0.9, e.getX(), e.getY()));
+        canvas.setOnMousePressed(e -> viewManager.startPan(e.getX(), e.getY()));
+        canvas.setOnMouseDragged(e -> viewManager.updatePan(e.getX(), e.getY()));
 
         // Click detection (for future interaction features)
         canvas.setOnMouseClicked(e -> {
-            Object clickedElement = scene.getElementAt(e.getX(), e.getY(), transform);
+            Object clickedElement = scene.getElementAt(e.getX(), e.getY(), viewManager.getTransform());
             if (clickedElement != null) {
                 System.out.println("Clicked: " + clickedElement.getClass().getSimpleName());
                 if (clickedElement instanceof Junction) {
@@ -155,152 +134,6 @@ public class TrafficSimulatorApp extends Application {
         });
     }
 
-    /** Create control panel with simulation and view controls */
-    private VBox createControlPanel() {
-        VBox panel = new VBox(10);
-        panel.setAlignment(Pos.TOP_CENTER);
-
-        // Simulation Controls Section
-        Label simLabel = new Label("═══ SIMULATION ═══");
-        simLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14;");
-
-        Button playBtn = new Button("▶ Play");
-        Button pauseBtn = new Button("⏸ Pause");
-        Button stopBtn = new Button("⏹ Stop");
-        
-        playBtn.setPrefWidth(250);
-        pauseBtn.setPrefWidth(250);
-        stopBtn.setPrefWidth(250);
-        
-        playBtn.setOnAction(e -> {
-            if (runner != null) {
-                runner.resume();
-                System.out.println("Simulation resumed");
-            }
-        });
-
-        pauseBtn.setOnAction(e -> {
-            if (runner != null) {
-                runner.pause();
-                System.out.println("Simulation paused");
-            }
-        });
-
-        stopBtn.setOnAction(e -> {
-            if (runner != null) {
-                runner.stop();
-            }
-            if (exec != null) {
-                exec.shutdownNow();
-            }
-            System.out.println("Simulation stopped - Exiting application");
-            Platform.exit();
-            System.exit(0);
-        });
-
-        Separator sep1 = new Separator();
-
-        // View Controls Section
-        Label viewLabel = new Label("═══ VIEW ═══");
-        viewLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14;");
-
-        Button zoomIn = new Button("+ Zoom In");
-        Button zoomOut = new Button("− Zoom Out");
-        Button reset = new Button("⟲ Reset View");
-        
-        zoomIn.setPrefWidth(250);
-        zoomOut.setPrefWidth(250);
-        reset.setPrefWidth(250);
-        
-        zoomIn.setOnAction(e -> zoomToCenter(1.2));
-        zoomOut.setOnAction(e -> zoomToCenter(0.8));
-        reset.setOnAction(e -> initializeView());
-
-        // Style buttons
-        String buttonStyle = "-fx-background-color: #3c3f41; -fx-text-fill: white; " +
-                "-fx-font-size: 12; -fx-padding: 8;";
-        String buttonHoverStyle = buttonStyle + "-fx-background-color: #4c4f51;";
-
-        for (Button btn : new Button[] { playBtn, pauseBtn, stopBtn, zoomIn, zoomOut, reset }) {
-            btn.setStyle(buttonStyle);
-            btn.setOnMouseEntered(e -> btn.setStyle(buttonHoverStyle));
-            btn.setOnMouseExited(e -> btn.setStyle(buttonStyle));
-        }
-
-        panel.getChildren().addAll(
-                simLabel,
-                playBtn,
-                pauseBtn,
-                stopBtn,
-                sep1,
-                viewLabel,
-                zoomIn,
-                zoomOut,
-                reset);
-
-        return panel;
-    }
-
-    /** Fit entire network to canvas with margins and reset zoom/pan */
-    private void initializeView() {
-        double margin = 50;
-        double netW = network.maxX - network.minX;
-        double netH = network.maxY - network.minY;
-
-        if (netW == 0 || netH == 0) {
-            scale = 1.0;
-            offsetX = offsetY = 400;
-            updateTransform();
-            return;
-        }
-
-        // Calculate scale to fit network with margins, maintain aspect ratio
-        scale = Math.min((canvas.getWidth() - 2 * margin) / netW,
-                (canvas.getHeight() - 2 * margin) / netH);
-
-        // Center network on canvas
-        offsetX = (canvas.getWidth() - netW * scale) / 2 - network.minX * scale;
-        offsetY = (canvas.getHeight() - netH * scale) / 2 - network.minY * scale;
-
-        // Reset user modifications
-        zoom = 1.0;
-        panX = panY = 0.0;
-        updateTransform();
-    }
-
-    /** Zoom to screen center (for buttons) */
-    private void zoomToCenter(double factor) {
-        double centerX = canvas.getWidth() / 2.0;
-        double centerY = canvas.getHeight() / 2.0;
-        zoomToPoint(factor, centerX, centerY);
-    }
-
-    /** Zoom to specific point (for scroll wheel at cursor) */
-    private void zoomToPoint(double factor, double targetX, double targetY) {
-        // Use your existing CoordinateTransform methods
-        double worldX = transform.screenToWorldX(targetX);
-        double worldY = transform.screenToWorldY(targetY);
-
-        // Apply new zoom level
-        zoom = Math.max(0.1, Math.min(10.0, zoom * factor));
-        updateTransform(); // Update transform with new zoom
-
-        // Calculate where that world point appears now
-        double newScreenX = transform.worldToScreenX(worldX);
-        double newScreenY = transform.worldToScreenY(worldY);
-
-        // Adjust pan to keep the world point under the cursor
-        panX += (targetX - newScreenX);
-        // FIX: The Y adjustment needs to account for the flipped coordinate system
-        panY -= (targetY - newScreenY);
-
-        updateTransform(); // Update again with new pan
-    }
-
-    private void updateTransform() {
-        transform.updateTransform(scale, offsetX, offsetY, zoom, panX, panY);
-    }
-
     /** Main rendering loop - called ~60 times per second */
     private void draw() {
         GraphicsContext g = canvas.getGraphicsContext2D();
@@ -309,19 +142,15 @@ public class TrafficSimulatorApp extends Application {
         g.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
         scene.updateVehicles(runner.getVehiclePositions());
-        scene.render(g, transform);
+        scene.render(g, viewManager.getTransform());
 
-        // Calculate FPS
+        // Update dashboard at reduced frequency
         long currentTime = System.nanoTime();
-        double deltaTime = (currentTime - lastFrameTime) / 1_000_000_000.0;
-        fps = 1.0/deltaTime;
-        lastFrameTime = currentTime;
-
-        // Increment simulation time
-        simTime += deltaTime;
-
-        // Update dashboard
-        updateDashboard();
+        double timeSinceLastUpdate = (currentTime - lastDashboardUpdate) / 1_000_000_000.0;
+        if (timeSinceLastUpdate >= DASHBOARD_UPDATE_INTERVAL) {
+            updateDashboard();
+            lastDashboardUpdate = currentTime;
+        }
     }
 
     // Collect metrics and update dashboard
@@ -331,11 +160,11 @@ public class TrafficSimulatorApp extends Application {
         var positions = runner.getVehiclePositions();
         var speeds = runner.getVehicleSpeeds();
 
-        data.activeVehicles = positions.size();
+        data.simTime = runner.getSimulationTime(); // Use actual SUMO time
 
         double totalSpeed = 0.0;
-        int stoppedCount = 0;
-        int carCount = 0, truckCount = 0, busCount = 0, motoCount = 0;
+        int carCount = 0, truckCount = 0, busCount = 0, motoCount = 0, emergencyCount = 0;
+        int totalVehicles = positions.size();
 
         for (var entry : positions.entrySet()) {
             String id = entry.getKey();
@@ -345,23 +174,20 @@ public class TrafficSimulatorApp extends Application {
             else if (id.startsWith("truck")) truckCount++;
             else if (id.startsWith("bus")) busCount++;
             else if (id.startsWith("moto")) motoCount++;
+            else if (id.startsWith("ambu")) emergencyCount++;
 
             // Get speed
             double speed = speeds.getOrDefault(id, 0.0);
             totalSpeed += speed;
-
-            if (speed < 0.5) stoppedCount++;
         }
 
-        data.simTime = simTime;
-        data.totalVehicles = data.activeVehicles;
-        data.avgSpeed = data.activeVehicles > 0 ? totalSpeed / data.activeVehicles : 0.0;
-        data.stoppedVehicles = stoppedCount;
+        data.activeVehicles = totalVehicles;
+        data.avgSpeed = totalVehicles > 0 ? totalSpeed / totalVehicles : 0.0;
         data.carCount = carCount;
         data.truckCount = truckCount;
         data.busCount = busCount;
         data.motorcycleCount = motoCount;
-        data.fps = fps;
+        data.emergencyCount = emergencyCount;
         dashboard.update(data);
     }
 

@@ -12,22 +12,20 @@ import javafx.scene.text.FontWeight;
 public class DashBoard extends VBox{
     // Metric labels
     private Label simTimeLabel;
-    private Label totalVehiclesLabel;
     private Label activeVehiclesLabel;
     private Label avgSpeedLabel;
-    private Label stoppedVehiclesLabel;
-    private Label fpsLabel;
 
     // Vehicle type breakdown
     private Label carsLabel;
     private Label trucksLabel;
     private Label busesLabel;
     private Label motorcyclesLabel;
+    private Label emergencyLabel;
 
     // Real-time chart
     private LineChart<Number, Number> speedChart;
     private XYChart.Series<Number, Number> speedSeries;
-    private int maxDataPoints = 600;
+    private int maxDataPoints = 120; // 120 points at 2 updates/sec = 60 seconds
 
     public DashBoard(){
         super(12);
@@ -44,21 +42,17 @@ public class DashBoard extends VBox{
 
         Label simSection = createSectionLabel("Simulation");
         simTimeLabel = createDataLabel("Time: 0.0s");
-        totalVehiclesLabel = createDataLabel("Total: 0");
         activeVehiclesLabel = createDataLabel("Active: 0");
 
         Label trafficSection = createSectionLabel("Traffic Stats");
         avgSpeedLabel = createDataLabel("Avg Speed: 0.0 m/s");
-        stoppedVehiclesLabel = createDataLabel("Stopped: 0");
 
         Label vehicleSection = createSectionLabel("Vehicle Types");
         carsLabel = createDataLabel("Cars: 0");
         trucksLabel = createDataLabel("Trucks: 0");
         busesLabel = createDataLabel("Buses: 0");
         motorcyclesLabel = createDataLabel("Motorcycles: 0");
-
-        Label systemSection = createSectionLabel("System");
-        fpsLabel = createDataLabel("FPS: 0");
+        emergencyLabel = createDataLabel("Emergency: 0");
 
         NumberAxis xAxis = new NumberAxis();
         NumberAxis yAxis = new NumberAxis();
@@ -67,27 +61,25 @@ public class DashBoard extends VBox{
         xAxis.setAutoRanging(false);
         xAxis.setLowerBound(0);
         xAxis.setUpperBound(60);
-        xAxis.setTickUnit(10);
+        xAxis.setTickUnit(15);
+        yAxis.setAutoRanging(true);
 
         speedChart = new LineChart<>(xAxis, yAxis);
         speedChart.setTitle("Average Speed");
         speedChart.setLegendVisible(false);
-        speedChart.setPrefHeight(120);
+        speedChart.setPrefHeight(180);
         speedChart.setMaxWidth(280);
         speedChart.setCreateSymbols(false);
         speedChart.setAnimated(false);
-        speedChart.setStyle("-fx-background-color: #2b2b2b; " +
-                          "-fx-title-side: top; " +
-                          ".chart-title { -fx-text-fill: white; }");
+        speedChart.setStyle("-fx-background-color: #2b2b2b; -fx-title-side: top;");
 
         speedSeries = new XYChart.Series<>();
         speedChart.getData().add(speedSeries);
 
         getChildren().addAll(title,
-            simSection, simTimeLabel, totalVehiclesLabel, activeVehiclesLabel,
-            trafficSection, avgSpeedLabel, stoppedVehiclesLabel,
-            vehicleSection, carsLabel, trucksLabel, busesLabel, motorcyclesLabel,
-            systemSection, fpsLabel,
+            simSection, simTimeLabel, activeVehiclesLabel,
+            trafficSection, avgSpeedLabel,
+            vehicleSection, carsLabel, trucksLabel, busesLabel, motorcyclesLabel, emergencyLabel,
             speedChart
         );
     }
@@ -122,17 +114,14 @@ public class DashBoard extends VBox{
 
     public void update(DashBoardData data){
         simTimeLabel.setText(String.format("Time: %.1fs", data.simTime));
-        totalVehiclesLabel.setText("Total: " + data.totalVehicles);
         activeVehiclesLabel.setText("Active: " + data.activeVehicles);
         avgSpeedLabel.setText(String.format("Avg Speed: %.2f m/s", data.avgSpeed));
-        stoppedVehiclesLabel.setText("Stopped: " + data.stoppedVehicles);
         
         carsLabel.setText("Cars: " + data.carCount);
         trucksLabel.setText("Trucks: " + data.truckCount);
         busesLabel.setText("Buses: " + data.busCount);
         motorcyclesLabel.setText("Motorcycles: " + data.motorcycleCount);
-
-        fpsLabel.setText(String.format("FPS: %.1f", data.fps));
+        emergencyLabel.setText("Emergency: " + data.emergencyCount);
 
         speedSeries.getData().add(new XYChart.Data<>(data.simTime, data.avgSpeed));
         if(speedSeries.getData().size() > maxDataPoints){
@@ -149,14 +138,12 @@ public class DashBoard extends VBox{
 
     public static class DashBoardData {
         public double simTime;
-        public int totalVehicles;
         public int activeVehicles;
         public double avgSpeed;
-        public int stoppedVehicles;
         public int carCount;
         public int truckCount;
         public int busCount;
         public int motorcycleCount;
-        public double fps;
+        public int emergencyCount;
     }
 }
