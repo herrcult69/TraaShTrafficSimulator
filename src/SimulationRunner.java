@@ -11,15 +11,16 @@ public class SimulationRunner implements Runnable {
     private volatile boolean running = true;
     private volatile boolean paused = false;
     private TraaSAdapter adapter;
+    private final Map<String, Double> vehicleSpeeds = new ConcurrentHashMap<>();
 
     public SimulationRunner(String configFile, boolean gui) {
         this.configFile = configFile;
         this.gui = gui;
     }
 
-    public Map<String, double[]> getVehiclePositions() {
-        return vehiclePositions;
-    }
+    public Map<String, Double> getVehicleSpeeds(){return vehicleSpeeds;}
+
+    public Map<String,double[]> getVehiclePositions(){return vehiclePositions;}
 
     public void stop() {
         running = false;
@@ -55,14 +56,17 @@ public class SimulationRunner implements Runnable {
                     List<String> ids = adapter.getVehicleIds();
                     // remove vehicles no longer present
                     vehiclePositions.keySet().removeIf(id -> !ids.contains(id));
-                    for (String id : ids) {
+                    vehicleSpeeds.keySet().removeIf(id -> !ids.contains(id));
+                    for(String id: ids){
                         double[] p = adapter.getVehiclePosition(id);
                         double ang = 0.0;
-                        try {
-                            ang = adapter.getVehicleAngle(id);
-                        } catch (Exception ignore) {
-                        }
-                        vehiclePositions.put(id, new double[] { p[0], p[1], ang });
+                        double speed = 0.0;
+                        try { 
+                            ang = adapter.getVehicleAngle(id); 
+                            speed = adapter.getVehicleSpeed(id);
+                        } catch (Exception ignore) {}
+                        vehiclePositions.put(id, new double[]{p[0], p[1], ang});
+                        vehicleSpeeds.put(id, speed); 
                     }
                 }
                 Thread.sleep(50); // 10 steps per second approx if SUMO step-length=1
