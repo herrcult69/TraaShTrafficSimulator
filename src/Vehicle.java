@@ -1,6 +1,5 @@
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
-import javafx.geometry.Rectangle2D;
 
 public class Vehicle {
     private String id;
@@ -8,8 +7,6 @@ public class Vehicle {
     private double worldX, worldY;
     private double angle;
     private double length, width;
-    private Lane currentLane;
-    private Rectangle2D bounds;
 
     public Vehicle(String id, double worldX, double worldY, double angle) {
         this.id = id;
@@ -19,7 +16,6 @@ public class Vehicle {
 
         // Determine vehicle type and dimensions from ID
         determineTypeFromId();
-        updateBounds();
     }
 
     private void determineTypeFromId() {
@@ -56,28 +52,6 @@ public class Vehicle {
         if (sumoData.length > 2) {
             this.angle = -(90.0 - sumoData[2]); // Fixed angle calculation
         }
-        updateBounds();
-    }
-
-    private void updateBounds() {
-        double halfWidth = width / 2;
-        // Bounds with head at (worldX, worldY) extending backward
-        bounds = new Rectangle2D(
-                worldX - length, worldY - halfWidth,
-                length, width);
-    }
-
-    public boolean contains(double screenX, double screenY, CoordinateTransform transform) {
-        double clickWorldX = transform.screenToWorldX(screenX);
-        double clickWorldY = transform.screenToWorldY(screenY);
-
-        double dx = clickWorldX - worldX;
-        double dy = clickWorldY - worldY;
-        double distance = Math.sqrt(dx * dx + dy * dy);
-
-        // The circle should be a little bit smaller than the width
-        double radius = width * .90 ;
-        return distance <= radius;
     }
 
     public void render(GraphicsContext g, CoordinateTransform transform) {
@@ -112,16 +86,6 @@ public class Vehicle {
         };
     }
 
-    public void setCurrentLane(Lane lane) {
-        if (currentLane != null) {
-            currentLane.removeVehicle(this);
-        }
-        this.currentLane = lane;
-        if (lane != null) {
-            lane.addVehicle(this);
-        }
-    }
-
     // Getters
     public String getId() {
         return id;
@@ -141,13 +105,5 @@ public class Vehicle {
 
     public double getAngle() {
         return angle;
-    }
-
-    public Lane getCurrentLane() {
-        return currentLane;
-    }
-
-    public Rectangle2D getBounds() {
-        return bounds;
     }
 }

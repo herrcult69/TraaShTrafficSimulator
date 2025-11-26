@@ -56,11 +56,7 @@ public class Junction {
 
         if (shape != null && shape.size() >= 3) {
             renderPolygonJunction(g, transform);
-            // renderCrosswalks(g, transform);
         }
-        // else {
-        // renderCircularJunction(g, transform);
-        // }
     }
 
     /**
@@ -84,33 +80,25 @@ public class Junction {
 
     }
 
-    public double getRadiusInDirection(double dirX, double dirY) {
+    /**
+     * Simple radius calculation for edge clipping
+     * Returns approximate junction radius based on shape bounds
+     */
+    public double getRadius() {
         if (shape.isEmpty()) {
             return 8.0; // Default radius
         }
 
-        // For small junctions (3 points = triangle), use simple approach
-        if (shape.size() <= 3) {
-            return 5.0;
-        }
-
-        // Find the shape point most aligned with the direction
+        // Calculate simple radius from junction shape bounds
         double maxDist = 0;
         for (Point2D p : shape) {
             double dx = p.getX() - x;
             double dy = p.getY() - y;
             double dist = Math.sqrt(dx * dx + dy * dy);
-
-            // Check if this point is roughly in the same direction
-            if (dist > 0.1) {
-                double dotProduct = (dx * dirX + dy * dirY) / dist;
-                if (dotProduct > 0.5) { // Point is in the forward direction
-                    maxDist = Math.max(maxDist, dist) - .5;
-                }
-            }
+            maxDist = Math.max(maxDist, dist);
         }
 
-        return maxDist > 0 ? maxDist : 8.0;
+        return maxDist > 0 ? maxDist * 0.6 : 8.0; // Arbitary Number to make it look good
     }
 
     // Getters

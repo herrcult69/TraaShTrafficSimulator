@@ -64,46 +64,6 @@ public class TrafficManager {
         vehicles.entrySet().removeIf(entry -> !vehiclePositions.containsKey(entry.getKey()));
     }
 
-    public Object getElementAt(double screenX, double screenY, CoordinateTransform transform) {
-        // Check vehicles first (top layer)
-        for (Vehicle vehicle : vehicles.values()) {
-            if (vehicle.contains(screenX, screenY, transform)) {
-                return vehicle;
-            }
-        }
-
-        // Check lanes
-        for (Edge edge : edges) {
-            Lane lane = edge.getLaneAt(screenX, screenY, transform);
-            if (lane != null) {
-                return lane;
-            }
-        }
-
-        return null;
-    }
-
-    /*
-     * public void render(GraphicsContext g, CoordinateTransform transform) {
-     * // Render edges (roads and lane markings)
-     * for (Edge edge : edges) {
-     * edge.render(g, transform);
-     * }
-     * 
-     * // Render junctions (between roads and vehicles for proper layering) and also
-     * traffic lights
-     * for (Junction junction : junctions) {
-     * junction.render(g, transform);
-     * 
-     * }
-     * 
-     * // Render vehicles
-     * for (Vehicle vehicle : vehicles.values()) {
-     * vehicle.render(g, transform);
-     * }
-     * }
-     */
-
     public void render(GraphicsContext g, CoordinateTransform transform) {
         // Render edges
         for (Edge edge : edges) {
@@ -119,18 +79,5 @@ public class TrafficManager {
         for (Vehicle vehicle : vehicles.values()) {
             vehicle.render(g, transform);
         }
-    }
-
-    // Getters
-    public List<Edge> getEdges() {
-        return edges;
-    }
-
-    public Map<String, Vehicle> getVehicles() {
-        return vehicles;
-    }
-
-    public List<Junction> getJunctions() {
-        return junctions;
     }
 }

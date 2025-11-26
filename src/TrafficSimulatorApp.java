@@ -30,12 +30,6 @@ public class TrafficSimulatorApp extends Application {
     private Canvas canvas;
     private TrafficManager scene;
     private CoordinateTransform transform;
-    private ViewManager viewManager;
-
-    // Dashboard fields
-    private DashBoard dashboard;
-    private long lastDashboardUpdate = System.nanoTime();
-    private static final double DASHBOARD_UPDATE_INTERVAL = 0.5; // Update every 0.5 seconds
 
     @Override
     public void start(Stage stage) throws Exception {
@@ -48,90 +42,73 @@ public class TrafficSimulatorApp extends Application {
         // Initialize scene from network data
         scene.initializeFromNetwork(network);
 
-        // Create view manager
-        viewManager = new ViewManager(canvas, transform, network);
-
-        // Create dashboard
-        dashboard = new DashBoard();
+        // Create mockup dashboard
+        DashBoard dashboard = new DashBoard();
         
         // Start simulation
         runner = new SimulationRunner(CONFIG_FILE, true);
         exec = Executors.newSingleThreadExecutor();
         exec.submit(runner);
 
-        // Create control panel with all UI components
-        ControlPanel controlPanel = new ControlPanel(runner, viewManager, dashboard);
-        ScrollPane scrollPane = controlPanel.getScrollPane();
-
         BorderPane root = new BorderPane();
         root.setCenter(canvas);
-        root.setRight(scrollPane);
+        root.setRight(dashboard.getScrollPane());
 
         Scene mainScene = new Scene(root, 1400, 900);
         stage.setScene(mainScene);
-        stage.setTitle("Traffic Simulator - OOP Architecture");
+        stage.setTitle("Traffic Simulator - Milestone 1");
         
-        // Make canvas fill the available space (subtract fixed right panel width)
+        // Make canvas fill the available space
         canvas.widthProperty().bind(root.widthProperty().subtract(300));
         canvas.heightProperty().bind(root.heightProperty());
         
-        // Update view when canvas size changes
-        canvas.widthProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal.doubleValue() > 0 && canvas.getHeight() > 0) {
-                viewManager.resetView();
-            }
-        });
+        // Simple view initialization
         canvas.heightProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal.doubleValue() > 0 && canvas.getWidth() > 0) {
                 transform = new CoordinateTransform(newVal.doubleValue());
-                viewManager.setTransform(transform);
-                viewManager.resetView();
+                resetView();
             }
         });
         
         stage.show();
         
-        // Initialize view after stage is shown and canvas has proper size
+        // Initialize view after stage is shown
         Platform.runLater(() -> {
             if (canvas.getWidth() > 0 && canvas.getHeight() > 0) {
-                viewManager.resetView();
+                resetView();
             }
         });
 
-        // Animation and interactions
+        // Animation (no interactions for milestone 1 - just display)
         new javafx.animation.AnimationTimer() {
             public void handle(long now) {
                 draw();
             }
         }.start();
 
-        canvas.setOnScroll(e -> viewManager.zoomToPoint(e.getDeltaY() > 0 ? 1.1 : 0.9, e.getX(), e.getY()));
-        canvas.setOnMousePressed(e -> viewManager.startPan(e.getX(), e.getY()));
-        canvas.setOnMouseDragged(e -> viewManager.updatePan(e.getX(), e.getY()));
-
-        // Click detection (for future interaction features)
-        canvas.setOnMouseClicked(e -> {
-            Object clickedElement = scene.getElementAt(e.getX(), e.getY(), viewManager.getTransform());
-            if (clickedElement != null) {
-                System.out.println("Clicked: " + clickedElement.getClass().getSimpleName());
-                if (clickedElement instanceof Junction) {
-                    Junction junction = (Junction) clickedElement;
-                    System.out.println("Junction ID: " + junction.getId() + " Type: " + junction.getType());
-                } else if (clickedElement instanceof Lane) {
-                    Lane lane = (Lane) clickedElement;
-                    System.out.println("Lane ID: " + lane.getId());
-                } else if (clickedElement instanceof Vehicle) {
-                    Vehicle vehicle = (Vehicle) clickedElement;
-                    System.out.println("Vehicle ID: " + vehicle.getId() + " Type: " + vehicle.getType());
-                }
-            }
-        });
-
         stage.setOnCloseRequest(e -> {
             runner.stop();
             exec.shutdownNow();
             Platform.exit();
         });
+    }
+
+    /** Fit network to canvas with simple scaling and center it */
+    private void resetView() {
+        double margin = 50;
+        double scaleX = (canvas.getWidth() - 2 * margin) / (network.maxX - network.minX);
+        double scaleY = (canvas.getHeight() - 2 * margin) / (network.maxY - network.minY);
+        double scale = Math.min(scaleX, scaleY);
+        
+        // Calculate scaled network dimensions
+        double scaledWidth = (network.maxX - network.minX) * scale;
+        double scaledHeight = (network.maxY - network.minY) * scale;
+        
+        // Center the network on canvas
+        double offsetX = (canvas.getWidth() - scaledWidth) / 2 - network.minX * scale;
+        double offsetY = (canvas.getHeight() - scaledHeight) / 2 - network.minY * scale;
+        
+        transform.updateTransform(scale, offsetX, offsetY);
     }
 
     /** Main rendering loop - called ~60 times per second */
@@ -142,53 +119,7 @@ public class TrafficSimulatorApp extends Application {
         g.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
         scene.updateVehicles(runner.getVehiclePositions());
-        scene.render(g, viewManager.getTransform());
-
-        // Update dashboard at reduced frequency
-        long currentTime = System.nanoTime();
-        double timeSinceLastUpdate = (currentTime - lastDashboardUpdate) / 1_000_000_000.0;
-        if (timeSinceLastUpdate >= DASHBOARD_UPDATE_INTERVAL) {
-            updateDashboard();
-            lastDashboardUpdate = currentTime;
-        }
-    }
-
-    // Collect metrics and update dashboard
-    private void updateDashboard() {
-        DashBoard.DashBoardData data = new DashBoard.DashBoardData();
-
-        var positions = runner.getVehiclePositions();
-        var speeds = runner.getVehicleSpeeds();
-
-        data.simTime = runner.getSimulationTime(); // Use actual SUMO time
-
-        double totalSpeed = 0.0;
-        int carCount = 0, truckCount = 0, busCount = 0, motoCount = 0, emergencyCount = 0;
-        int totalVehicles = positions.size();
-
-        for (var entry : positions.entrySet()) {
-            String id = entry.getKey();
-            
-            // Count vehicle types
-            if (id.startsWith("car")) carCount++;
-            else if (id.startsWith("truck")) truckCount++;
-            else if (id.startsWith("bus")) busCount++;
-            else if (id.startsWith("moto")) motoCount++;
-            else if (id.startsWith("ambu")) emergencyCount++;
-
-            // Get speed
-            double speed = speeds.getOrDefault(id, 0.0);
-            totalSpeed += speed;
-        }
-
-        data.activeVehicles = totalVehicles;
-        data.avgSpeed = totalVehicles > 0 ? totalSpeed / totalVehicles : 0.0;
-        data.carCount = carCount;
-        data.truckCount = truckCount;
-        data.busCount = busCount;
-        data.motorcycleCount = motoCount;
-        data.emergencyCount = emergencyCount;
-        dashboard.update(data);
+        scene.render(g, transform);
     }
 
     public static void main(String[] args) {
