@@ -6,6 +6,10 @@ import de.tudresden.sumo.cmd.Simulation;
 import de.tudresden.sumo.objects.SumoPosition2D;
 import java.util.List;
 
+/**
+ * Wrapper class for TraaS library providing simplified access to TraCI commands.
+ * Handles vehicle queries, traffic light data, and simulation time retrieval.
+ */
 @SuppressWarnings("unchecked")
 public class TraaSAdapter {
     private final SumoTraciConnection conn;

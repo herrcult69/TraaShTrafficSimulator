@@ -1,6 +1,10 @@
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 
+/**
+ * Represents a road segment between two junctions.
+ * Renders the road surface with center line and handles edge clipping at junctions.
+ */
 public class Edge {
     private NetworkParser.Edge networkEdge;
     private double fromX, fromY, toX, toY; // World coordinates

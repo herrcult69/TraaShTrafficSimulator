@@ -4,6 +4,10 @@ import java.util.Map;
 import java.util.HashMap;
 import javafx.scene.canvas.GraphicsContext;
 
+/**
+ * Scene graph manager coordinating all renderable objects in the simulation.
+ * Handles initialization, vehicle updates, and rendering order for roads, junctions, and vehicles.
+ */
 public class TrafficManager {
     private List<Junction> junctions;
     private List<Edge> edges;

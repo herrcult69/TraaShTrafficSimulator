@@ -1,8 +1,5 @@
 @echo off
 REM Run the Traffic Simulator Application
-echo.
-echo [96m [96mStarting Traffic Simulator...[0m
-echo.
 echo [INFO] Loading JavaFX modules...
 echo [INFO] Initializing application...
 echo.

@@ -10,7 +10,8 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 
 /**
- * Simple mockup dashboard with controls
+ * UI panel displaying simulation controls and dashboard metrics.
+ * Provides interface for play/pause/stop controls and view management.
  */
 public class DashBoard extends VBox {
     private ScrollPane scrollPane;

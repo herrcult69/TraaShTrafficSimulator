@@ -6,19 +6,14 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
-import javafx.scene.control.ScrollPane;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 
 /**
- * Real-time SUMO Traffic Visualization with JavaFX
- * 
- * Features:
- * - Coordinate transformation between SUMO (Y-up) and JavaFX (Y-down)
- * - Multi-level scaling: base scale + user zoom + pan offset
- * - Object-oriented rendering with hit detection
- * - 60fps animation with background simulation thread
+ * Main JavaFX application for real-time SUMO traffic visualization.
+ * Manages application lifecycle, window setup, and 60 FPS rendering loop.
+ * Automatically centers and scales the network to fit the canvas.
  */
 public class TrafficSimulatorApp extends Application {
     private static final String NETWORK_FILE = "resource/network.net.xml";

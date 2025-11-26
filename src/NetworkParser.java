@@ -6,10 +6,10 @@ import org.w3c.dom.NodeList;
 import java.io.File;
 import java.util.*;
 
-/*
- * This class parses the network.net.xml file to extract the road network.
+/**
+ * Parses SUMO network XML files to extract road network structure.
+ * Builds structured data containing junctions, edges, lanes, and network bounds.
  */
-
 public class NetworkParser {
     public static class Junction {
         public final String id;

@@ -1,9 +1,10 @@
-# TraaShTrafficSimulator
+# TraaShTrafficSimulator - Milestone 1
 
-Real-time SUMO traffic visualization application with JavaFX.
+Real-time SUMO traffic visualization with JavaFX using TraaS. Milestone 1 focuses on core visualization: displaying the road network and moving vehicles with a UI mockup.
 
 ## Table of Contents
 
+- [Milestone 1 Overview](#milestone-1-overview)
 - [System Requirements](#system-requirements)
 - [Project Structure](#project-structure)
 - [Class Hierarchy and Responsibilities](#class-hierarchy-and-responsibilities)
@@ -11,45 +12,58 @@ Real-time SUMO traffic visualization application with JavaFX.
 - [Compilation](#compilation)
 - [Running the Application](#running-the-application)
 - [Configuration](#configuration)
-- [Usage](#usage)
 - [Technical Specifications](#technical-specifications)
 - [Troubleshooting](#troubleshooting)
 - [Development Tools](#development-tools)
 - [License](#license)
 
+## Milestone 1 Overview
+
+**Objective**: Basic traffic visualization without user interactions.
+
+**Features Implemented**:
+- ✅ SUMO network rendering (roads, junctions)
+- ✅ Real-time vehicle visualization with type detection
+- ✅ Automatic view centering and scaling
+- ✅ Coordinate transformation (SUMO ↔ JavaFX)
+- ✅ Background simulation thread
+- ✅ Mockup UI panel (non-functional)
+- ✅ Traffic light state debugging (terminal output)
+
+**Features NOT Implemented** (Future Milestones):
+- ❌ User interactions (zoom, pan, click)
+- ❌ Functional control panel
+- ❌ Dashboard statistics and charts
+- ❌ Traffic light visualization on canvas
 
 ## System Requirements
 
 ### Software Dependencies
-- **Java**: JDK 17 
-- **JavaFX**: Version 17.0.17
-- **SUMO**: Version 1.24.0 
+- **Java**: JDK 17+
+- **JavaFX**: Version 17.0.2+
+- **SUMO**: Version 1.20.0+
 - **TraaS Library**: 1.0 (included in `lib/`)
 
 ### Operating Systems
 - Linux (Tested on Ubuntu 20.04+)
-- macOS (M4)
+- macOS (M1/M4)
 - Windows 10/11
 
 ## Project Structure
 
 ```
 TraaShTrafficSimulator/
-├── src/                          # Source files
+├── src/                          # Source files (10 classes)
 │   ├── TrafficSimulatorApp.java  # Main application entry point
 │   ├── NetworkParser.java        # SUMO XML network parser
-│   ├── SimulationRunner.java     # SUMO connection manager (background thread)
+│   ├── SimulationRunner.java     # SUMO connection + TL debugging
 │   ├── TraaSAdapter.java         # TraCI command wrapper
 │   ├── CoordinateTransform.java  # Coordinate system converter
-│   ├── ViewManager.java          # Zoom and pan controller
-│   ├── ControlPanel.java         # UI controls (play/pause/zoom)
-│   ├── DashBoard.java            # Statistics display panel
+│   ├── DashBoard.java            # UI mockup panel
 │   ├── TrafficManager.java       # Scene graph manager
 │   ├── Edge.java                 # Road segment renderer
-│   ├── Lane.java                 # Individual lane renderer
 │   ├── Junction.java             # Intersection renderer
-│   ├── Vehicle.java              # Vehicle object and renderer
-│   └── TrafficLight.java         # Traffic signal renderer
+│   └── Vehicle.java              # Vehicle object and renderer
 ├── lib/
 │   ├── javafx/                   # JavaFX SDK libraries
 │   └── TraaS.jar                 # SUMO TraCI Java library
@@ -62,6 +76,7 @@ TraaShTrafficSimulator/
 │   ├── motorcycles.rou.xml       # Motorcycle routes
 │   └── emergency.rou.xml         # Emergency vehicle routes
 └── tools/                        # Helper scripts
+    └── createMap.sh              # SUMO network generation script
 ```
 
 ## Class Hierarchy and Responsibilities
@@ -69,79 +84,65 @@ TraaShTrafficSimulator/
 ### Application Layer
 **TrafficSimulatorApp**
 - Extends: `javafx.application.Application`
-- Responsibilities: Application lifecycle, window setup, render loop (60fps), mouse event handling
-- Key Methods: `start()`, `render()`, `setupMouseHandlers()`
+- Responsibilities: Application lifecycle, window setup, 60fps render loop, automatic view centering
+- Key Methods: `start()`, `draw()`, `resetView()`
+- **Milestone 1**: No mouse interactions was added yet.
 
 ### Data Layer
 **NetworkParser**
 - Static utility class
 - Responsibilities: Parse SUMO network XML files (`.net.xml`)
 - Inner Classes: `NetworkData`, `Junction`, `Edge`, `Lane`
-- Returns: Structured network data with bounds
+- Returns: Structured network data with bounds (minX, maxX, minY, maxY)
 
 **SimulationRunner**
 - Implements: `Runnable`
-- Responsibilities: Background thread managing SUMO connection, timestep advancement, vehicle data collection
-- Thread-Safe: Uses `ConcurrentHashMap` for vehicle positions/speeds
-- Key Methods: `run()`, `pause()`, `resume()`, `stop()`
+- Responsibilities: Background thread managing SUMO connection, vehicle data collection, traffic light debugging
+- Thread-Safe: Uses `ConcurrentHashMap` for vehicle positions
+- Key Methods: `run()`, `stop()`, `interpretSignalChar()`
+- **Debug Output**: Prints traffic light states every 20 steps with character-by-character interpretation
 
 **TraaSAdapter**
 - Wrapper class for TraaS library
 - Responsibilities: Simplify TraCI command execution
-- Key Methods: `getVehicleIds()`, `getVehiclePosition()`, `getVehicleSpeed()`, `getVehicleAngle()`
+- Key Methods: `getVehicleIds()`, `getVehiclePosition()`, `getVehicleAngle()`, `getTrafficLightIds()`, `getTrafficLightState()`
 
 ### View Layer
-**ViewManager**
-- Responsibilities: View transformation state management (zoom, pan, scale)
-- Key Methods: `resetView()`, `zoomToCenter()`, `zoomToPoint()`, `startPan()`, `updatePan()`
-- State Variables: `scale`, `zoom`, `offsetX`, `offsetY`, `panX`, `panY`
-
 **CoordinateTransform**
 - Utility class
 - Responsibilities: Convert between SUMO world coordinates (Y-up, meters) and JavaFX screen coordinates (Y-down, pixels)
-- Key Methods: `worldToScreenX()`, `worldToScreenY()`, `screenToWorldX()`, `screenToWorldY()`
+- Key Methods: `worldToScreenX()`, `worldToScreenY()`, `worldToScreenSize()`, `updateTransform()`
+- Pan and Zoom will be implemented using this.
 
 ### UI Layer
-**ControlPanel**
-- Extends: None (composes `VBox`)
-- Responsibilities: Simulation controls (play/pause/stop), view controls (zoom/reset)
-- Returns: `ScrollPane` containing control buttons
-
 **DashBoard**
-- Extends: `VBox`
-- Responsibilities: Display real-time statistics, speed chart (60-second window)
-- Components: Labels for metrics, `LineChart` for speed visualization
-- Update Frequency: 2 times per second (0.5s intervals)
+- Mockup UI panel (non-functional)
+- Components: Static labels for simulation time, vehicle counts, speed, and view controls
+- Returns: `ScrollPane` containing mockup buttons and labels
+- **Milestone 1**: Display only, no actual data updates or button functionality
 
 ### Rendering Layer
 **TrafficManager**
-- Responsibilities: Scene graph management, object lifecycle, click detection
+- Responsibilities: Scene graph management, object lifecycle, rendering coordination
 - Collections: Lists of `Junction`, `Edge`, `Vehicle` objects
-- Key Methods: `initializeFromNetwork()`, `updateVehicles()`, `render()`, `getElementAt()`
+- Key Methods: `initializeFromNetwork()`, `updateVehicles()`, `render()`
 
 **Junction**
 - Responsibilities: Render intersection polygons from SUMO shape data
-- Key Methods: `render()`, `getRadiusInDirection()`
+- Key Methods: `render()`, `getRadius()`
 - Geometry: Polygon rendering from SUMO shape coordinates
+- Basic clipping of edge by providing arbitary radious values.
 
 **Edge**
-- Responsibilities: Road segment rendering, lane creation, lane marking visualization
-- Contains: Multiple `Lane` objects (bidirectional)
-- Key Methods: `render()`, `getLaneAt()`, `createLanes()`
-
-**Lane**
-- Responsibilities: Individual lane rendering, hit detection
-- Properties: Width, offset from edge centerline, index
-- Key Methods: `render()`, `contains()`
+- Responsibilities: Road segment rendering with clipping at junctions
+- Rendering: Solid gray road with yellow center line
+- Key Methods: `render()`
+- Uses standard 3.2m lane width
 
 **Vehicle**
-- Responsibilities: Vehicle visualization, type detection, position updates
+- Responsibilities: Vehicle visualization, type detection from ID prefix, position updates
 - Properties: Type (car/truck/bus/motorcycle/emergency), dimensions, color
-- Key Methods: `render()`, `updatePosition()`, `contains()`
-
-**TrafficLight**
-- Responsibilities: Traffic signal state visualization
-- Status: Partially implemented
+- Key Methods: `render()`, `updatePosition()`, `determineTypeFromId()`
 
 ## Installation
 
@@ -297,59 +298,78 @@ private static final String NETWORK_FILE = "resource/network.net.xml";
 private static final String CONFIG_FILE = "resource/simulation.sumocfg";
 ```
 
-Edit view settings in `ViewManager.java`:
-```java
-private static final double MIN_ZOOM = 0.1;
-private static final double MAX_ZOOM = 10.0;
+## Milestone 1 Usage
+
+### Display Mode
+- Application launches in **display-only mode**
+- Network automatically centered and scaled to fit canvas
+- Vehicles update in real-time from SUMO simulation
+- UI panel shows mockup controls (non-functional)
+
+### Traffic Light Debugging (Terminal Output)
+Traffic light states print to console every 1 second (20 steps):
+```
+=== TRAFFIC LIGHTS DETECTED ===
+Total traffic lights: 4
+  - Traffic Light ID: J1
+================================
+
+======= Traffic Light States at t=1.0s =======
+
+Traffic Light: J1
+  State String: 'GGrrrrGGrrrr' (length=12)
+  Note: Each character = one link/movement through intersection
+
+  Signal Breakdown (each signal controls one movement):
+    [ 0] = 'G' → GREEN (go, priority)
+    [ 1] = 'G' → GREEN (go, priority)
+    [ 2] = 'r' → RED (stop)
+    ...
 ```
 
-## Usage
+### No User Interactions
+**Milestone 1 does not support**:
+- Mouse zoom/pan
+- Click interactions
+- Control panel buttons
+- Dashboard updates
 
-### Mouse Controls
-- **Scroll Wheel**: Zoom in/out (focused on cursor position)
-- **Click + Drag**: Pan view
-- **Click Vehicle**: Select and print information to console
-
-### Control Panel
-- **▶ Play**: Resume simulation
-- **|| Pause**: Pause simulation (navigation still active)
-- **[] Stop**: Stop simulation and exit application
-- **+ Zoom In**: Zoom toward screen center
-- **− Zoom Out**: Zoom away from screen center
-- **⟲ Reset View**: Fit entire network to window
-
-### Dashboard Metrics
-- Simulation time (seconds)
-- Active vehicle count
-- Average speed (m/s)
-- Vehicle type breakdown (cars, trucks, buses, motorcycles, emergency)
-- Real-time speed chart (60-second window)
+These features will be implemented in future milestones.
 
 ## Technical Specifications
 
 ### Coordinate System
 - **SUMO**: Origin arbitrary, Y-axis up, units in meters
 - **JavaFX**: Origin top-left (0,0), Y-axis down, units in pixels
-- **Transformation**: Multi-level (base scale × zoom + offsets)
+- **Transformation**: Single-level (base scale + offsets for centering)
+- **Centering Algorithm**: Calculates scaled dimensions and centers with equal margins
 
 ### Performance
 - **Render Rate**: 60 FPS (JavaFX AnimationTimer)
-- **Simulation Update**: 20 Hz (50ms intervals)
-- **Dashboard Update**: 2 Hz (0.5s intervals)
-- **Threading**: Separate threads for UI and simulation
+- **Simulation Update**: ~20 Hz (50ms sleep intervals)
+- **Threading**: Separate threads for UI (JavaFX) and simulation (ExecutorService)
+- **Thread-Safety**: ConcurrentHashMap for vehicle data sharing
+
+### Road Rendering
+- **Lane Width**: Standardized to 3.2 meters
+- **Road Surface**: Solid gray stroke (rgb(70, 70, 70))
+- **Center Line**: Yellow stroke (rgb(255, 220, 50))
+- **Junction Fill**: Dark gray (rgb(55, 60, 65))
+- **Background**: Dark blue (rgb(0, 14, 36))
 
 ### Vehicle Detection
 Vehicle types determined by ID prefix:
 - `car*` → Car (4.5m × 1.8m, red)
 - `truck*` → Truck (8m × 2.5m, blue)
 - `bus*` → Bus (10m × 2.5m, green)
-- `moto*` → Motorcycle (2m × 0.8m, orangie-yellow)
-- `ambu*` → Emergency (6m × 2.5m, greyish-white)
+- `moto*` → Motorcycle (2m × 0.8m, orange-yellow)
+- `ambu*` → Emergency (6m × 2.5m, grayish-white)
 
-### Interactable Objects
-Currently the *lanes* and the *vehicles* are all interactable.
-- They will provide their information upon click in the terminal
-- `Note*` that the vehile's hitbox is a circle at its HEAD in the direction of travel.
+### Code Statistics (Milestone 1)
+- **Total Lines**: 989
+- **Classes**: 10
+- **Removed from Original**: Lane tracking (~130 lines), click detection, zoom/pan logic, dashboard updates
+- **Focus**: Core visualization with minimal complexity
 
 ## Troubleshooting
 

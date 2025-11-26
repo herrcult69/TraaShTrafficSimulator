@@ -1,6 +1,10 @@
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 
+/**
+ * Represents a vehicle in the simulation with type-specific rendering.
+ * Detects vehicle type from ID prefix and applies appropriate dimensions and colors.
+ */
 public class Vehicle {
     private String id;
     private String type;

@@ -1,3 +1,7 @@
+/**
+ * Handles coordinate transformations between SUMO world space (Y-up, meters)
+ * and JavaFX screen space (Y-down, pixels). Applies scaling and offsets.
+ */
 public class CoordinateTransform {
     private double scale, offsetX, offsetY;
     private double canvasHeight;

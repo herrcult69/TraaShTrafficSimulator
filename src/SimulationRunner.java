@@ -3,7 +3,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** Handles SUMO stepping in a background thread and updates shared maps. */
+/**
+ * Background thread managing SUMO simulation connection via TraCI protocol.
+ * Advances timesteps, collects vehicle data, and provides traffic light debugging output.
+ * Uses thread-safe data structures for communication with the UI thread.
+ */
 public class SimulationRunner implements Runnable {
     private final String configFile;
     private final boolean gui;
@@ -44,8 +48,9 @@ public class SimulationRunner implements Runnable {
             adapter = new TraaSAdapter(conn);
             
             // Debug: Print traffic light IDs once at start
+            List<String> tlIds = null;
             try {
-                List<String> tlIds = adapter.getTrafficLightIds();
+                tlIds = adapter.getTrafficLightIds();
                 System.out.println("\n=== TRAFFIC LIGHTS DETECTED ===");
                 System.out.println("Total traffic lights: " + tlIds.size());
                 for (String tlId : tlIds) {
@@ -64,28 +69,25 @@ public class SimulationRunner implements Runnable {
                     stepCount++;
                     
                     // Debug: Print traffic light states every 20 steps (1 second if step-length=0.05)
-                    if (stepCount % 20 == 0) {
+                    if (stepCount % 20 == 0 && tlIds != null && !tlIds.isEmpty()) {
                         try {
-                            List<String> tlIds = adapter.getTrafficLightIds();
-                            if (!tlIds.isEmpty()) {
-                                System.out.println("\n======= Traffic Light States at t=" + String.format("%.1f", simulationTime) + "s =======");
-                                for (String tlId : tlIds) {
-                                    String state = adapter.getTrafficLightState(tlId);
-                                    System.out.println("\nTraffic Light: " + tlId);
-                                    System.out.println("  State String: '" + state + "' (length=" + state.length() + ")");
-                                    System.out.println("  Note: Each character = one link/movement through intersection");
-                                    System.out.println();
-                                    
-                                    // Print character breakdown with color interpretation
-                                    System.out.println("  Signal Breakdown (each signal controls one movement):");
-                                    for (int i = 0; i < state.length(); i++) {
-                                        char c = state.charAt(i);
-                                        String color = interpretSignalChar(c);
-                                        System.out.println("    [" + String.format("%2d", i) + "] = '" + c + "' → " + color);
-                                    }
-                                }
+                            System.out.println("\n======= Traffic Light States at t=" + String.format("%.1f", simulationTime) + "s =======");
+                            for (String tlId : tlIds) {
+                                String state = adapter.getTrafficLightState(tlId);
+                                System.out.println("\nTraffic Light: " + tlId);
+                                System.out.println("  State String: '" + state + "' (length=" + state.length() + ")");
+                                System.out.println("  Note: Each character = one link/movement through intersection");
                                 System.out.println();
+                                
+                                // Print character breakdown with color interpretation
+                                System.out.println("  Signal Breakdown (each signal controls one movement):");
+                                for (int i = 0; i < state.length(); i++) {
+                                    char c = state.charAt(i);
+                                    String color = interpretSignalChar(c);
+                                    System.out.println("    [" + String.format("%2d", i) + "] = '" + c + "' → " + color);
+                                }
                             }
+                            System.out.println();
                         } catch (Exception e) {
                             System.out.println("Error getting TL states: " + e.getMessage());
                         }
