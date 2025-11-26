@@ -55,7 +55,7 @@ public class TrafficSimulatorApp extends Application {
         dashboard = new DashBoard();
         
         // Start simulation
-        runner = new SimulationRunner(CONFIG_FILE, false);
+        runner = new SimulationRunner(CONFIG_FILE, true);
         exec = Executors.newSingleThreadExecutor();
         exec.submit(runner);
 
@@ -138,7 +138,7 @@ public class TrafficSimulatorApp extends Application {
     private void draw() {
         GraphicsContext g = canvas.getGraphicsContext2D();
 
-        g.setFill(Color.rgb(26, 36, 47));
+        g.setFill(Color.rgb(0, 14, 36));
         g.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
         scene.updateVehicles(runner.getVehiclePositions());

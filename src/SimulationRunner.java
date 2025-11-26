@@ -44,6 +44,17 @@ public class SimulationRunner implements Runnable {
     public boolean isRunning() {
         return running;
     }
+    
+    private String interpretSignalChar(char c) {
+        switch (c) {
+            case 'r': return "RED (stop)";
+            case 'g': return "GREEN (go, yield)";
+            case 'G': return "GREEN (go, priority)";
+            case 'y': return "YELLOW (prepare to stop)";
+
+            default: return "UNKNOWN (" + c + ")";
+        }
+    }
 
     @Override
     public void run() {
@@ -53,10 +64,56 @@ public class SimulationRunner implements Runnable {
             conn.addOption("start", "true");
             conn.runServer();
             adapter = new TraaSAdapter(conn);
+            
+            // Debug: Print traffic light IDs once at start
+            try {
+                List<String> tlIds = adapter.getTrafficLightIds();
+                System.out.println("\n=== TRAFFIC LIGHTS DETECTED ===");
+                System.out.println("Total traffic lights: " + tlIds.size());
+                for (String tlId : tlIds) {
+                    System.out.println("  - Traffic Light ID: " + tlId);
+                }
+                System.out.println("================================\n");
+            } catch (Exception e) {
+                System.out.println("No traffic lights or error getting TL IDs: " + e.getMessage());
+            }
+            
+            int stepCount = 0;
             while (running) {
                 if (!paused) {
                     conn.do_timestep();
                     simulationTime = adapter.getSimulationTime();
+                    stepCount++;
+                    
+                    // Debug: Print traffic light states every 20 steps (1 second if step-length=0.05)
+                    if (stepCount % 20 == 0) {
+                        try {
+                            List<String> tlIds = adapter.getTrafficLightIds();
+                            if (!tlIds.isEmpty()) {
+                                System.out.println("\n======= Traffic Light States at t=" + String.format("%.1f", simulationTime) + "s =======");
+                                for (String tlId : tlIds) {
+                                    String state = adapter.getTrafficLightState(tlId);
+                                    System.out.println("\nTraffic Light: " + tlId);
+                                    System.out.println("  State String: '" + state + "' (length=" + state.length() + ")");
+                                    System.out.println("  Note: Each character = one link/movement through intersection");
+                                    System.out.println();
+                                    
+                                    // Print character breakdown with color interpretation
+                                    System.out.println("  Signal Breakdown (each signal controls one movement):");
+                                    for (int i = 0; i < state.length(); i++) {
+                                        char c = state.charAt(i);
+                                        String color = interpretSignalChar(c);
+                                        System.out.println("    [" + String.format("%2d", i) + "] = '" + c + "' → " + color);
+                                    }
+        
+                                }
+                                System.out.println();
+                            }
+                        } catch (Exception e) {
+                            System.out.println("Error getting TL states: " + e.getMessage());
+                        }
+                    }
+                    
                     List<String> ids = adapter.getVehicleIds();
                     // remove vehicles no longer present
                     vehiclePositions.keySet().removeIf(id -> !ids.contains(id));

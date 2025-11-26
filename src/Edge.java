@@ -124,7 +124,7 @@ public class Edge {
         double halfWidth = networkEdge.getTotalWidth();
 
         // Road edges (gray)
-        g.setStroke(Color.rgb(180, 180, 180));
+        g.setStroke(Color.rgb(121, 116, 116));
         g.setLineWidth(Math.max(2, transform.worldToScreenSize(0.15)));
 
         double edgeX1 = startX - halfWidth * perpX;
