@@ -7,7 +7,7 @@ Real-time SUMO traffic visualization with JavaFX using TraaS. Milestone 1 focuse
 - [Milestone 1 Overview](#milestone-1-overview)
 - [System Requirements](#system-requirements)
 - [Project Structure](#project-structure)
-- [Class Hierarchy and Responsibilities](#class-hierarchy-and-responsibilities)
+- [Class Organization](#class-hierarchy-and-responsibilities)
 - [Installation](#installation)
 - [Compilation](#compilation)
 - [Running the Application](#running-the-application)
@@ -22,19 +22,19 @@ Real-time SUMO traffic visualization with JavaFX using TraaS. Milestone 1 focuse
 **Objective**: Basic traffic visualization without user interactions.
 
 **Features Implemented**:
-- ✅ SUMO network rendering (roads, junctions)
-- ✅ Real-time vehicle visualization with type detection
-- ✅ Automatic view centering and scaling
-- ✅ Coordinate transformation (SUMO ↔ JavaFX)
-- ✅ Background simulation thread
-- ✅ Mockup UI panel (non-functional)
-- ✅ Traffic light state debugging (terminal output)
+- DONE: Network rendering (with roads and junctions)
+- DONE: Vehicle visualization with type displaying
+- DONE: Automatic view centering and scaling at runtime
+- DONE: Coordinate transformation (SUMO coordinate to JavaFX coordinate)
+- DONE: Background simulation thread
+- DONE: Mockup UI panel (functionalities to be implemented)
+- DONE: Logging Traffic Light state (output in the terminal)
 
 **Features NOT Implemented** (Future Milestones):
-- ❌ User interactions (zoom, pan, click)
-- ❌ Functional control panel
-- ❌ Dashboard statistics and charts
-- ❌ Traffic light visualization on canvas
+- NOT YET: User interactions (zooming, panning, clicking activities)
+- NOT YET: Functional control panel
+- NOT YET: Dashboard figures and related charts
+- NOT YET: Traffic light visualization on canvas
 
 ## System Requirements
 
@@ -56,9 +56,9 @@ TraaShTrafficSimulator/
 ├── src/                          # Source files (10 classes)
 │   ├── TrafficSimulatorApp.java  # Main application entry point
 │   ├── NetworkParser.java        # SUMO XML network parser
-│   ├── SimulationRunner.java     # SUMO connection + TL debugging
+│   ├── SimulationRunner.java     # SUMO connection + Traffic Light debugging
 │   ├── TraaSAdapter.java         # TraCI command wrapper
-│   ├── CoordinateTransform.java  # Coordinate system converter
+│   ├── CoordinateTransform.java  # System Coordinate transformer
 │   ├── DashBoard.java            # UI mockup panel
 │   ├── TrafficManager.java       # Scene graph manager
 │   ├── Edge.java                 # Road segment renderer
@@ -79,70 +79,70 @@ TraaShTrafficSimulator/
     └── createMap.sh              # SUMO network generation script
 ```
 
-## Class Hierarchy and Responsibilities
+## Class Organization
 
-### Application Layer
+### Application Modules
 **TrafficSimulatorApp**
 - Extends: `javafx.application.Application`
-- Responsibilities: Application lifecycle, window setup, 60fps render loop, automatic view centering
-- Key Methods: `start()`, `draw()`, `resetView()`
-- **Milestone 1**: No mouse interactions was added yet.
+- Responsibilities: ensures application lifecycle, window setup, renders 60fps loop, automatically renders center view
+- Important Methods: `start()`, `draw()`, `resetView()`
+- **Milestone 1**: No mouse interactions were added yet.
 
-### Data Layer
+### Data Modules
 **NetworkParser**
-- Static utility class
-- Responsibilities: Parse SUMO network XML files (`.net.xml`)
+- Helper class providing static methods
+- Responsibilities: Parses SUMO network XML files (`.net.xml`)
 - Inner Classes: `NetworkData`, `Junction`, `Edge`, `Lane`
 - Returns: Structured network data with bounds (minX, maxX, minY, maxY)
 
 **SimulationRunner**
-- Implements: `Runnable`
-- Responsibilities: Background thread managing SUMO connection, vehicle data collection, traffic light debugging
+- Implements Runnability
+- Responsibilities: Manages multi-threading on the background, ensures parallel cooperation of simulation and GUI.
 - Thread-Safe: Uses `ConcurrentHashMap` for vehicle positions
-- Key Methods: `run()`, `stop()`, `interpretSignalChar()`
+- Important Methods: `run()`, `stop()`, `interpretSignalChar()`
 - **Debug Output**: Prints traffic light states every 20 steps with character-by-character interpretation
 
 **TraaSAdapter**
 - Wrapper class for TraaS library
-- Responsibilities: Simplify TraCI command execution
-- Key Methods: `getVehicleIds()`, `getVehiclePosition()`, `getVehicleAngle()`, `getTrafficLightIds()`, `getTrafficLightState()`
+- Responsibilities: "wraps around" the TraaS library, provides a simpler and cleaner interface.
+- Important Methods: `getVehicleIds()`, `getVehiclePosition()`, `getVehicleAngle()`, `getTrafficLightIds()`, `getTrafficLightState()`
 
-### View Layer
+### View Modules
 **CoordinateTransform**
 - Utility class
-- Responsibilities: Convert between SUMO world coordinates (Y-up, meters) and JavaFX screen coordinates (Y-down, pixels)
-- Key Methods: `worldToScreenX()`, `worldToScreenY()`, `worldToScreenSize()`, `updateTransform()`
+- Responsibilities: converts between SUMO world coordinates (Y-up, meters) and JavaFX screen coordinates (Y-down, pixels)
+- Important Methods: `worldToScreenX()`, `worldToScreenY()`, `worldToScreenSize()`, `updateTransform()`
 - Pan and Zoom will be implemented using this.
 
-### UI Layer
+### UI Modules
 **DashBoard**
-- Mockup UI panel (non-functional)
+- Mockup UI panel (funtionalities not yet implemented)
 - Components: Static labels for simulation time, vehicle counts, speed, and view controls
 - Returns: `ScrollPane` containing mockup buttons and labels
 - **Milestone 1**: Display only, no actual data updates or button functionality
 
-### Rendering Layer
+### Rendering Modules
 **TrafficManager**
-- Responsibilities: Scene graph management, object lifecycle, rendering coordination
+- Responsibilities: sets priority on rendering objects (edge -> juntion -> vehicle)
 - Collections: Lists of `Junction`, `Edge`, `Vehicle` objects
-- Key Methods: `initializeFromNetwork()`, `updateVehicles()`, `render()`
+- Important Methods: `initializeFromNetwork()`, `updateVehicles()`, `render()`
 
 **Junction**
-- Responsibilities: Render intersection polygons from SUMO shape data
-- Key Methods: `render()`, `getRadius()`
+- Responsibilities: renders intersection polygons from SUMO shape data
+- Important Methods: `render()`, `getRadius()`
 - Geometry: Polygon rendering from SUMO shape coordinates
-- Basic clipping of edge by providing arbitary radious values.
+- Shortening the roads before they reach the junction center so that they do not overlap each other (clipping) 
 
 **Edge**
-- Responsibilities: Road segment rendering with clipping at junctions
-- Rendering: Solid gray road with yellow center line
-- Key Methods: `render()`
+- Responsibilities: renders road segments and clips them at junctions 
+- Rendering: Solid gray roads with yellow center lines
+- Important Methods: `render()`
 - Uses standard 3.2m lane width
 
 **Vehicle**
-- Responsibilities: Vehicle visualization, type detection from ID prefix, position updates
-- Properties: Type (car/truck/bus/motorcycle/emergency), dimensions, color
-- Key Methods: `render()`, `updatePosition()`, `determineTypeFromId()`
+- Responsibilities: displays vehicles, detects types and updates their positions
+- Features: vehicle types (car, truck, bus, motorcycle, emergency), physical sizes, colors
+- Important Methods: `render()`, `updatePosition()`, `determineTypeFromId()`
 
 ## Installation
 
@@ -186,13 +186,42 @@ Add SUMO to system PATH
 
 ### 3. Install JavaFX
 
-**All Platforms:**
+#### Step 1: Download
 1. Download JavaFX SDK 17+ from [https://openjfx.io/](https://openjfx.io/)
-2. Extract to `lib/javafx/` directory in project root
+2. Download **JavaFX SDK 17+** for your platform:
+  - Windows: `javafx-sdk-17.x.x_windows-x64_bin.zip`
+  - macOS: `javafx-sdk-17.x.x_macos-x64_bin.zip` (Intel) or `javafx-sdk-17.x.x_macos-aarch64_bin.zip` (M1/M2/M3/M4)
+  - Linux: `javafx-sdk-17.x.x_linux-x64_bin.zip`
+
+#### Step 2: Extract to Project Directory
+
+**Linux / macOS:**
+```bash
+# Extract downloaded zip
+unzip javafx-sdk-17.*.zip
+
+# Move to project lib directory
+mv javafx-sdk-17.*/lib /path/to/TraaShTrafficSimulator/lib/javafx/
+```
+
+**Windows:**
+- Extract the downloaded `.zip` file and leave it there (Compilation section will discuss more about this)
 
 **Directory structure after extraction:**
+
+**Linux / macOS:**
 ```
 lib/javafx/
+├── javafx.base.jar
+├── javafx.controls.jar
+├── javafx.fxml.jar
+├── javafx.graphics.jar
+└── ...
+```
+
+**Windows:**
+```
+lib/
 ├── javafx.base.jar
 ├── javafx.controls.jar
 ├── javafx.fxml.jar
