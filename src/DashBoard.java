@@ -38,39 +38,39 @@ public class DashBoard extends VBox {
     
     private void createMockupUI() {
         // Simulation controls
-        Label simLabel = createHeaderLabel("═══ SIMULATION ═══");
-        Button playBtn = createButton("▶ Play");
-        Button pauseBtn = createButton("|| Pause");
-        Button stopBtn = createButton("[] Stop");
+        Label simLabel = createHeaderLabel("=== SIMULATION ===");
+        Button playBtn = createButton("> Play");
+        Button pauseBtn = createButton("| | Pause");
+        Button stopBtn = createButton("# Stop");
         
         getChildren().addAll(simLabel, playBtn, pauseBtn, stopBtn);
         getChildren().add(new Separator());
         
         // View controls
-        Label viewLabel = createHeaderLabel("═══ VIEW ═══");
+        Label viewLabel = createHeaderLabel("=== VIEW ===");
         Button zoomIn = createButton("+ Zoom In");
-        Button zoomOut = createButton("− Zoom Out");
-        Button reset = createButton("⟲ Reset View");
+        Button zoomOut = createButton("- Zoom Out");
+        Button reset = createButton("@ Reset View");
         
         getChildren().addAll(viewLabel, zoomIn, zoomOut, reset);
         getChildren().add(new Separator());
         
         // Dashboard info
-        Label dashLabel = createHeaderLabel("═══ DASHBOARD ═══");
+        Label dashLabel = createHeaderLabel("=== DASHBOARD ===");
         
         Label simSection = createSectionLabel("Simulation");
-        Label simTimeLabel = createDataLabel("Time: 0.0s");
-        Label activeVehiclesLabel = createDataLabel("Active: 0");
+        Label simTimeLabel = createDataLabel("Time: ### s");
+        Label activeVehiclesLabel = createDataLabel("Active: ###");
         
         Label trafficSection = createSectionLabel("Traffic Stats");
-        Label avgSpeedLabel = createDataLabel("Avg Speed: 0.0 m/s");
+        Label avgSpeedLabel = createDataLabel("Avg Speed: ### m/s");
         
         Label vehicleSection = createSectionLabel("Vehicle Types");
-        Label carsLabel = createDataLabel("Cars: 0");
-        Label trucksLabel = createDataLabel("Trucks: 0");
-        Label busesLabel = createDataLabel("Buses: 0");
-        Label motorcyclesLabel = createDataLabel("Motorcycles: 0");
-        Label emergencyLabel = createDataLabel("Emergency: 0");
+        Label carsLabel = createDataLabel("Cars: ###");
+        Label trucksLabel = createDataLabel("Trucks: ###");
+        Label busesLabel = createDataLabel("Buses: ###");
+        Label motorcyclesLabel = createDataLabel("Motorcycles: ###");
+        Label emergencyLabel = createDataLabel("Emergency: ###");
         
         getChildren().addAll(dashLabel, simSection, simTimeLabel, activeVehiclesLabel,
                             trafficSection, avgSpeedLabel,

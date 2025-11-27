@@ -3,7 +3,8 @@ import javafx.scene.paint.Color;
 
 /**
  * Represents a road segment between two junctions.
- * Renders the road surface with center line and handles edge clipping at junctions.
+ * Renders the road surface with center line and handles edge clipping at
+ * junctions.
  */
 public class Edge {
     private NetworkParser.Edge networkEdge;
@@ -55,15 +56,11 @@ public class Edge {
         double x2 = transform.worldToScreenX(endX);
         double y2 = transform.worldToScreenY(endY);
 
-        // Skip tiny edges
-        if (Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1)) < 1)
-            return;
-
         double totalWidth = networkEdge.getTotalWidth() * 2; // Bidirectional
         double screenWidth = transform.worldToScreenSize(totalWidth);
 
         // Simple road rendering: solid gray with yellow center line
-        
+
         // Draw solid road surface
         g.setStroke(Color.rgb(70, 70, 70));
         g.setLineWidth(screenWidth);

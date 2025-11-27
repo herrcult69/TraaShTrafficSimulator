@@ -31,7 +31,7 @@ public class SimulationRunner implements Runnable {
     private String interpretSignalChar(char c) {
         switch (c) {
             case 'r': return "RED (stop)";
-            case 'g': return "GREEN (go, yield)";
+            case 'g': return "GREEN (go, normal)";
             case 'G': return "GREEN (go, priority)";
             case 'y': return "YELLOW (prepare to stop)";
             default: return "UNKNOWN (" + c + ")";
@@ -51,12 +51,12 @@ public class SimulationRunner implements Runnable {
             List<String> tlIds = null;
             try {
                 tlIds = adapter.getTrafficLightIds();
-                System.out.println("\n=== TRAFFIC LIGHTS DETECTED ===");
+   
                 System.out.println("Total traffic lights: " + tlIds.size());
                 for (String tlId : tlIds) {
                     System.out.println("  - Traffic Light ID: " + tlId);
                 }
-                System.out.println("================================\n");
+                System.out.println();
             } catch (Exception e) {
                 System.out.println("No traffic lights or error getting TL IDs: " + e.getMessage());
             }
@@ -68,19 +68,17 @@ public class SimulationRunner implements Runnable {
                     simulationTime = adapter.getSimulationTime();
                     stepCount++;
                     
-                    // Debug: Print traffic light states every 20 steps (1 second if step-length=0.05)
+                    // Print traffic light states every 20 steps (1 second if step-length=0.05)
                     if (stepCount % 20 == 0 && tlIds != null && !tlIds.isEmpty()) {
                         try {
                             System.out.println("\n======= Traffic Light States at t=" + String.format("%.1f", simulationTime) + "s =======");
                             for (String tlId : tlIds) {
                                 String state = adapter.getTrafficLightState(tlId);
                                 System.out.println("\nTraffic Light: " + tlId);
-                                System.out.println("  State String: '" + state + "' (length=" + state.length() + ")");
-                                System.out.println("  Note: Each character = one link/movement through intersection");
-                                System.out.println();
+                                System.out.println("  State String: '" + state);
                                 
                                 // Print character breakdown with color interpretation
-                                System.out.println("  Signal Breakdown (each signal controls one movement):");
+                                System.out.println("  Signal Breakdown:");
                                 for (int i = 0; i < state.length(); i++) {
                                     char c = state.charAt(i);
                                     String color = interpretSignalChar(c);

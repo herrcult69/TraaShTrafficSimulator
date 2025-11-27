@@ -16,8 +16,8 @@ import java.util.concurrent.ExecutorService;
  * Automatically centers and scales the network to fit the canvas.
  */
 public class TrafficSimulatorApp extends Application {
-    private static final String NETWORK_FILE = "resource/network.net.xml";
-    private static final String CONFIG_FILE = "resource/simulation.sumocfg";
+    private static final String NETWORK_FILE = "SumoConfig/network.net.xml";
+    private static final String CONFIG_FILE = "SumoConfig/simulation.sumocfg";
 
     private NetworkParser.NetworkData network;
     private SimulationRunner runner;

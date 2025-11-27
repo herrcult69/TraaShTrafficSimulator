@@ -67,7 +67,7 @@ TraaShTrafficSimulator/
 ├── lib/
 │   ├── javafx/                   # JavaFX SDK libraries
 │   └── TraaS.jar                 # SUMO TraCI Java library
-├── resource/
+├── SumoConfig/
 │   ├── network.net.xml           # SUMO network definition
 │   ├── simulation.sumocfg        # SUMO simulation configuration
 │   ├── cars.rou.xml              # Car routes
@@ -242,7 +242,7 @@ Ensure the following directories exist:
 - `src/` (Java source files)
 - `lib/javafx/` (JavaFX libraries)
 - `lib/TraaS.jar` (included)
-- `resource/` (SUMO configuration files)
+- `SumoConfig/` (SUMO configuration files)
 
 ## Compilation
 
@@ -314,7 +314,7 @@ java --module-path "lib\javafx" ^
 
 ### Network Files
 
-Place custom SUMO files in `resource/` directory:
+Place custom SUMO files in `SumoConfig/` directory:
 - `network.net.xml` - Road network (created with netedit or netgenerate)
 - `simulation.sumocfg` - Main configuration file
 - `*.rou.xml` - Route files for different vehicle types
@@ -323,8 +323,8 @@ Place custom SUMO files in `resource/` directory:
 
 Edit constants in `TrafficSimulatorApp.java`:
 ```java
-private static final String NETWORK_FILE = "resource/network.net.xml";
-private static final String CONFIG_FILE = "resource/simulation.sumocfg";
+private static final String NETWORK_FILE = "SumoConfig/network.net.xml";
+private static final String CONFIG_FILE = "SumoConfig/simulation.sumocfg";
 ```
 
 ## Milestone 1 Usage
@@ -415,12 +415,12 @@ Error: Could not connect to SUMO
 **Solution**: 
 1. Verify SUMO is installed: `sumo --version`
 2. Check SUMO is in system PATH
-3. Test configuration: `sumo-gui -c resource/simulation.sumocfg`
+3. Test configuration: `sumo-gui -c SumoConfig/simulation.sumocfg`
 4. Verify network file path in `.sumocfg` matches actual file
 
 ### Network File Not Found
 ```
-Error: resource/network.net.xml not found
+Error: SumoConfig/network.net.xml not found
 ```
 **Solution**: Ensure network file exists and path in `TrafficSimulatorApp.java` is correct
 

@@ -39,20 +39,20 @@ fi
 # Make sure SUMO tools are on PYTHONPATH so randomTrips can import sumolib/traci
 export PYTHONPATH="$SUMO_HOME/tools:${PYTHONPATH:-}"
 
-RESOURCE_DIR="resource"
+RESOURCE_DIR="SumoConfig"
 NETWORK_FILE="$RESOURCE_DIR/network.net.xml"
 CONFIG_FILE="$RESOURCE_DIR/simulation.sumocfg"
 SIMULATION_TIME=3600  # 1 hour in seconds
 
 # Network parameters (RANDOM NETWORK)
-RAND_ITERATIONS=30      # Number of random network iterations
-RAND_MAX_DISTANCE=120   # Maximum edge length in meters
-RAND_MIN_DISTANCE=70    # Minimum edge length in meters
+RAND_ITERATIONS=20      # Number of random network iterations
+RAND_MAX_DISTANCE=100   # Maximum edge length in meters
+RAND_MIN_DISTANCE=50    # Minimum edge length in meters
 DEFAULT_SPEED=10.89      # m/s
 NUM_TRIES=200 
 # Traffic density (seconds between vehicles)
 # Lower values = more vehicles spawned
-CAR_PERIOD=5          # Cars every 5 seconds (was 100)
+CAR_PERIOD=10          # Cars every 5 seconds (was 100)
 TRUCK_PERIOD=40       # Trucks every 40 seconds (was 6000)
 MOTORCYCLE_PERIOD=15  # Motorcycles every 15 seconds (was 1000)
 BUS_PERIOD=30         # Buses every 30 seconds (was 650)
