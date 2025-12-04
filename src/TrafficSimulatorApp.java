@@ -32,6 +32,10 @@ public class TrafficSimulatorApp extends Application {
     private CoordinateTransform transform;
     private ViewManager viewManager;
 
+    // Interaction fields
+    private Object selectedElement;
+    private Object hoveredElement;
+
     // Dashboard fields
     private DashBoard dashboard;
     private long lastDashboardUpdate = System.nanoTime();
@@ -109,9 +113,15 @@ public class TrafficSimulatorApp extends Application {
         canvas.setOnMousePressed(e -> viewManager.startPan(e.getX(), e.getY()));
         canvas.setOnMouseDragged(e -> viewManager.updatePan(e.getX(), e.getY()));
 
+        canvas.setOnMouseMoved(e -> {
+            hoveredElement = scene.getElementAt(e.getX(), e.getY(), viewManager.getTransform());
+        });
+
         // Click detection (for future interaction features)
         canvas.setOnMouseClicked(e -> {
             Object clickedElement = scene.getElementAt(e.getX(), e.getY(), viewManager.getTransform());
+            selectedElement = clickedElement;
+
             if (clickedElement != null) {
                 System.out.println("Clicked: " + clickedElement.getClass().getSimpleName());
                 if (clickedElement instanceof Junction) {
@@ -144,12 +154,50 @@ public class TrafficSimulatorApp extends Application {
         scene.updateVehicles(runner.getVehiclePositions());
         scene.render(g, viewManager.getTransform());
 
+        // Render highlights
+        scene.renderHighlight(g, viewManager.getTransform(), selectedElement, hoveredElement);
+
+        // Draw info box
+        if (selectedElement != null) {
+            drawInfoBox(g, selectedElement);
+        }
+
         // Update dashboard at reduced frequency
         long currentTime = System.nanoTime();
         double timeSinceLastUpdate = (currentTime - lastDashboardUpdate) / 1_000_000_000.0;
         if (timeSinceLastUpdate >= DASHBOARD_UPDATE_INTERVAL) {
             updateDashboard();
             lastDashboardUpdate = currentTime;
+        }
+    }
+
+    private void drawInfoBox(GraphicsContext g, Object selected) {
+        double x = 10;
+        double y = 10;
+        double width = 250;
+        double height = 100;
+
+        g.setFill(Color.rgb(0, 0, 0, 0.7));
+        g.fillRect(x, y, width, height);
+        g.setStroke(Color.WHITE);
+        g.setLineWidth(1.0);
+        g.strokeRect(x, y, width, height);
+
+        g.setFill(Color.WHITE);
+        g.fillText("Selected: " + selected.getClass().getSimpleName(), x + 10, y + 20);
+
+        if (selected instanceof Vehicle) {
+            Vehicle v = (Vehicle) selected;
+            g.fillText("ID: " + v.getId(), x + 10, y + 40);
+            g.fillText("Type: " + v.getType(), x + 10, y + 60);
+        } else if (selected instanceof Lane) {
+            Lane l = (Lane) selected;
+            g.fillText("ID: " + l.getId(), x + 10, y + 40);
+            g.fillText("Width: " + String.format("%.2f", l.getWidth()) + "m", x + 10, y + 60);
+        } else if (selected instanceof Junction) {
+            Junction j = (Junction) selected;
+            g.fillText("ID: " + j.getId(), x + 10, y + 40);
+            g.fillText("Type: " + j.getType(), x + 10, y + 60);
         }
     }
 

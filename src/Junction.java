@@ -45,6 +45,47 @@ public class Junction {
         }
     }
 
+    public boolean contains(double screenX, double screenY, CoordinateTransform transform) {
+        if (shape == null || shape.size() < 3) {
+            // Fallback to circular check
+            double worldX = transform.screenToWorldX(screenX);
+            double worldY = transform.screenToWorldY(screenY);
+            double dist = Math.sqrt(Math.pow(worldX - x, 2) + Math.pow(worldY - y, 2));
+            return dist < 5.0; // Default radius
+        }
+
+        // Point in polygon test
+        double worldX = transform.screenToWorldX(screenX);
+        double worldY = transform.screenToWorldY(screenY);
+        
+        boolean result = false;
+        for (int i = 0, j = shape.size() - 1; i < shape.size(); j = i++) {
+            if ((shape.get(i).getY() > worldY) != (shape.get(j).getY() > worldY) &&
+                (worldX < (shape.get(j).getX() - shape.get(i).getX()) * (worldY - shape.get(i).getY()) / (shape.get(j).getY() - shape.get(i).getY()) + shape.get(i).getX())) {
+                result = !result;
+            }
+        }
+        return result;
+    }
+
+    public void highlight(GraphicsContext g, CoordinateTransform transform, Color color) {
+        if (shape == null || shape.size() < 3) return;
+
+        double[] xPoints = new double[shape.size()];
+        double[] yPoints = new double[shape.size()];
+
+        for (int i = 0; i < shape.size(); i++) {
+            xPoints[i] = transform.worldToScreenX(shape.get(i).getX());
+            yPoints[i] = transform.worldToScreenY(shape.get(i).getY());
+        }
+
+        g.save();
+        g.setStroke(color);
+        g.setLineWidth(3);
+        g.strokePolygon(xPoints, yPoints, shape.size());
+        g.restore();
+    }
+
     /**
      * Main rendering method - draws the junction geometry
      */

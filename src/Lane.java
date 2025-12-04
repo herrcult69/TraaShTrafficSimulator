@@ -75,16 +75,12 @@ public class Lane {
         vehicles.remove(vehicle);
     }
 
-    public void render(GraphicsContext g, CoordinateTransform transform, boolean highlight) {
-        // Lane markings are rendered by parent edge
-        // Individual lane highlighting can be done here
-        if (highlight) {
-            g.setStroke(Color.YELLOW);
-            g.setLineWidth(4);
-            g.strokeLine(
-                    transform.worldToScreenX(x1), transform.worldToScreenY(y1),
-                    transform.worldToScreenX(x2), transform.worldToScreenY(y2));
-        }
+    public void highlight(GraphicsContext g, CoordinateTransform transform, Color color) {
+        g.setStroke(color);
+        g.setLineWidth(Math.max(2, transform.worldToScreenSize(width)));
+        g.strokeLine(
+                transform.worldToScreenX(x1), transform.worldToScreenY(y1),
+                transform.worldToScreenX(x2), transform.worldToScreenY(y2));
     }
 
     // Getters

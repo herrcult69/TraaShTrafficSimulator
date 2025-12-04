@@ -59,9 +59,9 @@ public class ControlPanel {
         Label simLabel = new Label("=== SIMULATION ===");
         simLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14;");
         
-        Button playBtn = createButton("▶ Play");
-        Button pauseBtn = createButton("|| Pause");
-        Button stopBtn = createButton("[] Stop");
+        Button playBtn = createButton("Play");
+        Button pauseBtn = createButton("Pause");
+        Button stopBtn = createButton("Stop");
         
         playBtn.setOnAction(e -> {
             if (runner != null) {
@@ -93,9 +93,9 @@ public class ControlPanel {
         Label viewLabel = new Label("=== VIEW ===");
         viewLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14;");
         
-        Button zoomIn = createButton("+ Zoom In");
-        Button zoomOut = createButton("− Zoom Out");
-        Button reset = createButton("⟲ Reset View");
+        Button zoomIn = createButton("Zoom In");
+        Button zoomOut = createButton("Zoom Out");
+        Button reset = createButton("Reset View");
         
         zoomIn.setOnAction(e -> viewManager.zoomToCenter(1.2));
         zoomOut.setOnAction(e -> viewManager.zoomToCenter(0.8));

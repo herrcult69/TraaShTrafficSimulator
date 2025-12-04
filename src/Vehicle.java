@@ -84,6 +84,28 @@ public class Vehicle {
         return distance <= radius;
     }
 
+    public void highlight(GraphicsContext g, CoordinateTransform transform, Color color) {
+        double screenX = transform.worldToScreenX(worldX);
+        double screenY = transform.worldToScreenY(worldY);
+        double screenLength = Math.max(transform.worldToScreenSize(length), 6);
+        double screenWidth = Math.max(transform.worldToScreenSize(width), 3);
+
+        g.save();
+        g.translate(screenX, screenY);
+        g.rotate(angle);
+
+        g.setStroke(color);
+        g.setLineWidth(2);
+        g.strokeRect(-screenLength, -screenWidth / 2, screenLength, screenWidth);
+        
+        // Glow effect
+        g.setEffect(new javafx.scene.effect.Glow(0.8));
+        g.strokeRect(-screenLength, -screenWidth / 2, screenLength, screenWidth);
+        g.setEffect(null);
+
+        g.restore();
+    }
+
     public void render(GraphicsContext g, CoordinateTransform transform) {
         double screenX = transform.worldToScreenX(worldX);
         double screenY = transform.worldToScreenY(worldY);
@@ -153,7 +175,7 @@ public class Vehicle {
 
     private Color getVehicleColor() {
         return switch (type) {
-            case "car" -> Color.rgb(220, 70, 70);
+            case "car" -> Color.rgb(220, 115, 115);
             case "truck" -> Color.rgb(70, 120, 230);
             case "bus" -> Color.rgb(80, 200, 120);
             case "motorcycle" -> Color.rgb(243, 141, 9);

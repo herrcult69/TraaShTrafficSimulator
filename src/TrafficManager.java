@@ -3,6 +3,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.paint.Color;
 
 public class TrafficManager {
     private List<Junction> junctions;
@@ -72,6 +73,13 @@ public class TrafficManager {
             }
         }
 
+        // Check junctions
+        for (Junction junction : junctions) {
+            if (junction.contains(screenX, screenY, transform)) {
+                return junction;
+            }
+        }
+
         // Check lanes
         for (Edge edge : edges) {
             Lane lane = edge.getLaneAt(screenX, screenY, transform);
@@ -81,6 +89,25 @@ public class TrafficManager {
         }
 
         return null;
+    }
+
+    public void renderHighlight(GraphicsContext g, CoordinateTransform transform, Object selected, Object hovered) {
+        if (selected != null) {
+            highlightObject(g, transform, selected, Color.CYAN);
+        }
+        if (hovered != null && hovered != selected) {
+            highlightObject(g, transform, hovered, Color.YELLOW);
+        }
+    }
+
+    private void highlightObject(GraphicsContext g, CoordinateTransform transform, Object obj, Color color) {
+        if (obj instanceof Vehicle) {
+            ((Vehicle) obj).highlight(g, transform, color);
+        } else if (obj instanceof Lane) {
+            ((Lane) obj).highlight(g, transform, color);
+        } else if (obj instanceof Junction) {
+            ((Junction) obj).highlight(g, transform, color);
+        }
     }
 
     /*
