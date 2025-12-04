@@ -10,6 +10,7 @@ public class Vehicle {
     private double length, width;
     private Lane currentLane;
     private Rectangle2D bounds;
+    private int signals;
 
     public Vehicle(String id, double worldX, double worldY, double angle) {
         this.id = id;
@@ -56,6 +57,9 @@ public class Vehicle {
         if (sumoData.length > 2) {
             this.angle = -(90.0 - sumoData[2]); // Fixed angle calculation
         }
+        if (sumoData.length > 3) {
+            this.signals = (int) sumoData[3];
+        }
         updateBounds();
     }
 
@@ -90,13 +94,59 @@ public class Vehicle {
         g.translate(screenX, screenY);
         g.rotate(angle);
 
-        // Draw vehicle with head at origin (worldX, worldY), extending backward
+        // Draw vehicle body
         g.setFill(getVehicleColor());
         g.fillRect(-screenLength, -screenWidth / 2, screenLength, screenWidth);
 
         g.setStroke(Color.BLACK);
         g.setLineWidth(1.5);
         g.strokeRect(-screenLength, -screenWidth / 2, screenLength, screenWidth);
+
+        // Draw windshield (approx 20% from front, 20% length)
+        double windshieldStart = -screenLength * 0.2;
+        double windshieldLength = screenLength * 0.2;
+        double windshieldWidth = screenWidth * 0.8;
+        g.setFill(Color.LIGHTBLUE);
+        g.fillRect(windshieldStart - windshieldLength, -windshieldWidth / 2, windshieldLength, windshieldWidth);
+
+        // Draw headlights
+        g.setFill(Color.YELLOW.deriveColor(0, 1, 1, 0.6));
+        // Left headlight
+        g.fillOval(-screenLength * 0.05, -screenWidth / 2 + screenWidth * 0.1, screenLength * 0.1, screenWidth * 0.3);
+        // Right headlight
+        g.fillOval(-screenLength * 0.05, screenWidth / 2 - screenWidth * 0.4, screenLength * 0.1, screenWidth * 0.3);
+
+        // Draw signals
+        // Right turn: bit 0 (1)
+        // Left turn: bit 1 (2)
+        // Emergency: bit 2 (4) -> implies both
+        // Brake: bit 3 (8)
+
+        boolean rightSignal = (signals & 1) != 0 || (signals & 4) != 0;
+        boolean leftSignal = (signals & 2) != 0 || (signals & 4) != 0;
+        boolean brakeSignal = (signals & 8) != 0;
+
+        if (brakeSignal) {
+            g.setFill(Color.RED);
+            // Back lights
+            g.fillRect(-screenLength, -screenWidth / 2, screenLength * 0.05, screenWidth);
+        }
+
+        if (rightSignal) {
+            g.setFill(Color.ORANGE);
+            // Front Right
+            g.fillOval(0, screenWidth / 2 - screenWidth * 0.2, screenLength * 0.1, screenWidth * 0.2);
+            // Back Right
+            g.fillOval(-screenLength, screenWidth / 2 - screenWidth * 0.2, screenLength * 0.1, screenWidth * 0.2);
+        }
+
+        if (leftSignal) {
+            g.setFill(Color.ORANGE);
+            // Front Left
+            g.fillOval(0, -screenWidth / 2, screenLength * 0.1, screenWidth * 0.2);
+            // Back Left
+            g.fillOval(-screenLength, -screenWidth / 2, screenLength * 0.1, screenWidth * 0.2);
+        }
 
         g.restore();
     }

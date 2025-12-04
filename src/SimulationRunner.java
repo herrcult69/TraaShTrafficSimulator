@@ -65,11 +65,13 @@ public class SimulationRunner implements Runnable {
                         double[] p = adapter.getVehiclePosition(id);
                         double ang = 0.0;
                         double speed = 0.0;
+                        int signals = 0;
                         try { 
                             ang = adapter.getVehicleAngle(id); 
                             speed = adapter.getVehicleSpeed(id);
+                            signals = adapter.getVehicleSignals(id);
                         } catch (Exception ignore) {}
-                        vehiclePositions.put(id, new double[]{p[0], p[1], ang});
+                        vehiclePositions.put(id, new double[]{p[0], p[1], ang, (double)signals});
                         vehicleSpeeds.put(id, speed); 
                     }
                 }
