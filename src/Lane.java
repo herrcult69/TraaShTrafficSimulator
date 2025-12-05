@@ -76,11 +76,34 @@ public class Lane {
     }
 
     public void highlight(GraphicsContext g, CoordinateTransform transform, Color color) {
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+        double length = Math.sqrt(dx * dx + dy * dy);
+
+        if (length < 0.001) return;
+
+        double perpX = -dy / length;
+        double perpY = dx / length;
+        double halfWidth = width / 2.0;
+
+        // Calculate 4 corners of the lane
+        double[] xPoints = {
+            transform.worldToScreenX(x1 - perpX * halfWidth),
+            transform.worldToScreenX(x1 + perpX * halfWidth),
+            transform.worldToScreenX(x2 + perpX * halfWidth),
+            transform.worldToScreenX(x2 - perpX * halfWidth)
+        };
+
+        double[] yPoints = {
+            transform.worldToScreenY(y1 - perpY * halfWidth),
+            transform.worldToScreenY(y1 + perpY * halfWidth),
+            transform.worldToScreenY(y2 + perpY * halfWidth),
+            transform.worldToScreenY(y2 - perpY * halfWidth)
+        };
+
         g.setStroke(color);
-        g.setLineWidth(Math.max(2, transform.worldToScreenSize(width)));
-        g.strokeLine(
-                transform.worldToScreenX(x1), transform.worldToScreenY(y1),
-                transform.worldToScreenX(x2), transform.worldToScreenY(y2));
+        g.setLineWidth(2);
+        g.strokePolygon(xPoints, yPoints, 4);
     }
 
     // Getters
