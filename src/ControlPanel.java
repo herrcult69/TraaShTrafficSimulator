@@ -56,7 +56,7 @@ public class ControlPanel {
     }
     
     private void addSimulationControls() {
-        Label simLabel = new Label("═══ SIMULATION ═══");
+        Label simLabel = new Label("=== SIMULATION ===");
         simLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14;");
         
         Button playBtn = createButton("▶ Play");
@@ -90,7 +90,7 @@ public class ControlPanel {
     }
     
     private void addViewControls() {
-        Label viewLabel = new Label("═══ VIEW ═══");
+        Label viewLabel = new Label("=== VIEW ===");
         viewLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14;");
         
         Button zoomIn = createButton("+ Zoom In");

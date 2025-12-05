@@ -38,7 +38,7 @@ public class DashBoard extends VBox{
     }
 
     private void initializeComponents() {
-        Label title = createHeaderLabel("═══ DASHBOARD ═══");
+        Label title = createHeaderLabel("=== DASHBOARD ===");
 
         Label simSection = createSectionLabel("Simulation");
         simTimeLabel = createDataLabel("Time: 0.0s");

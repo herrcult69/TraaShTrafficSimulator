@@ -7,6 +7,8 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.MenuItem;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
@@ -56,6 +58,20 @@ public class TrafficSimulatorApp extends Application {
         
         // Start simulation
         runner = new SimulationRunner(CONFIG_FILE, false);
+        
+        // Set up listener to initialize traffic lights when SUMO connects
+        runner.setConnectionListener(adapter -> {
+            Platform.runLater(() -> {
+                try {
+                    scene.initializeTrafficLightsFromSUMO(adapter);
+                    System.out.println("Traffic lights initialized from SUMO");
+                } catch (Exception e) {
+                    System.err.println("Error initializing traffic lights: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            });
+        });
+        
         exec = Executors.newSingleThreadExecutor();
         exec.submit(runner);
 
@@ -123,9 +139,22 @@ public class TrafficSimulatorApp extends Application {
                 } else if (clickedElement instanceof Vehicle) {
                     Vehicle vehicle = (Vehicle) clickedElement;
                     System.out.println("Vehicle ID: " + vehicle.getId() + " Type: " + vehicle.getType());
+                // } else if (clickedElement instanceof TrafficLight) {
+                //     TrafficLight tl = (TrafficLight) clickedElement;
+                //     String status = "";
+                //     if (tl.isMainForcedControl()) {
+                //         status += " Main: FORCED " + tl.getMainForcedState().toUpperCase();
+                //     }
+                //     if (tl.isTurnForcedControl()) {
+                //         status += " Turn: FORCED " + tl.getTurnForcedState().toUpperCase();
+                //     }
+                //     System.out.println("Traffic Light: Junction " + tl.getJunctionId() + 
+                //         ", Edge " + tl.getApproachEdgeId() + status);
+                // }
                 }
             }
-        });
+        }
+        );
 
         stage.setOnCloseRequest(e -> {
             runner.stop();
@@ -133,6 +162,69 @@ public class TrafficSimulatorApp extends Application {
             Platform.exit();
         });
     }
+    
+    // private void showTrafficLightMenu(TrafficLight tl, double screenX, double screenY) {
+    //     ContextMenu menu = new ContextMenu();
+        
+    //     // Main light controls
+    //     MenuItem mainGreen = new MenuItem("Main: Force Green");
+    //     mainGreen.setOnAction(e -> {
+    //         tl.forceMainGreen();
+    //         System.out.println("Forced MAIN GREEN: Junction " + tl.getJunctionId() + ", Edge " + tl.getApproachEdgeId());
+    //     });
+        
+    //     MenuItem mainRed = new MenuItem("Main: Force Red");
+    //     mainRed.setOnAction(e -> {
+    //         tl.forceMainRed();
+    //         System.out.println("Forced MAIN RED: Junction " + tl.getJunctionId() + ", Edge " + tl.getApproachEdgeId());
+    //     });
+        
+    //     MenuItem mainRelease = new MenuItem("Main: Release Control");
+    //     mainRelease.setOnAction(e -> {
+    //         tl.releaseMainControl();
+    //         System.out.println("Released MAIN control: Junction " + tl.getJunctionId() + ", Edge " + tl.getApproachEdgeId());
+    //     });
+    //     mainRelease.setDisable(!tl.isMainForcedControl());
+        
+    //     // Turn signal controls (only if there are turn links)
+    //     if (!tl.getTurnLinkIndices().isEmpty()) {
+    //         MenuItem turnGreen = new MenuItem("Turn: Force Green");
+    //         turnGreen.setOnAction(e -> {
+    //             tl.forceTurnGreen();
+    //             System.out.println("Forced TURN GREEN: Junction " + tl.getJunctionId() + ", Edge " + tl.getApproachEdgeId());
+    //         });
+            
+    //         MenuItem turnRed = new MenuItem("Turn: Force Red");
+    //         turnRed.setOnAction(e -> {
+    //             tl.forceTurnRed();
+    //             System.out.println("Forced TURN RED: Junction " + tl.getJunctionId() + ", Edge " + tl.getApproachEdgeId());
+    //         });
+            
+    //         MenuItem turnRelease = new MenuItem("Turn: Release Control");
+    //         turnRelease.setOnAction(e -> {
+    //             tl.releaseTurnControl();
+    //             System.out.println("Released TURN control: Junction " + tl.getJunctionId() + ", Edge " + tl.getApproachEdgeId());
+    //         });
+    //         turnRelease.setDisable(!tl.isTurnForcedControl());
+            
+    //         menu.getItems().addAll(mainGreen, mainRed, mainRelease, 
+    //                                new javafx.scene.control.SeparatorMenuItem(),
+    //                                turnGreen, turnRed, turnRelease);
+    //     } else {
+    //         menu.getItems().addAll(mainGreen, mainRed, mainRelease);
+    //     }
+        
+    //     // Auto-hide when clicking elsewhere
+    //     menu.setAutoHide(true);
+    //     canvas.setOnMousePressed(e -> {
+    //         if (e.isPrimaryButtonDown()) {
+    //             menu.hide();
+    //             viewManager.startPan(e.getX(), e.getY());
+    //         }
+    //     });
+        
+    //     menu.show(canvas, screenX, screenY);
+    // }
 
     /** Main rendering loop - called ~60 times per second */
     private void draw() {
@@ -142,6 +234,7 @@ public class TrafficSimulatorApp extends Application {
         g.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
         scene.updateVehicles(runner.getVehiclePositions());
+        scene.updateTrafficLights(runner.getTrafficLightData());
         scene.render(g, viewManager.getTransform());
 
         // Update dashboard at reduced frequency

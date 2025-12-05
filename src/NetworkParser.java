@@ -66,15 +66,61 @@ public class NetworkParser {
             return lanes.stream().mapToDouble(l -> l.width).sum();
         }
     }
+    public static class Connection {
+        public final String from;
+        public final String to;
+        public final int fromLane;
+        public final int toLane;
+        public final String dir;
+        public final String tl; // for Traffic Light ID
+        public final int linkIndex;
+
+        public Connection(String from, String to, int fromLane, int toLane, String dir, String tl, int linkIndex) {
+            this.from = from;
+            this.to = to;
+            this.fromLane = fromLane;
+            this.toLane = toLane;
+            this.dir = dir;
+            this.tl = tl;
+            this.linkIndex = linkIndex;
+        }
+    }
+    public static class TrafficLightLogic {
+        public final String id;
+        public final String type;
+        public final int programID;
+        public final List<TrafficLightPhase> phases;
+        
+        public TrafficLightLogic(String id, String type, int programID, List<TrafficLightPhase> phases) {
+            this.id = id;
+            this.type = type;
+            this.programID = programID;
+            this.phases = phases;
+        }
+        
+        public static class TrafficLightPhase {
+            public final double duration;
+            public final String state;
+            
+            public TrafficLightPhase(double duration, String state) {
+                this.duration = duration;
+                this.state = state;
+            }
+        }
+    }
 
     public static class NetworkData {
         public final List<Junction> junctions;
         public final List<Edge> edges;
+        public final List<TrafficLightLogic> trafficLights;
+        public final List<Connection> connections;
         public final double minX, maxX, minY, maxY;
 
-        public NetworkData(List<Junction> js, List<Edge> es, double minX, double maxX, double minY, double maxY) {
+        public NetworkData(List<Junction> js, List<Edge> es, List<TrafficLightLogic> tls, List<Connection> conns, double minX, double maxX, double minY, double maxY) {
             this.junctions = js;
             this.edges = es;
+            this.trafficLights = tls;
+            this.connections = conns;
             this.minX = minX;
             this.maxX = maxX;
             this.minY = minY;
@@ -169,7 +215,64 @@ public class NetworkParser {
                 edges.add(new Edge(edgeId, from, to, lanes));
             }
         }
+        
+        // Parse traffic lights
+        NodeList tlLogicNodes = doc.getElementsByTagName("tlLogic");
+        List<TrafficLightLogic> trafficLights = new ArrayList<>();
+        
+        System.out.println("\n=== Parsing Traffic Lights from XML ===");
+        for (int i = 0; i < tlLogicNodes.getLength(); i++) {
+            Element tlElem = (Element) tlLogicNodes.item(i);
+            
+            String tlId = tlElem.getAttribute("id");
+            String type = tlElem.hasAttribute("type") ? tlElem.getAttribute("type") : "static";
+            int programID = tlElem.hasAttribute("programID") 
+                ? Integer.parseInt(tlElem.getAttribute("programID")) 
+                : 0;
+            
+            // Parse phases
+            NodeList phaseNodes = tlElem.getElementsByTagName("phase");
+            List<TrafficLightLogic.TrafficLightPhase> phases = new ArrayList<>();
+            
+            for (int j = 0; j < phaseNodes.getLength(); j++) {
+                Element phaseElem = (Element) phaseNodes.item(j);
+                
+                double duration = Double.parseDouble(phaseElem.getAttribute("duration"));
+                String state = phaseElem.getAttribute("state");
+                
+                phases.add(new TrafficLightLogic.TrafficLightPhase(duration, state));
+            }
+            
+            if (!phases.isEmpty()) {
+                trafficLights.add(new TrafficLightLogic(tlId, type, programID, phases));
+                System.out.println("Parsed TL [" + tlId + "] with " + phases.size() + " phases, initial state: " + phases.get(0).state);
+            }
+        }
+        
+        System.out.println("Total traffic lights parsed: " + trafficLights.size());
 
-        return new NetworkData(junctions, edges, minX, maxX, minY, maxY);
+        // Parse connections
+        NodeList connectionNodes = doc.getElementsByTagName("connection");
+        List<Connection> connections = new ArrayList<>();
+        
+        for (int i = 0; i < connectionNodes.getLength(); i++) {
+            Element connElem = (Element) connectionNodes.item(i);
+            
+            String from = connElem.getAttribute("from");
+            String to = connElem.getAttribute("to");
+            int fromLane = Integer.parseInt(connElem.getAttribute("fromLane"));
+            int toLane = Integer.parseInt(connElem.getAttribute("toLane"));
+            String dir = connElem.getAttribute("dir");
+            String tl = connElem.hasAttribute("tl") ? connElem.getAttribute("tl") : null;
+            int linkIndex = connElem.hasAttribute("linkIndex") 
+                ? Integer.parseInt(connElem.getAttribute("linkIndex")) 
+                : -1;
+            
+            connections.add(new Connection(from, to, fromLane, toLane, dir, tl, linkIndex));
+        }
+        
+        System.out.println("Total connections parsed: " + connections.size());
+
+        return new NetworkData(junctions, edges, trafficLights, connections, minX, maxX, minY, maxY);
     }
 }
