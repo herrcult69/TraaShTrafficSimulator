@@ -66,36 +66,15 @@ public class NetworkParser {
             return lanes.stream().mapToDouble(l -> l.width).sum();
         }
     }
-    public static class Connection {
-        public final String from;
-        public final String to;
-        public final int fromLane;
-        public final int toLane;
-        public final String dir;
-        public final String tl; // for Traffic Light ID
-        public final int linkIndex;
-
-        public Connection(String from, String to, int fromLane, int toLane, String dir, String tl, int linkIndex) {
-            this.from = from;
-            this.to = to;
-            this.fromLane = fromLane;
-            this.toLane = toLane;
-            this.dir = dir;
-            this.tl = tl;
-            this.linkIndex = linkIndex;
-        }
-    }
 
     public static class NetworkData {
         public final List<Junction> junctions;
         public final List<Edge> edges;
-        public final List<Connection> connections;
         public final double minX, maxX, minY, maxY;
 
-        public NetworkData(List<Junction> js, List<Edge> es, List<Connection> conns, double minX, double maxX, double minY, double maxY) {
+        public NetworkData(List<Junction> js, List<Edge> es, double minX, double maxX, double minY, double maxY) {
             this.junctions = js;
             this.edges = es;
-            this.connections = conns;
             this.minX = minX;
             this.maxX = maxX;
             this.minY = minY;
@@ -191,28 +170,6 @@ public class NetworkParser {
             }
         }
 
-        // Parse connections
-        NodeList connectionNodes = doc.getElementsByTagName("connection");
-        List<Connection> connections = new ArrayList<>();
-        
-        for (int i = 0; i < connectionNodes.getLength(); i++) {
-            Element connElem = (Element) connectionNodes.item(i);
-            
-            String from = connElem.getAttribute("from");
-            String to = connElem.getAttribute("to");
-            int fromLane = Integer.parseInt(connElem.getAttribute("fromLane"));
-            int toLane = Integer.parseInt(connElem.getAttribute("toLane"));
-            String dir = connElem.getAttribute("dir");
-            String tl = connElem.hasAttribute("tl") ? connElem.getAttribute("tl") : null;
-            int linkIndex = connElem.hasAttribute("linkIndex") 
-                ? Integer.parseInt(connElem.getAttribute("linkIndex")) 
-                : -1;
-            
-            connections.add(new Connection(from, to, fromLane, toLane, dir, tl, linkIndex));
-        }
-        
-        System.out.println("Total connections parsed: " + connections.size());
-
-        return new NetworkData(junctions, edges, connections, minX, maxX, minY, maxY);
+        return new NetworkData(junctions, edges, minX, maxX, minY, maxY);
     }
 }

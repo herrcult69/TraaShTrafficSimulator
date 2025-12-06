@@ -8,7 +8,6 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.scene.control.ScrollPane;
 
-
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 
@@ -140,8 +139,7 @@ public class TrafficSimulatorApp extends Application {
                     System.out.println("Vehicle ID: " + vehicle.getId() + " Type: " + vehicle.getType());
                 }
             }
-        }
-        );
+        });
 
         stage.setOnCloseRequest(e -> {
             runner.stop();

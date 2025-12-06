@@ -46,10 +46,10 @@ SIMULATION_TIME=3600  # 1 hour in seconds
 
 # Network parameters (RANDOM NETWORK)
 RAND_ITERATIONS=30      # Number of random network iterations
-RAND_MAX_DISTANCE=120   # Maximum edge length in meters
-RAND_MIN_DISTANCE=70    # Minimum edge length in meters
+RAND_MAX_DISTANCE=110   # Maximum edge length in meters
+RAND_MIN_DISTANCE=50    # Minimum edge length in meters
 DEFAULT_SPEED=10.89      # m/s
-NUM_TRIES=200 
+NUM_TRIES=150 
 # Traffic density (seconds between vehicles)
 # Lower values = more vehicles spawned
 CAR_PERIOD=5          # Cars every 5 seconds (was 100)
@@ -74,10 +74,10 @@ netgenerate --rand \
     --rand.num-tries=$NUM_TRIES \
     --rand.max-distance=$RAND_MAX_DISTANCE \
     --rand.min-distance=$RAND_MIN_DISTANCE \
-    --rand.connectivity=0.8 \
+    --rand.connectivity=0.6 \
     --tls.guess \
     --default.speed=$DEFAULT_SPEED \
-    --default.lanenumber=2 \
+    --default.lanenumber=3 \
     --junctions.join \
     --junctions.join-dist=10 \
     --output-file="$NETWORK_FILE"

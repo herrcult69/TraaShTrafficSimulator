@@ -8,7 +8,6 @@ public class Vehicle {
     private double worldX, worldY;
     private double angle;
     private double length, width;
-    private Lane currentLane;
     private Rectangle2D bounds;
 
     public Vehicle(String id, double worldX, double worldY, double angle) {
@@ -112,16 +111,6 @@ public class Vehicle {
         };
     }
 
-    public void setCurrentLane(Lane lane) {
-        if (currentLane != null) {
-            currentLane.removeVehicle(this);
-        }
-        this.currentLane = lane;
-        if (lane != null) {
-            lane.addVehicle(this);
-        }
-    }
-
     // Getters
     public String getId() {
         return id;
@@ -141,10 +130,6 @@ public class Vehicle {
 
     public double getAngle() {
         return angle;
-    }
-
-    public Lane getCurrentLane() {
-        return currentLane;
     }
 
     public Rectangle2D getBounds() {
