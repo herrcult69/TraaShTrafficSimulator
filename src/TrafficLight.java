@@ -12,6 +12,7 @@ public class TrafficLight {
     private String currentState;
     private List<Integer> linkIndices; // for main light: straight + right turns
     private List<Integer> turnLinkIndices; // ArrowLight: left turns only
+    private List<NetworkParser.Connection> connections; // Store connections for lane lookup
     
     // // Force control - separate for main and turn signals
     // private boolean mainForcedControl = false;
@@ -39,6 +40,7 @@ public class TrafficLight {
         this.linkIndices = new ArrayList<>();
         this.turnLinkIndices = new ArrayList<>();
         this.currentState = "";
+        this.connections = new ArrayList<>();
     }
 
     public void calculatePosition(List<Edge> edges) {
@@ -50,35 +52,23 @@ public class TrafficLight {
             }
         }
         if (fromEdge == null || fromEdge.getLanes().isEmpty()) {
-            System.out.println("WARNING: Cound not find edge for traffic light: " + approachEdgeId);
+            System.out.println("WARNING: Could not find edge for traffic light: " + approachEdgeId);
             return;
         }
-        // Calculate average position across all lanes for centered placement
-        // Use the start point (x1, y1) and end point (x2, y2) of lanes
-        double sumX1 = 0, sumY1 = 0, sumX2 = 0, sumY2 = 0;
-        int laneCount = fromEdge.getLanes().size();
         
-        for (Lane lane : fromEdge.getLanes()) {
-            sumX1 += lane.getCenterX1();
-            sumY1 += lane.getCenterY1();
-            sumX2 += lane.getCenterX2();
-            sumY2 += lane.getCenterY2();
-        }
+        // Get edge geometry
+        double edgeFromX = fromEdge.getFromX();
+        double edgeFromY = fromEdge.getFromY();
+        double edgeToX = fromEdge.getToX();
+        double edgeToY = fromEdge.getToY();
         
-        double avgX1 = sumX1 / laneCount;
-        double avgY1 = sumY1 / laneCount;
-        double avgX2 = sumX2 / laneCount;
-        double avgY2 = sumY2 / laneCount;
-
-        // Calculate direction vector from start to end of edge
-        double dx = avgX2 - avgX1;
-        double dy = avgY2 - avgY1;
+        // Calculate direction vector
+        double dx = edgeToX - edgeFromX;
+        double dy = edgeToY - edgeFromY;
         double length = Math.sqrt(dx * dx + dy * dy);
 
         if (length < 0.001) {
-            System.out.println("WARNING: Zero-length edge [" + approachEdgeId + "]: (" + 
-                String.format("%.2f,%.2f", avgX1, avgY1) + ") to (" + 
-                String.format("%.2f,%.2f", avgX2, avgY2) + "), using junction position");
+            System.out.println("WARNING: Zero-length edge [" + approachEdgeId + "], using junction position");
             this.x = junction.getX();
             this.y = junction.getY();
             return;
@@ -86,17 +76,97 @@ public class TrafficLight {
 
         double dirX = dx / length;
         double dirY = dy / length;
+        
+        // Perpendicular vector for lateral offset
+        double perpX = dy / length;
+        double perpY = -dx / length;
 
-        // Position traffic light 5 meters back from the end of the edge (before junction)
-        double offset = 5.0;
-        this.x = avgX2 - dirX * offset;
-        this.y = avgY2 - dirY * offset;
+        // Get the radius at the destination junction
+        double toRadius = junction.getRadiusInDirection(-dirX, -dirY);
+        
+        // Calculate clipped end position
+        double clippedEndX = edgeToX - toRadius * dirX;
+        double clippedEndY = edgeToY - toRadius * dirY;
+        
+        // Position traffic light slightly INTO the junction (2m for visibility)
+        double junctionOffset = 2.0;
+        double baseX = clippedEndX + dirX * junctionOffset;
+        double baseY = clippedEndY + dirY * junctionOffset;
+        
+        // Find which lanes this TL controls by looking at link indices
+        // Edge creates lanes: [0..numLanes-1] = Direction 1 (negative offset)
+        //                     [numLanes..2*numLanes-1] = Direction 2 (positive offset)
+        // SUMO fromLane indices are [0..numLanes-1]
+        // We need to map SUMO lane index to the correct visual lane
+        
+        int numLanesPerDirection = fromEdge.getNetworkEdge().lanes.size();
+        
+        // Determine which direction the traffic flows: toward junction (Direction 2) or away (Direction 1)
+        // Direction 2 lanes (positive offset) flow from fromX,fromY -> toX,toY (toward junction)
+        // So for approaching traffic, we want Direction 2 lanes (indices numLanes to 2*numLanes-1)
+        
+        double avgLaneOffset = 0.0;
+        int count = 0;
+        
+        // Get all controlled lanes from linkIndices and turnLinkIndices
+        for (int linkIdx : linkIndices) {
+            avgLaneOffset += getLaneOffsetForLink(linkIdx, fromEdge, numLanesPerDirection);
+            count++;
+        }
+        for (int linkIdx : turnLinkIndices) {
+            avgLaneOffset += getLaneOffsetForLink(linkIdx, fromEdge, numLanesPerDirection);
+            count++;
+        }
+        
+        if (count > 0) {
+            avgLaneOffset /= count;
+        }
+        
+        // Apply lateral offset
+        this.x = baseX + perpX * avgLaneOffset;
+        this.y = baseY + perpY * avgLaneOffset;
 
-        // Calculate direction label based on angle
+        // Calculate direction label
         this.direction = calculateDirectionName(dirX, dirY);
         
-        System.out.println("  TL positioned at (" + String.format("%.1f", x) + ", " + 
-                          String.format("%.1f", y) + ") facing " + direction);
+        System.out.println("  TL [" + approachEdgeId + "] positioned at (" + 
+                          String.format("%.1f", x) + ", " + String.format("%.1f", y) + 
+                          ") with offset " + String.format("%.1f", avgLaneOffset) + ", facing " + direction);
+    }
+    
+    private double getLaneOffsetForLink(int linkIdx, Edge fromEdge, int numLanesPerDirection) {
+        // Find the connection for this link to get the fromLane index
+        for (NetworkParser.Connection conn : connections) {
+            if (conn.tl != null && conn.tl.equals(junctionId) && 
+                conn.from.equals(approachEdgeId) && conn.linkIndex == linkIdx) {
+                
+                int sumoLaneIdx = conn.fromLane;
+                // Map SUMO lane index to Direction 2 visual lane (approaching traffic)
+                int visualLaneIdx = numLanesPerDirection + sumoLaneIdx;
+                
+                if (visualLaneIdx < fromEdge.getLanes().size()) {
+                    Lane lane = fromEdge.getLanes().get(visualLaneIdx);
+                    
+                    // Calculate offset from edge centerline
+                    double laneX = lane.getCenterX2();
+                    double laneY = lane.getCenterY2();
+                    double edgeToX = fromEdge.getToX();
+                    double edgeToY = fromEdge.getToY();
+                    
+                    // Get perpendicular distance
+                    double dx = edgeToX - fromEdge.getFromX();
+                    double dy = edgeToY - fromEdge.getFromY();
+                    double len = Math.sqrt(dx * dx + dy * dy);
+                    double perpX = dy / len;
+                    double perpY = -dx / len;
+                    
+                    double offset = (laneX - edgeToX) * perpX + (laneY - edgeToY) * perpY;
+                    return offset;
+                }
+                break;
+            }
+        }
+        return 0.0;
     }
     private String calculateDirectionName(double dirX, double dirY) {
         double angle = Math.toDegrees(Math.atan2(dirY, dirX));
@@ -123,6 +193,8 @@ public class TrafficLight {
     
     // Classify links based on connection directions from network XML
     public void classifyLinks(List<Integer> links, List<NetworkParser.Connection> connections) {
+        this.connections = connections; // Store for later use in calculatePosition
+        
         for (int linkIdx : links) {
             // Find direction for this link from connections
             String direction = null;

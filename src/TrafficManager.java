@@ -48,9 +48,8 @@ public class TrafficManager {
             }
         }
         System.out.println("Created " + edges.size() + " edges");
-        //Store connections for traffic light initialization
+        
         this.connections = network.connections;
-        // Initialize traffic lights using factory method
     }
     public void initializeTrafficLightsFromSUMO(TraaSAdapter adapter) {
         this.adapter = adapter;
@@ -89,7 +88,6 @@ public class TrafficManager {
                 // Create traffic lights and classify links
                 for (Map.Entry<String, List<Integer>> entry : linksByEdge.entrySet()) {
                     TrafficLight tl = new TrafficLight(junctionId, junction, entry.getKey());
-                    // tl.setAdapter(adapter);
                     tl.classifyLinks(entry.getValue(), connections);
                     tl.calculatePosition(edges);
                     trafficLights.add(tl);
@@ -142,13 +140,6 @@ public class TrafficManager {
                 }
             }
         }
-        
-        // After updating from SUMO, apply forced states
-        // for (TrafficLight tl : trafficLights) {
-        //     if (tl.isMainForcedControl() || tl.isTurnForcedControl()) {
-        //         tl.applyForcedState();
-        //     }
-        // }
     }
 
     public Object getElementAt(double screenX, double screenY, CoordinateTransform transform) {
