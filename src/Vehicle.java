@@ -1,5 +1,6 @@
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
+import javafx.geometry.Rectangle2D;
 
 public class Vehicle {
     private String id;
@@ -7,6 +8,7 @@ public class Vehicle {
     private double worldX, worldY;
     private double angle;
     private double length, width;
+    private Rectangle2D bounds;
     private int signals;
 
     public Vehicle(String id, double worldX, double worldY, double angle) {
@@ -17,6 +19,7 @@ public class Vehicle {
 
         // Determine vehicle type and dimensions from ID
         determineTypeFromId();
+        updateBounds();
     }
 
     private void determineTypeFromId() {
@@ -51,11 +54,20 @@ public class Vehicle {
         this.worldX = sumoData[0];
         this.worldY = sumoData[1];
         if (sumoData.length > 2) {
-            this.angle = sumoData[2];
+            this.angle = -(90.0 - sumoData[2]); // Fixed angle calculation
         }
         if (sumoData.length > 3) {
             this.signals = (int) sumoData[3];
         }
+        updateBounds();
+    }
+
+    private void updateBounds() {
+        double halfWidth = width / 2;
+        // Bounds with head at (worldX, worldY) extending backward
+        bounds = new Rectangle2D(
+                worldX - length, worldY - halfWidth,
+                length, width);
     }
 
     public boolean contains(double screenX, double screenY, CoordinateTransform transform) {
@@ -67,7 +79,7 @@ public class Vehicle {
         double distance = Math.sqrt(dx * dx + dy * dy);
 
         // The circle should be a little bit smaller than the width
-        double radius = width * .90;
+        double radius = width * .90 ;
         return distance <= radius;
     }
 
@@ -80,6 +92,7 @@ public class Vehicle {
         g.save();
         g.translate(screenX, screenY);
         g.rotate(angle);
+
 
         // Dashed outline
         g.setStroke(color);
@@ -188,5 +201,9 @@ public class Vehicle {
 
     public double getAngle() {
         return angle;
+    }
+
+    public Rectangle2D getBounds() {
+        return bounds;
     }
 }
