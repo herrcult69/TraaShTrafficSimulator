@@ -63,49 +63,82 @@ public class Lane {
         return t >= -0.1 && t <= 1.1; // Small tolerance
     }
 
-
-
     public void highlight(GraphicsContext g, CoordinateTransform transform, Color color) {
-        double dx = x2 - x1;
-        double dy = y2 - y1;
+        // Get edge endpoints
+        double edgeFromX = parentEdge.getFromX();
+        double edgeFromY = parentEdge.getFromY();
+        double edgeToX = parentEdge.getToX();
+        double edgeToY = parentEdge.getToY();
+
+        double dx = edgeToX - edgeFromX;
+        double dy = edgeToY - edgeFromY;
         double length = Math.sqrt(dx * dx + dy * dy);
 
-        if (length < 0.001) return;
+        if (length < 0.001)
+            return;
 
-        double perpX = -dy / length;
-        double perpY = dx / length;
+        double dirX = dx / length;
+        double dirY = dy / length;
+
+        // Get junction radii for clipping
+        Junction fromJunction = parentEdge.getFromJunction();
+        Junction toJunction = parentEdge.getToJunction();
+
+        double fromRadius = fromJunction.getRadiusInDirection(dirX, dirY);
+        double toRadius = toJunction.getRadiusInDirection(-dirX, -dirY);
+
+        // Clip lane at junction boundaries (same as edge rendering)
+        double clippedStartX = edgeFromX + fromRadius * dirX;
+        double clippedStartY = edgeFromY + fromRadius * dirY;
+        double clippedEndX = edgeToX - toRadius * dirX;
+        double clippedEndY = edgeToY - toRadius * dirY;
+
+        // Apply lane offset to clipped coordinates
+        double perpX = dy / length;
+        double perpY = -dx / length;
+
+        double laneStartX = clippedStartX + offsetFromCenter * perpX;
+        double laneStartY = clippedStartY + offsetFromCenter * perpY;
+        double laneEndX = clippedEndX + offsetFromCenter * perpX;
+        double laneEndY = clippedEndY + offsetFromCenter * perpY;
+
+        // Calculate perpendicular for lane width
+        double laneDx = laneEndX - laneStartX;
+        double laneDy = laneEndY - laneStartY;
+        double laneLength = Math.sqrt(laneDx * laneDx + laneDy * laneDy);
+
+        if (laneLength < 0.001)
+            return;
+
+        double lanePerpX = -laneDy / laneLength;
+        double lanePerpY = laneDx / laneLength;
         double halfWidth = width / 2.0;
 
-        // Calculate 4 corners of the lane
+        // Calculate 4 corners of the clipped lane
         double[] xPoints = {
-            transform.worldToScreenX(x1 - perpX * halfWidth),
-            transform.worldToScreenX(x1 + perpX * halfWidth),
-            transform.worldToScreenX(x2 + perpX * halfWidth),
-            transform.worldToScreenX(x2 - perpX * halfWidth)
+                transform.worldToScreenX(laneStartX - lanePerpX * halfWidth),
+                transform.worldToScreenX(laneStartX + lanePerpX * halfWidth),
+                transform.worldToScreenX(laneEndX + lanePerpX * halfWidth),
+                transform.worldToScreenX(laneEndX - lanePerpX * halfWidth)
         };
 
         double[] yPoints = {
-            transform.worldToScreenY(y1 - perpY * halfWidth),
-            transform.worldToScreenY(y1 + perpY * halfWidth),
-            transform.worldToScreenY(y2 + perpY * halfWidth),
-            transform.worldToScreenY(y2 - perpY * halfWidth)
+                transform.worldToScreenY(laneStartY - lanePerpY * halfWidth),
+                transform.worldToScreenY(laneStartY + lanePerpY * halfWidth),
+                transform.worldToScreenY(laneEndY + lanePerpY * halfWidth),
+                transform.worldToScreenY(laneEndY - lanePerpY * halfWidth)
         };
 
-        g.setStroke(color);
-        g.setLineWidth(2);
-        g.strokePolygon(xPoints, yPoints, 4);
-    }
+        // Draw semi-transparent fill
+        g.setFill(Color.color(color.getRed(), color.getGreen(), color.getBlue(), 0.15));
+        g.fillPolygon(xPoints, yPoints, 4);
 
-    public void render(GraphicsContext g, CoordinateTransform transform, boolean highlight) {
-        // Lane markings are rendered by parent edge
-        // Individual lane highlighting can be done here
-        if (highlight) {
-            g.setStroke(Color.YELLOW);
-            g.setLineWidth(4);
-            g.strokeLine(
-                    transform.worldToScreenX(x1), transform.worldToScreenY(y1),
-                    transform.worldToScreenX(x2), transform.worldToScreenY(y2));
-        }
+        // Draw dashed outline
+        g.setStroke(color);
+        g.setLineWidth(2.5);
+        g.setLineDashes(8, 4);
+        g.strokePolygon(xPoints, yPoints, 4);
+        g.setLineDashes(null);
     }
 
     // Getters

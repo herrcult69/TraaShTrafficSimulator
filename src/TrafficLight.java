@@ -13,7 +13,7 @@ public class TrafficLight {
     private static final Color YELLOW_DIM = Color.rgb(60, 60, 0);
     private static final Color GREEN_DIM = Color.rgb(0, 60, 0);
     private static final Color BG_DARK = Color.rgb(40, 40, 40);
-    
+
     private String junctionId;
     private Junction junction;
     private String approachEdgeId;
@@ -27,14 +27,15 @@ public class TrafficLight {
         public String state;
         public List<String> controlledLanes;
         public int linkCount;
-        
+
         public TrafficLightData(String state, List<String> lanes, int linkCount) {
             this.state = state;
             this.controlledLanes = lanes;
             this.linkCount = linkCount;
         }
     }
-    public TrafficLight(String junctionId, Junction junction, String approachEdgeId){
+
+    public TrafficLight(String junctionId, Junction junction, String approachEdgeId) {
         this.junctionId = junctionId;
         this.junction = junction;
         this.approachEdgeId = approachEdgeId;
@@ -44,7 +45,7 @@ public class TrafficLight {
 
     public void calculatePosition(List<Edge> edges) {
         Edge fromEdge = null;
-        for (Edge edge: edges) {
+        for (Edge edge : edges) {
             if (edge.getNetworkEdge().id.equals(approachEdgeId)) {
                 fromEdge = edge;
                 break;
@@ -54,13 +55,13 @@ public class TrafficLight {
             System.out.println("WARNING: Could not find edge for traffic light: " + approachEdgeId);
             return;
         }
-        
+
         // Get edge geometry
         double edgeFromX = fromEdge.getFromX();
         double edgeFromY = fromEdge.getFromY();
         double edgeToX = fromEdge.getToX();
         double edgeToY = fromEdge.getToY();
-        
+
         // Calculate direction vector
         double dx = edgeToX - edgeFromX;
         double dy = edgeToY - edgeFromY;
@@ -75,23 +76,23 @@ public class TrafficLight {
 
         double dirX = dx / length;
         double dirY = dy / length;
-        
+
         // Perpendicular vector for lateral offset
         double perpX = dy / length;
         double perpY = -dx / length;
 
         // Get the radius at the destination junction
         double toRadius = junction.getRadiusInDirection(-dirX, -dirY);
-        
+
         // Calculate clipped end position
         double clippedEndX = edgeToX - toRadius * dirX;
         double clippedEndY = edgeToY - toRadius * dirY;
-        
+
         // Position traffic light slightly INTO the junction (2m for visibility)
         double junctionOffset = 2.0;
         double baseX = clippedEndX + dirX * junctionOffset;
         double baseY = clippedEndY + dirY * junctionOffset;
-        
+
         // Position at center of the approaching lanes (Direction 2)
         double totalLaneWidth = fromEdge.getNetworkEdge().getTotalWidth();
         double centerLaneOffset = totalLaneWidth + (3.2 / 2);
@@ -104,7 +105,7 @@ public class TrafficLight {
         double roadAngle = Math.toDegrees(Math.atan2(dirY, dirX));
         this.rotationAngle = -roadAngle + 90;
     }
-    
+
     public void classifyLinks(List<Integer> links) {
         this.linkIndices.addAll(links);
     }
@@ -119,26 +120,33 @@ public class TrafficLight {
         }
 
         boolean hasGreen = false, hasYellow = false, hasRed = false;
-        
+
         for (int index : indices) {
-            if (index >= currentState.length()) continue;
+            if (index >= currentState.length())
+                continue;
             char signal = currentState.charAt(index);
-            
-            if (signal == 'G' || signal == 'g') hasGreen = true;
-            else if (signal == 'y' || signal == 'Y') hasYellow = true;
-            else if (signal == 'r' || signal == 'R') hasRed = true;
+
+            if (signal == 'G' || signal == 'g')
+                hasGreen = true;
+            else if (signal == 'y' || signal == 'Y')
+                hasYellow = true;
+            else if (signal == 'r' || signal == 'R')
+                hasRed = true;
         }
-        
-        if (hasRed) return RED;
-        if (hasYellow) return YELLOW;
-        if (hasGreen) return GREEN;
+
+        if (hasRed)
+            return RED;
+        if (hasYellow)
+            return YELLOW;
+        if (hasGreen)
+            return GREEN;
         return GRAY;
     }
 
     public Color getCurrentColor() {
         return getSignalColor(linkIndices);
     }
-    
+
     public void render(GraphicsContext g, CoordinateTransform transform) {
         double screenX = transform.worldToScreenX(x);
         double screenY = transform.worldToScreenY(y);
@@ -151,10 +159,10 @@ public class TrafficLight {
 
         // Render traffic light model
         g.setFill(BG_DARK);
-        g.fillRect(-size/2, -size/2, size, size * 1.8);
+        g.fillRect(-size / 2, -size / 2, size, size * 1.8);
         g.setStroke(GRAY);
         g.setLineWidth(1);
-        g.strokeRect(-size/2, -size/2, size, size * 1.8);
+        g.strokeRect(-size / 2, -size / 2, size, size * 1.8);
 
         Color activeColor = getCurrentColor();
         double lightRadius = size * 0.3;
@@ -186,14 +194,60 @@ public class TrafficLight {
 
         return screenX >= left && screenX <= right && screenY >= top && screenY <= bottom;
     }
+
+    public void highlight(GraphicsContext g, CoordinateTransform transform, Color color) {
+        double screenX = transform.worldToScreenX(x);
+        double screenY = transform.worldToScreenY(y);
+        double size = transform.worldToScreenSize(2.0);
+        double width = size * 3.5;
+        double height = size * 2.5;
+
+        // Draw semi-transparent fill
+        g.setFill(Color.color(color.getRed(), color.getGreen(), color.getBlue(), 0.2));
+        g.fillRect(screenX - width / 2, screenY - height / 2, width, height);
+
+        // Draw dashed border
+        g.setStroke(color);
+        g.setLineWidth(2.5);
+        g.setLineDashes(6, 3);
+        g.strokeRect(screenX - width / 2, screenY - height / 2, width, height);
+        g.setLineDashes(null);
+    }
+
     // Getters
-    public String getJunctionId() { return junctionId; }
-    public String getApproachEdgeId() { return approachEdgeId; }
-    public Junction getJunction() { return junction; }
-    public String getCurrentState() { return currentState; }
-    public List<Integer> getLinkIndices() { return linkIndices; }
-    public double getX() { return x; }
-    public double getY() { return y; }
-    public boolean isManualMode() { return manualMode; }
-    public void setManualMode(boolean manualMode) { this.manualMode = manualMode; }
+    public String getJunctionId() {
+        return junctionId;
+    }
+
+    public String getApproachEdgeId() {
+        return approachEdgeId;
+    }
+
+    public Junction getJunction() {
+        return junction;
+    }
+
+    public String getCurrentState() {
+        return currentState;
+    }
+
+    public List<Integer> getLinkIndices() {
+        return linkIndices;
+    }
+
+    public double getX() {
+        return x;
+    }
+
+    public double getY() {
+        return y;
+    }
+
+    public boolean isManualMode() {
+        return manualMode;
+    }
+
+    public void setManualMode(boolean manualMode) {
+        this.manualMode = manualMode;
+    }
 }

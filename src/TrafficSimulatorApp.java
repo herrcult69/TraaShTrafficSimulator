@@ -31,10 +31,6 @@ public class TrafficSimulatorApp extends Application {
     private TrafficManager scene;
     private CoordinateTransform transform;
     private ViewManager viewManager;
-    private double mouseX = -1;
-    private double mouseY = -1;
-
-    // Interaction fields
     private Object selectedElement;
     private Object hoveredElement;
 
@@ -59,10 +55,10 @@ public class TrafficSimulatorApp extends Application {
 
         // Create dashboard
         dashboard = new DashBoard();
-        
+
         // Start simulation
         runner = new SimulationRunner(CONFIG_FILE, false);
-        
+
         // Set up listener to initialize traffic lights when SUMO connects
         runner.setConnectionListener(adapter -> {
             Platform.runLater(() -> {
@@ -75,7 +71,7 @@ public class TrafficSimulatorApp extends Application {
                 }
             });
         });
-        
+
         exec = Executors.newSingleThreadExecutor();
         exec.submit(runner);
 
@@ -90,11 +86,11 @@ public class TrafficSimulatorApp extends Application {
         Scene mainScene = new Scene(root, 1400, 900);
         stage.setScene(mainScene);
         stage.setTitle("Traffic Simulator - OOP Architecture");
-        
+
         // Make canvas fill the available space (subtract fixed right panel width)
         canvas.widthProperty().bind(root.widthProperty().subtract(300));
         canvas.heightProperty().bind(root.heightProperty());
-        
+
         // Update view when canvas size changes
         canvas.widthProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal.doubleValue() > 0 && canvas.getHeight() > 0) {
@@ -108,9 +104,9 @@ public class TrafficSimulatorApp extends Application {
                 viewManager.resetView();
             }
         });
-        
+
         stage.show();
-        
+
         // Initialize view after stage is shown and canvas has proper size
         Platform.runLater(() -> {
             if (canvas.getWidth() > 0 && canvas.getHeight() > 0) {
@@ -128,37 +124,35 @@ public class TrafficSimulatorApp extends Application {
         canvas.setOnScroll(e -> viewManager.zoomToPoint(e.getDeltaY() > 0 ? 1.1 : 0.9, e.getX(), e.getY()));
         canvas.setOnMousePressed(e -> viewManager.startPan(e.getX(), e.getY()));
         canvas.setOnMouseDragged(e -> viewManager.updatePan(e.getX(), e.getY()));
-        
-        // Track mouse movement for hover highlighting
-        canvas.setOnMouseMoved(e -> {
-            mouseX = e.getX();
-            mouseY = e.getY();
-        });
+        canvas.setOnMouseMoved(
+                e -> hoveredElement = scene.getElementAt(e.getX(), e.getY(), viewManager.getTransform()));
 
-        canvas.setOnMouseMoved(e -> {
-            hoveredElement = scene.getElementAt(e.getX(), e.getY(), viewManager.getTransform());
-        });
-
-        // Click detection (for future interaction features)
+        // Click detection
         canvas.setOnMouseClicked(e -> {
             Object clickedElement = scene.getElementAt(e.getX(), e.getY(), viewManager.getTransform());
             selectedElement = clickedElement;
 
-            if (clickedElement != null) {
-                System.out.println("Clicked: " + clickedElement.getClass().getSimpleName());
-                if (clickedElement instanceof TrafficLight) {
-                    TrafficLight tl = (TrafficLight) clickedElement;
-                    System.out.println("Traffic Light - Junction: " + tl.getJunctionId() + " Approach: " + tl.getApproachEdgeId());
-                    controlPanel.showTrafficLightControl(tl);
-                } else if (clickedElement instanceof Junction) {
-                    Junction junction = (Junction) clickedElement;
-                    System.out.println("Junction ID: " + junction.getId() + " Type: " + junction.getType());
-                } else if (clickedElement instanceof Lane) {
-                    Lane lane = (Lane) clickedElement;
-                    System.out.println("Lane ID: " + lane.getId());
-                } else if (clickedElement instanceof Vehicle) {
-                    Vehicle vehicle = (Vehicle) clickedElement;
-                    System.out.println("Vehicle ID: " + vehicle.getId() + " Type: " + vehicle.getType());
+            if (clickedElement instanceof TrafficLight) {
+                TrafficLight tl = (TrafficLight) clickedElement;
+                System.out.println("Clicked: Traffic Light - Junction: " + tl.getJunctionId() + " Approach: "
+                        + tl.getApproachEdgeId());
+                controlPanel.showTrafficLightControl(tl);
+            } else {
+                // Hide traffic light control panel when clicking anything else
+                controlPanel.showNormalControls();
+
+                if (clickedElement != null) {
+                    System.out.println("Clicked: " + clickedElement.getClass().getSimpleName());
+                    if (clickedElement instanceof Junction) {
+                        Junction junction = (Junction) clickedElement;
+                        System.out.println("Junction ID: " + junction.getId() + " Type: " + junction.getType());
+                    } else if (clickedElement instanceof Lane) {
+                        Lane lane = (Lane) clickedElement;
+                        System.out.println("Lane ID: " + lane.getId());
+                    } else if (clickedElement instanceof Vehicle) {
+                        Vehicle vehicle = (Vehicle) clickedElement;
+                        System.out.println("Vehicle ID: " + vehicle.getId() + " Type: " + vehicle.getType());
+                    }
                 }
             }
         });
@@ -170,36 +164,6 @@ public class TrafficSimulatorApp extends Application {
         });
     }
 
-    /** Draw highlight around hovered element */
-    private void drawHoverHighlight(GraphicsContext g) {
-        Object element = scene.getElementAt(mouseX, mouseY, viewManager.getTransform());
-        if (element == null) return;
-        
-        g.setStroke(Color.rgb(255, 255, 0, 0.8));
-        g.setLineWidth(2);
-        g.setLineDashes(5, 5);
-        
-        CoordinateTransform t = viewManager.getTransform();
-        
-        if (element instanceof TrafficLight) {
-            TrafficLight tl = (TrafficLight) element;
-            double x = t.worldToScreenX(tl.getX());
-            double y = t.worldToScreenY(tl.getY());
-            double size = t.worldToScreenSize(2.0);
-            double width = size * 3.5;
-            double height = size * 2.5;
-            g.strokeRect(x - width/2, y - height/2, width, height);
-        } else if (element instanceof Vehicle) {
-            Vehicle v = (Vehicle) element;
-            double x = t.worldToScreenX(v.getWorldX());
-            double y = t.worldToScreenY(v.getWorldY());
-            double radius = Math.max(3, t.worldToScreenSize(2.5));
-            g.strokeOval(x - radius, y - radius, radius * 2, radius * 2);
-        }
-        
-        g.setLineDashes(null);
-    }
-    
     /** Main rendering loop - called ~60 times per second */
     private void draw() {
         GraphicsContext g = canvas.getGraphicsContext2D();
@@ -210,13 +174,6 @@ public class TrafficSimulatorApp extends Application {
         scene.updateVehicles(runner.getVehiclePositions());
         scene.updateTrafficLights(runner.getTrafficLightData());
         scene.render(g, viewManager.getTransform());
-        
-        // Draw hover highlight
-        if (mouseX >= 0 && mouseY >= 0) {
-            drawHoverHighlight(g);
-        }
-
-        // Render highlights
         scene.renderHighlight(g, viewManager.getTransform(), selectedElement, hoveredElement);
 
         // Draw info box
@@ -278,13 +235,18 @@ public class TrafficSimulatorApp extends Application {
 
         for (var entry : positions.entrySet()) {
             String id = entry.getKey();
-            
+
             // Count vehicle types
-            if (id.startsWith("car")) carCount++;
-            else if (id.startsWith("truck")) truckCount++;
-            else if (id.startsWith("bus")) busCount++;
-            else if (id.startsWith("moto")) motoCount++;
-            else if (id.startsWith("ambu")) emergencyCount++;
+            if (id.startsWith("car"))
+                carCount++;
+            else if (id.startsWith("truck"))
+                truckCount++;
+            else if (id.startsWith("bus"))
+                busCount++;
+            else if (id.startsWith("moto"))
+                motoCount++;
+            else if (id.startsWith("ambu"))
+                emergencyCount++;
 
             // Get speed
             double speed = speeds.getOrDefault(id, 0.0);

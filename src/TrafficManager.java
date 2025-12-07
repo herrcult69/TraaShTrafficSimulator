@@ -124,7 +124,7 @@ public class TrafficManager {
             }
         }
     }
-    
+
     /**
      * Set manual mode for ALL traffic lights at a junction
      * This ensures the entire junction is synchronized
@@ -188,6 +188,8 @@ public class TrafficManager {
             ((Lane) obj).highlight(g, transform, color);
         } else if (obj instanceof Junction) {
             ((Junction) obj).highlight(g, transform, color);
+        } else if (obj instanceof TrafficLight) {
+            ((TrafficLight) obj).highlight(g, transform, color);
         }
     }
 

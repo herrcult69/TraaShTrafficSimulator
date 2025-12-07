@@ -15,7 +15,7 @@ public class Junction {
     private static final double DIRECTION_THRESHOLD = 0.5;
     private static final double DISTANCE_THRESHOLD = 0.1;
     private static final double RADIUS_ADJUSTMENT = 0.5;
-    
+
     private NetworkParser.Junction networkJunction;
     private String id;
     private double x, y; // Center position in world coordinates
@@ -50,11 +50,12 @@ public class Junction {
         // Point in polygon test
         double worldX = transform.screenToWorldX(screenX);
         double worldY = transform.screenToWorldY(screenY);
-        
+
         boolean result = false;
         for (int i = 0, j = shape.size() - 1; i < shape.size(); j = i++) {
             if ((shape.get(i).getY() > worldY) != (shape.get(j).getY() > worldY) &&
-                (worldX < (shape.get(j).getX() - shape.get(i).getX()) * (worldY - shape.get(i).getY()) / (shape.get(j).getY() - shape.get(i).getY()) + shape.get(i).getX())) {
+                    (worldX < (shape.get(j).getX() - shape.get(i).getX()) * (worldY - shape.get(i).getY())
+                            / (shape.get(j).getY() - shape.get(i).getY()) + shape.get(i).getX())) {
                 result = !result;
             }
         }
@@ -62,7 +63,8 @@ public class Junction {
     }
 
     public void highlight(GraphicsContext g, CoordinateTransform transform, Color color) {
-        if (shape == null || shape.size() < 3) return;
+        if (shape == null || shape.size() < 3)
+            return;
 
         double[] xPoints = new double[shape.size()];
         double[] yPoints = new double[shape.size()];
@@ -72,11 +74,16 @@ public class Junction {
             yPoints[i] = transform.worldToScreenY(shape.get(i).getY());
         }
 
-        g.save();
+        // Semi-transparent fill
+        g.setFill(Color.color(color.getRed(), color.getGreen(), color.getBlue(), 0.15));
+        g.fillPolygon(xPoints, yPoints, shape.size());
+
+        // Dashed outline
         g.setStroke(color);
-        g.setLineWidth(3);
+        g.setLineWidth(2.5);
+        g.setLineDashes(8, 4);
         g.strokePolygon(xPoints, yPoints, shape.size());
-        g.restore();
+        g.setLineDashes(null);
     }
 
     /**
@@ -159,9 +166,10 @@ public class Junction {
             }
         }
     }
+
     private void calculateRadius() {
         radius = DEFAULT_RADIUS;
-        if (shape != null && !shape.isEmpty()){
+        if (shape != null && !shape.isEmpty()) {
             radius = 0;
             for (Point2D point : shape) {
                 double dx = point.getX() - x;
@@ -169,40 +177,13 @@ public class Junction {
                 double distance = Math.sqrt(dx * dx + dy * dy);
                 radius = Math.max(radius, distance);
             }
-            
+
             // Ensure minimum radius for click detection
             if (radius < MIN_RADIUS) {
                 radius = DEFAULT_RADIUS;
             }
         }
     }
-    
-    private boolean isPointInPolygon(double screenX, double screenY, CoordinateTransform transform) {
-        int crossings = 0;
-        int n = shape.size();
-        
-        for (int i = 0; i < n; i++) {
-            Point2D p1 = shape.get(i);
-            Point2D p2 = shape.get((i + 1) % n);
-            
-            double x1 = transform.worldToScreenX(p1.getX());
-            double y1 = transform.worldToScreenY(p1.getY());
-            double x2 = transform.worldToScreenX(p2.getX());
-            double y2 = transform.worldToScreenY(p2.getY());
-            
-            // Check if the ray crosses this edge
-            if ((y1 <= screenY && screenY < y2) || (y2 <= screenY && screenY < y1)) {
-                double xIntersection = x1 + (screenY - y1) * (x2 - x1) / (y2 - y1);
-                if (screenX < xIntersection) {
-                    crossings++;
-                }
-            }
-        }
-        
-        // Point is inside if number of crossings is odd
-        return (crossings % 2) == 1;
-    }
-
 
     // Getters
     public String getId() {

@@ -9,7 +9,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 
-public class DashBoard extends VBox{
+public class DashBoard extends VBox {
     // Metric labels
     private Label simTimeLabel;
     private Label activeVehiclesLabel;
@@ -27,7 +27,7 @@ public class DashBoard extends VBox{
     private XYChart.Series<Number, Number> speedSeries;
     private int maxDataPoints = 120; // 120 points at 2 updates/sec = 60 seconds
 
-    public DashBoard(){
+    public DashBoard() {
         super(12);
         setPadding(new Insets(15, 10, 0, 10));
         setStyle("-fx-background-color: #2b2b2b;");
@@ -77,14 +77,13 @@ public class DashBoard extends VBox{
         speedChart.getData().add(speedSeries);
 
         getChildren().addAll(title,
-            simSection, simTimeLabel, activeVehiclesLabel,
-            trafficSection, avgSpeedLabel,
-            vehicleSection, carsLabel, trucksLabel, busesLabel, motorcyclesLabel, emergencyLabel,
-            speedChart
-        );
+                simSection, simTimeLabel, activeVehiclesLabel,
+                trafficSection, avgSpeedLabel,
+                vehicleSection, carsLabel, trucksLabel, busesLabel, motorcyclesLabel, emergencyLabel,
+                speedChart);
     }
 
-    private Label createHeaderLabel(String text){
+    private Label createHeaderLabel(String text) {
         Label label = new Label(text);
         label.setFont(Font.font("Monospace", FontWeight.BOLD, 16));
         label.setTextFill(Color.web("#ffffff"));
@@ -93,7 +92,7 @@ public class DashBoard extends VBox{
         return label;
     }
 
-    private Label createSectionLabel(String text){
+    private Label createSectionLabel(String text) {
         Label label = new Label(text);
         label.setFont(Font.font("Monospace", FontWeight.BOLD, 13));
         label.setTextFill(Color.web("#4a9eff"));
@@ -103,7 +102,7 @@ public class DashBoard extends VBox{
         return label;
     }
 
-    private Label createDataLabel(String text){
+    private Label createDataLabel(String text) {
         Label label = new Label(text);
         label.setFont(Font.font("Monospace", 12));
         label.setTextFill(Color.web("#cccccc"));
@@ -112,11 +111,11 @@ public class DashBoard extends VBox{
         return label;
     }
 
-    public void update(DashBoardData data){
+    public void update(DashBoardData data) {
         simTimeLabel.setText(String.format("Time: %.1fs", data.simTime));
         activeVehiclesLabel.setText("Active: " + data.activeVehicles);
         avgSpeedLabel.setText(String.format("Avg Speed: %.2f m/s", data.avgSpeed));
-        
+
         carsLabel.setText("Cars: " + data.carCount);
         trucksLabel.setText("Trucks: " + data.truckCount);
         busesLabel.setText("Buses: " + data.busCount);
@@ -124,10 +123,10 @@ public class DashBoard extends VBox{
         emergencyLabel.setText("Emergency: " + data.emergencyCount);
 
         speedSeries.getData().add(new XYChart.Data<>(data.simTime, data.avgSpeed));
-        if(speedSeries.getData().size() > maxDataPoints){
+        if (speedSeries.getData().size() > maxDataPoints) {
             speedSeries.getData().remove(0);
         }
-        
+
         // Update x-axis bounds to create a sliding window effect
         NumberAxis xAxis = (NumberAxis) speedChart.getXAxis();
         if (data.simTime > 60) {

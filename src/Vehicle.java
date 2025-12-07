@@ -1,6 +1,5 @@
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
-import javafx.geometry.Rectangle2D;
 
 public class Vehicle {
     private String id;
@@ -8,7 +7,6 @@ public class Vehicle {
     private double worldX, worldY;
     private double angle;
     private double length, width;
-    private Rectangle2D bounds;
     private int signals;
 
     public Vehicle(String id, double worldX, double worldY, double angle) {
@@ -19,7 +17,6 @@ public class Vehicle {
 
         // Determine vehicle type and dimensions from ID
         determineTypeFromId();
-        updateBounds();
     }
 
     private void determineTypeFromId() {
@@ -54,20 +51,11 @@ public class Vehicle {
         this.worldX = sumoData[0];
         this.worldY = sumoData[1];
         if (sumoData.length > 2) {
-            this.angle = -(90.0 - sumoData[2]); // Fixed angle calculation
+            this.angle = sumoData[2];
         }
         if (sumoData.length > 3) {
             this.signals = (int) sumoData[3];
         }
-        updateBounds();
-    }
-
-    private void updateBounds() {
-        double halfWidth = width / 2;
-        // Bounds with head at (worldX, worldY) extending backward
-        bounds = new Rectangle2D(
-                worldX - length, worldY - halfWidth,
-                length, width);
     }
 
     public boolean contains(double screenX, double screenY, CoordinateTransform transform) {
@@ -79,7 +67,7 @@ public class Vehicle {
         double distance = Math.sqrt(dx * dx + dy * dy);
 
         // The circle should be a little bit smaller than the width
-        double radius = width * .90 ;
+        double radius = width * .90;
         return distance <= radius;
     }
 
@@ -93,14 +81,12 @@ public class Vehicle {
         g.translate(screenX, screenY);
         g.rotate(angle);
 
+        // Dashed outline
         g.setStroke(color);
-        g.setLineWidth(2);
+        g.setLineWidth(2.5);
+        g.setLineDashes(6, 3);
         g.strokeRect(-screenLength, -screenWidth / 2, screenLength, screenWidth);
-        
-        // Glow effect
-        g.setEffect(new javafx.scene.effect.Glow(0.8));
-        g.strokeRect(-screenLength, -screenWidth / 2, screenLength, screenWidth);
-        g.setEffect(null);
+        g.setLineDashes(null);
 
         g.restore();
     }
@@ -174,11 +160,11 @@ public class Vehicle {
 
     private Color getVehicleColor() {
         return switch (type) {
-            case "car" -> Color.rgb(220, 115, 115);
-            case "truck" -> Color.rgb(70, 120, 230);
+            case "car" -> Color.rgb(220, 60, 115);
+            case "truck" -> Color.rgb(50, 120, 230);
             case "bus" -> Color.rgb(80, 200, 120);
-            case "motorcycle" -> Color.rgb(243, 141, 9);
-            case "emergency" -> Color.rgb(225, 206, 206);
+            case "motorcycle" -> Color.rgb(240, 140, 10);
+            case "emergency" -> Color.rgb(225, 205, 205);
             default -> Color.PURPLE;
         };
     }
@@ -202,9 +188,5 @@ public class Vehicle {
 
     public double getAngle() {
         return angle;
-    }
-
-    public Rectangle2D getBounds() {
-        return bounds;
     }
 }

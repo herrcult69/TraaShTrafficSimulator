@@ -183,4 +183,12 @@ public class Edge {
     public double getToY() {
         return toY;
     }
+
+    public Junction getFromJunction() {
+        return fromJunction;
+    }
+
+    public Junction getToJunction() {
+        return toJunction;
+    }
 }

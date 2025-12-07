@@ -41,22 +41,22 @@ public class TraaSAdapter {
     public int getVehicleSignals(String id) throws Exception {
         return ((Number) conn.do_job_get(Vehicle.getSignals(id))).intValue();
     }
-    
+
     // Get Traffic Light Ids
     public List<String> getTrafficLightIds() throws Exception {
         return (List<String>) conn.do_job_get(Trafficlight.getIDList());
     }
-    
+
     // get the state
     public String getTrafficLightState(String tlId) throws Exception {
         return (String) conn.do_job_get(Trafficlight.getRedYellowGreenState(tlId));
     }
-    
+
     // set the state
     public void setTrafficLightState(String tlId, String state) throws Exception {
         conn.do_job_set(Trafficlight.setRedYellowGreenState(tlId, state));
     }
-    
+
     // set the program (return to automatic control)
     public void setTrafficLightProgram(String tlId, String programId) throws Exception {
         conn.do_job_set(Trafficlight.setProgram(tlId, programId));
@@ -64,8 +64,7 @@ public class TraaSAdapter {
 
     public SumoLinkList getControlledLinks(String trafficLightId) throws Exception {
         return (SumoLinkList) conn.do_job_get(
-            Trafficlight.getControlledLinks(trafficLightId)
-        );
+                Trafficlight.getControlledLinks(trafficLightId));
     }
 
 }
