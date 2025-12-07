@@ -33,6 +33,8 @@ public class SimulationRunner implements Runnable {
     public double getSimulationTime(){return simulationTime;}
     
     public Map<String, TrafficLight.TrafficLightData> getTrafficLightData(){return trafficLightData;}
+    
+    public TraaSAdapter getAdapter() {return adapter;}
 
     public void stop() {
         running = false;
@@ -89,7 +91,7 @@ public class SimulationRunner implements Runnable {
                         vehicleSpeeds.put(id, speed); 
                     }
                     
-                    // Update traffic lights
+                    // Update traffic lights (only if not in manual mode)
                     List<String> tlIds = adapter.getTrafficLightIds();
                     for (String tlId : tlIds) {
                         String state = adapter.getTrafficLightState(tlId);

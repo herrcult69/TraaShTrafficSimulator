@@ -52,6 +52,11 @@ public class TraaSAdapter {
     public void setTrafficLightState(String tlId, String state) throws Exception {
         conn.do_job_set(Trafficlight.setRedYellowGreenState(tlId, state));
     }
+    
+    // set the program (return to automatic control)
+    public void setTrafficLightProgram(String tlId, String programId) throws Exception {
+        conn.do_job_set(Trafficlight.setProgram(tlId, programId));
+    }
 
     public SumoLinkList getControlledLinks(String trafficLightId) throws Exception {
         return (SumoLinkList) conn.do_job_get(

@@ -115,10 +115,25 @@ public class TrafficManager {
             String junctionId = entry.getKey();
             TrafficLight.TrafficLightData data = entry.getValue();
 
-            // Update all traffic lights at this junction
+            // Update all traffic lights at this junction (skip if in manual mode)
             for (TrafficLight tl : trafficLights) {
-                if (tl.getJunctionId().equals(junctionId)) {
+                if (tl.getJunctionId().equals(junctionId) && !tl.isManualMode()) {
                     tl.setState(data.state);
+                }
+            }
+        }
+    }
+    
+    /**
+     * Set manual mode for ALL traffic lights at a junction
+     * This ensures the entire junction is synchronized
+     */
+    public void setJunctionManualMode(String junctionId, boolean manualMode, String state) {
+        for (TrafficLight tl : trafficLights) {
+            if (tl.getJunctionId().equals(junctionId)) {
+                tl.setManualMode(manualMode);
+                if (state != null) {
+                    tl.setState(state);
                 }
             }
         }

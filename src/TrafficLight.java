@@ -21,6 +21,7 @@ public class TrafficLight {
     private double rotationAngle;
     private String currentState;
     private List<Integer> linkIndices;
+    private boolean manualMode = false;
 
     public static class TrafficLightData {
         public String state;
@@ -174,9 +175,9 @@ public class TrafficLight {
     public boolean contains(double screenX, double screenY, CoordinateTransform transform) {
         double lightScreenX = transform.worldToScreenX(x);
         double lightScreenY = transform.worldToScreenY(y);
-        double size = transform.worldToScreenSize(1.5);
-        double width = size * 2.5;
-        double height = size * 1.8;
+        double size = transform.worldToScreenSize(2.0);
+        double width = size * 3.5;
+        double height = size * 2.5;
 
         double left = lightScreenX - width / 2;
         double top = lightScreenY - height / 2;
@@ -193,4 +194,6 @@ public class TrafficLight {
     public List<Integer> getLinkIndices() { return linkIndices; }
     public double getX() { return x; }
     public double getY() { return y; }
+    public boolean isManualMode() { return manualMode; }
+    public void setManualMode(boolean manualMode) { this.manualMode = manualMode; }
 }

@@ -31,6 +31,8 @@ public class TrafficSimulatorApp extends Application {
     private TrafficManager scene;
     private CoordinateTransform transform;
     private ViewManager viewManager;
+    private double mouseX = -1;
+    private double mouseY = -1;
 
     // Dashboard fields
     private DashBoard dashboard;
@@ -74,7 +76,7 @@ public class TrafficSimulatorApp extends Application {
         exec.submit(runner);
 
         // Create control panel with all UI components
-        ControlPanel controlPanel = new ControlPanel(runner, viewManager, dashboard);
+        ControlPanel controlPanel = new ControlPanel(runner, viewManager, dashboard, scene);
         ScrollPane scrollPane = controlPanel.getScrollPane();
 
         BorderPane root = new BorderPane();
@@ -122,13 +124,23 @@ public class TrafficSimulatorApp extends Application {
         canvas.setOnScroll(e -> viewManager.zoomToPoint(e.getDeltaY() > 0 ? 1.1 : 0.9, e.getX(), e.getY()));
         canvas.setOnMousePressed(e -> viewManager.startPan(e.getX(), e.getY()));
         canvas.setOnMouseDragged(e -> viewManager.updatePan(e.getX(), e.getY()));
+        
+        // Track mouse movement for hover highlighting
+        canvas.setOnMouseMoved(e -> {
+            mouseX = e.getX();
+            mouseY = e.getY();
+        });
 
         // Click detection (for future interaction features)
         canvas.setOnMouseClicked(e -> {
             Object clickedElement = scene.getElementAt(e.getX(), e.getY(), viewManager.getTransform());
             if (clickedElement != null) {
                 System.out.println("Clicked: " + clickedElement.getClass().getSimpleName());
-                if (clickedElement instanceof Junction) {
+                if (clickedElement instanceof TrafficLight) {
+                    TrafficLight tl = (TrafficLight) clickedElement;
+                    System.out.println("Traffic Light - Junction: " + tl.getJunctionId() + " Approach: " + tl.getApproachEdgeId());
+                    controlPanel.showTrafficLightControl(tl);
+                } else if (clickedElement instanceof Junction) {
                     Junction junction = (Junction) clickedElement;
                     System.out.println("Junction ID: " + junction.getId() + " Type: " + junction.getType());
                 } else if (clickedElement instanceof Lane) {
@@ -148,6 +160,36 @@ public class TrafficSimulatorApp extends Application {
         });
     }
 
+    /** Draw highlight around hovered element */
+    private void drawHoverHighlight(GraphicsContext g) {
+        Object element = scene.getElementAt(mouseX, mouseY, viewManager.getTransform());
+        if (element == null) return;
+        
+        g.setStroke(Color.rgb(255, 255, 0, 0.8));
+        g.setLineWidth(2);
+        g.setLineDashes(5, 5);
+        
+        CoordinateTransform t = viewManager.getTransform();
+        
+        if (element instanceof TrafficLight) {
+            TrafficLight tl = (TrafficLight) element;
+            double x = t.worldToScreenX(tl.getX());
+            double y = t.worldToScreenY(tl.getY());
+            double size = t.worldToScreenSize(2.0);
+            double width = size * 3.5;
+            double height = size * 2.5;
+            g.strokeRect(x - width/2, y - height/2, width, height);
+        } else if (element instanceof Vehicle) {
+            Vehicle v = (Vehicle) element;
+            double x = t.worldToScreenX(v.getWorldX());
+            double y = t.worldToScreenY(v.getWorldY());
+            double radius = Math.max(3, t.worldToScreenSize(2.5));
+            g.strokeOval(x - radius, y - radius, radius * 2, radius * 2);
+        }
+        
+        g.setLineDashes(null);
+    }
+    
     /** Main rendering loop - called ~60 times per second */
     private void draw() {
         GraphicsContext g = canvas.getGraphicsContext2D();
@@ -158,6 +200,11 @@ public class TrafficSimulatorApp extends Application {
         scene.updateVehicles(runner.getVehiclePositions());
         scene.updateTrafficLights(runner.getTrafficLightData());
         scene.render(g, viewManager.getTransform());
+        
+        // Draw hover highlight
+        if (mouseX >= 0 && mouseY >= 0) {
+            drawHoverHighlight(g);
+        }
 
         // Update dashboard at reduced frequency
         long currentTime = System.nanoTime();
