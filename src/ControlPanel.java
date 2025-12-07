@@ -15,10 +15,12 @@ public class ControlPanel {
     private ScrollPane scrollPane;
     private SimulationRunner runner;
     private ViewManager viewManager;
+    private TrafficManager trafficManager;
     
-    public ControlPanel(SimulationRunner runner, ViewManager viewManager, DashBoard dashboard) {
+    public ControlPanel(SimulationRunner runner, ViewManager viewManager, DashBoard dashboard, TrafficManager trafficManager) {
         this.runner = runner;
         this.viewManager = viewManager;
+        this.trafficManager = trafficManager;
         createPanel(dashboard);
     }
     
@@ -121,5 +123,14 @@ public class ControlPanel {
     
     public ScrollPane getScrollPane() {
         return scrollPane;
+    }
+    
+    public void showTrafficLightControl(TrafficLight tl) {
+        TrafficLightControlPanel tlPanel = new TrafficLightControlPanel(tl, runner, trafficManager, this::showNormalControls);
+        scrollPane.setContent(tlPanel.getPanel());
+    }
+    
+    public void showNormalControls() {
+        scrollPane.setContent(controlPanel);
     }
 }

@@ -3,7 +3,9 @@ import it.polito.appeal.traci.SumoTraciConnection;
 import de.tudresden.sumo.cmd.Vehicle;
 import de.tudresden.sumo.cmd.Trafficlight;
 import de.tudresden.sumo.cmd.Simulation;
+import de.tudresden.sumo.objects.SumoLinkList;
 import de.tudresden.sumo.objects.SumoPosition2D;
+
 import java.util.List;
 
 @SuppressWarnings("unchecked")
@@ -39,26 +41,31 @@ public class TraaSAdapter {
     public int getVehicleSignals(String id) throws Exception {
         return ((Number) conn.do_job_get(Vehicle.getSignals(id))).intValue();
     }
-
+    
+    // Get Traffic Light Ids
     public List<String> getTrafficLightIds() throws Exception {
         return (List<String>) conn.do_job_get(Trafficlight.getIDList());
     }
-
+    
+    // get the state
     public String getTrafficLightState(String tlId) throws Exception {
         return (String) conn.do_job_get(Trafficlight.getRedYellowGreenState(tlId));
     }
-
-    public static String interpretTrafficLightColor(String state) {
-        if (state == null || state.isEmpty())
-            return "RED";
-        // Precedence: any GREEN -> GREEN; else any RED -> RED; else any YELLOW ->
-        // YELLOW; else RED
-        if (state.indexOf('g') >= 0 || state.indexOf('G') >= 0)
-            return "GREEN";
-        if (state.indexOf('r') >= 0 || state.indexOf('R') >= 0)
-            return "RED";
-        if (state.indexOf('y') >= 0 || state.indexOf('Y') >= 0)
-            return "YELLOW";
-        return "RED";
+    
+    // set the state
+    public void setTrafficLightState(String tlId, String state) throws Exception {
+        conn.do_job_set(Trafficlight.setRedYellowGreenState(tlId, state));
     }
+    
+    // set the program (return to automatic control)
+    public void setTrafficLightProgram(String tlId, String programId) throws Exception {
+        conn.do_job_set(Trafficlight.setProgram(tlId, programId));
+    }
+
+    public SumoLinkList getControlledLinks(String trafficLightId) throws Exception {
+        return (SumoLinkList) conn.do_job_get(
+            Trafficlight.getControlledLinks(trafficLightId)
+        );
+    }
+
 }

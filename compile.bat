@@ -4,7 +4,8 @@ echo   Compiling Java Source Files...
 
 echo.
 echo [INFO] Compiling source files from src/ to bin/...
-javac -cp "lib\*;lib\javafx\*" -d bin src\*.java
+@REM javac -cp "lib\*;lib\javafx\*" -d bin src\*.java
+javac -cp "lib\TraaS.jar;D:\Trac\SumoProject\javafx-sdk-17.0.17\lib\*" -d bin -encoding UTF-8 src\*.java
 
 if %ERRORLEVEL% EQU 0 (
     echo.

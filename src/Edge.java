@@ -121,37 +121,18 @@ public class Edge {
         double perpY = -dx / length;
 
         int numLanes = networkEdge.lanes.size();
-        double halfWidth = networkEdge.getTotalWidth();
-
-        // Road edges (gray)
-        g.setStroke(Color.rgb(180, 180, 180));
-        g.setLineWidth(Math.max(2, transform.worldToScreenSize(0.15)));
-
-        double edgeX1 = startX - halfWidth * perpX;
-        double edgeY1 = startY - halfWidth * perpY;
-        double edgeX2 = endX - halfWidth * perpX;
-        double edgeY2 = endY - halfWidth * perpY;
-        g.strokeLine(transform.worldToScreenX(edgeX1), transform.worldToScreenY(edgeY1),
-                transform.worldToScreenX(edgeX2), transform.worldToScreenY(edgeY2));
-
-        edgeX1 = startX + halfWidth * perpX;
-        edgeY1 = startY + halfWidth * perpY;
-        edgeX2 = endX + halfWidth * perpX;
-        edgeY2 = endY + halfWidth * perpY;
-        g.strokeLine(transform.worldToScreenX(edgeX1), transform.worldToScreenY(edgeY1),
-                transform.worldToScreenX(edgeX2), transform.worldToScreenY(edgeY2));
 
         // Center line (yellow)
         g.setStroke(Color.rgb(255, 220, 50));
-        g.setLineWidth(Math.max(2, transform.worldToScreenSize(0.15)));
+        g.setLineWidth(Math.max(1, transform.worldToScreenSize(0.5)));
         g.strokeLine(transform.worldToScreenX(startX), transform.worldToScreenY(startY),
                 transform.worldToScreenX(endX), transform.worldToScreenY(endY));
 
         // Lane dividers (white dashed)
         g.setStroke(Color.WHITE);
-        g.setLineWidth(Math.max(1.5, transform.worldToScreenSize(0.12)));
-        double dashSize = Math.max(8, transform.worldToScreenSize(3));
-        double gapSize = Math.max(6, transform.worldToScreenSize(2));
+        g.setLineWidth(Math.max(.5, transform.worldToScreenSize(0.12)));
+        double dashSize = Math.max(2, transform.worldToScreenSize(3));
+        double gapSize = Math.max(1, transform.worldToScreenSize(2));
         g.setLineDashes(dashSize, gapSize);
 
         // Draw dividers between lanes using cumulative offsets

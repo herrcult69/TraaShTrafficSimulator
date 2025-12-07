@@ -5,6 +5,10 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /** Handles SUMO stepping in a background thread and updates shared maps. */
 public class SimulationRunner implements Runnable {
+    
+    public interface ConnectionListener {
+        void onConnected(TraaSAdapter adapter);
+    }
     private final String configFile;
     private final boolean gui;
     private final Map<String, double[]> vehiclePositions = new ConcurrentHashMap<>();
@@ -13,17 +17,24 @@ public class SimulationRunner implements Runnable {
     private TraaSAdapter adapter;
     private final Map<String, Double> vehicleSpeeds = new ConcurrentHashMap<>();
     private volatile double simulationTime = 0.0;
-
+    private final Map<String, TrafficLight.TrafficLightData> trafficLightData = new ConcurrentHashMap<>();
+    private ConnectionListener connectionListener;
     public SimulationRunner(String configFile, boolean gui) {
         this.configFile = configFile;
         this.gui = gui;
     }
-
+    public void setConnectionListener(ConnectionListener listener) {
+        this.connectionListener = listener;
+    }
     public Map<String, Double> getVehicleSpeeds(){return vehicleSpeeds;}
 
     public Map<String,double[]> getVehiclePositions(){return vehiclePositions;}
     
     public double getSimulationTime(){return simulationTime;}
+    
+    public Map<String, TrafficLight.TrafficLightData> getTrafficLightData(){return trafficLightData;}
+    
+    public TraaSAdapter getAdapter() {return adapter;}
 
     public void stop() {
         running = false;
@@ -53,12 +64,19 @@ public class SimulationRunner implements Runnable {
             conn.addOption("start", "true");
             conn.runServer();
             adapter = new TraaSAdapter(conn);
+            
+            // Notify connection listener if set
+            if (connectionListener != null) {
+                connectionListener.onConnected(adapter);
+            }
+            
             while (running) {
                 if (!paused) {
                     conn.do_timestep();
                     simulationTime = adapter.getSimulationTime();
+                    
+                    // Update vehicles
                     List<String> ids = adapter.getVehicleIds();
-                    // remove vehicles no longer present
                     vehiclePositions.keySet().removeIf(id -> !ids.contains(id));
                     vehicleSpeeds.keySet().removeIf(id -> !ids.contains(id));
                     for(String id: ids){
@@ -74,8 +92,15 @@ public class SimulationRunner implements Runnable {
                         vehiclePositions.put(id, new double[]{p[0], p[1], ang, (double)signals});
                         vehicleSpeeds.put(id, speed); 
                     }
+                    
+                    // Update traffic lights (only if not in manual mode)
+                    List<String> tlIds = adapter.getTrafficLightIds();
+                    for (String tlId : tlIds) {
+                        String state = adapter.getTrafficLightState(tlId);
+                        trafficLightData.put(tlId, new TrafficLight.TrafficLightData(state, null, 0));
+                    }
                 }
-                Thread.sleep(50); // 10 steps per second approx if SUMO step-length=1
+                Thread.sleep(20); 
             }
             conn.close();
         } catch (Exception e) {

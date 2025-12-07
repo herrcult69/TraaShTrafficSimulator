@@ -1,7 +1,5 @@
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
-import java.util.ArrayList;
-import java.util.List;
 
 public class Lane {
     private String id;
@@ -10,7 +8,6 @@ public class Lane {
     private double width; // Lane width in world units (3.2m)
     private int index; // Lane index (0, 1, 2...)
     private double offsetFromCenter; // Distance from road center line
-    private List<Vehicle> vehicles;
 
     public Lane(String id, Edge parentEdge, double width, int index, double offsetFromCenter) {
         this.id = id;
@@ -18,7 +15,6 @@ public class Lane {
         this.width = width;
         this.index = index;
         this.offsetFromCenter = offsetFromCenter;
-        this.vehicles = new ArrayList<>();
         calculateCenterLine();
     }
 
@@ -106,6 +102,18 @@ public class Lane {
         g.strokePolygon(xPoints, yPoints, 4);
     }
 
+    public void render(GraphicsContext g, CoordinateTransform transform, boolean highlight) {
+        // Lane markings are rendered by parent edge
+        // Individual lane highlighting can be done here
+        if (highlight) {
+            g.setStroke(Color.YELLOW);
+            g.setLineWidth(4);
+            g.strokeLine(
+                    transform.worldToScreenX(x1), transform.worldToScreenY(y1),
+                    transform.worldToScreenX(x2), transform.worldToScreenY(y2));
+        }
+    }
+
     // Getters
     public String getId() {
         return id;
@@ -121,10 +129,6 @@ public class Lane {
 
     public int getIndex() {
         return index;
-    }
-
-    public List<Vehicle> getVehicles() {
-        return vehicles;
     }
 
     public double getCenterX1() {

@@ -8,11 +8,20 @@ import java.util.List;
  * Represents a road junction/intersection with proper geometry rendering.
  */
 public class Junction {
+    // Constants for junction geometry
+    private static final double DEFAULT_RADIUS = 8.0;
+    private static final double SMALL_JUNCTION_RADIUS = 5.0;
+    private static final double MIN_RADIUS = 3.0;
+    private static final double DIRECTION_THRESHOLD = 0.5;
+    private static final double DISTANCE_THRESHOLD = 0.1;
+    private static final double RADIUS_ADJUSTMENT = 0.5;
+    
     private NetworkParser.Junction networkJunction;
     private String id;
     private double x, y; // Center position in world coordinates
     private String type;
     private List<Point2D> shape; // Junction boundary polygon
+    private double radius; // Get the radius
 
     public Junction(NetworkParser.Junction networkJunction) {
         this.networkJunction = networkJunction;
@@ -26,23 +35,7 @@ public class Junction {
         if (networkJunction.shape != null && !networkJunction.shape.isEmpty()) {
             parseShape(networkJunction.shape);
         }
-    }
-
-    private void parseShape(String shapeStr) {
-        // SUMO shape format: "x1,y1 x2,y2 x3,y3 ..."
-        String[] points = shapeStr.trim().split("\\s+");
-        for (String point : points) {
-            String[] coords = point.split(",");
-            if (coords.length == 2) {
-                try {
-                    double px = Double.parseDouble(coords[0]);
-                    double py = Double.parseDouble(coords[1]);
-                    shape.add(new Point2D(px, py));
-                } catch (NumberFormatException e) {
-                    System.err.println("Invalid shape coordinate: " + point);
-                }
-            }
-        }
+        calculateRadius();
     }
 
     public boolean contains(double screenX, double screenY, CoordinateTransform transform) {
@@ -97,11 +90,7 @@ public class Junction {
 
         if (shape != null && shape.size() >= 3) {
             renderPolygonJunction(g, transform);
-            // renderCrosswalks(g, transform);
         }
-        // else {
-        // renderCircularJunction(g, transform);
-        // }
     }
 
     /**
@@ -127,12 +116,12 @@ public class Junction {
 
     public double getRadiusInDirection(double dirX, double dirY) {
         if (shape.isEmpty()) {
-            return 8.0; // Default radius
+            return DEFAULT_RADIUS;
         }
 
         // For small junctions (3 points = triangle), use simple approach
         if (shape.size() <= 3) {
-            return 5.0;
+            return SMALL_JUNCTION_RADIUS;
         }
 
         // Find the shape point most aligned with the direction
@@ -143,16 +132,93 @@ public class Junction {
             double dist = Math.sqrt(dx * dx + dy * dy);
 
             // Check if this point is roughly in the same direction
-            if (dist > 0.1) {
+            if (dist > DISTANCE_THRESHOLD) {
                 double dotProduct = (dx * dirX + dy * dirY) / dist;
-                if (dotProduct > 0.5) { // Point is in the forward direction
-                    maxDist = Math.max(maxDist, dist) - .5;
+                if (dotProduct > DIRECTION_THRESHOLD) {
+                    maxDist = Math.max(maxDist, dist) - RADIUS_ADJUSTMENT;
                 }
             }
         }
 
-        return maxDist > 0 ? maxDist : 8.0;
+        return maxDist > 0 ? maxDist : DEFAULT_RADIUS;
     }
+
+    private void parseShape(String shapeStr) {
+        // SUMO shape format: "x1,y1 x2,y2 x3,y3 ..."
+        String[] points = shapeStr.trim().split("\\s+");
+        for (String point : points) {
+            String[] coords = point.split(",");
+            if (coords.length == 2) {
+                try {
+                    double px = Double.parseDouble(coords[0]);
+                    double py = Double.parseDouble(coords[1]);
+                    shape.add(new Point2D(px, py));
+                } catch (NumberFormatException e) {
+                    System.err.println("Invalid shape coordinate: " + point);
+                }
+            }
+        }
+    }
+    private void calculateRadius() {
+        radius = DEFAULT_RADIUS;
+        if (shape != null && !shape.isEmpty()){
+            radius = 0;
+            for (Point2D point : shape) {
+                double dx = point.getX() - x;
+                double dy = point.getY() - y;
+                double distance = Math.sqrt(dx * dx + dy * dy);
+                radius = Math.max(radius, distance);
+            }
+            
+            // Ensure minimum radius for click detection
+            if (radius < MIN_RADIUS) {
+                radius = DEFAULT_RADIUS;
+            }
+        }
+    }
+    public boolean contains(double screenX, double screenY, CoordinateTransform transform) {
+    // If no shape, use simple radius check
+        if (shape == null || shape.size() < 3) {
+            double junctionScreenX = transform.worldToScreenX(x);
+            double junctionScreenY = transform.worldToScreenY(y);
+            double screenRadius = transform.worldToScreenSize(radius);
+            
+            double dx = screenX - junctionScreenX;
+            double dy = screenY - junctionScreenY;
+            double distanceSquared = dx * dx + dy * dy;
+            
+            return distanceSquared <= screenRadius * screenRadius;
+        }
+        
+        // Use polygon contains check for accurate junction detection
+        return isPointInPolygon(screenX, screenY, transform);
+    }
+    private boolean isPointInPolygon(double screenX, double screenY, CoordinateTransform transform) {
+        int crossings = 0;
+        int n = shape.size();
+        
+        for (int i = 0; i < n; i++) {
+            Point2D p1 = shape.get(i);
+            Point2D p2 = shape.get((i + 1) % n);
+            
+            double x1 = transform.worldToScreenX(p1.getX());
+            double y1 = transform.worldToScreenY(p1.getY());
+            double x2 = transform.worldToScreenX(p2.getX());
+            double y2 = transform.worldToScreenY(p2.getY());
+            
+            // Check if the ray crosses this edge
+            if ((y1 <= screenY && screenY < y2) || (y2 <= screenY && screenY < y1)) {
+                double xIntersection = x1 + (screenY - y1) * (x2 - x1) / (y2 - y1);
+                if (screenX < xIntersection) {
+                    crossings++;
+                }
+            }
+        }
+        
+        // Point is inside if number of crossings is odd
+        return (crossings % 2) == 1;
+    }
+
 
     // Getters
     public String getId() {
