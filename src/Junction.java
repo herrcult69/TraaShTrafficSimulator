@@ -176,23 +176,7 @@ public class Junction {
             }
         }
     }
-    public boolean contains(double screenX, double screenY, CoordinateTransform transform) {
-    // If no shape, use simple radius check
-        if (shape == null || shape.size() < 3) {
-            double junctionScreenX = transform.worldToScreenX(x);
-            double junctionScreenY = transform.worldToScreenY(y);
-            double screenRadius = transform.worldToScreenSize(radius);
-            
-            double dx = screenX - junctionScreenX;
-            double dy = screenY - junctionScreenY;
-            double distanceSquared = dx * dx + dy * dy;
-            
-            return distanceSquared <= screenRadius * screenRadius;
-        }
-        
-        // Use polygon contains check for accurate junction detection
-        return isPointInPolygon(screenX, screenY, transform);
-    }
+    
     private boolean isPointInPolygon(double screenX, double screenY, CoordinateTransform transform) {
         int crossings = 0;
         int n = shape.size();

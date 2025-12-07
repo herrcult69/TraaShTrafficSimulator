@@ -63,13 +63,7 @@ public class Lane {
         return t >= -0.1 && t <= 1.1; // Small tolerance
     }
 
-    public void addVehicle(Vehicle vehicle) {
-        vehicles.add(vehicle);
-    }
 
-    public void removeVehicle(Vehicle vehicle) {
-        vehicles.remove(vehicle);
-    }
 
     public void highlight(GraphicsContext g, CoordinateTransform transform, Color color) {
         double dx = x2 - x1;
