@@ -231,4 +231,44 @@ public class TrafficManager {
     public List<TrafficLight> getTrafficLights() {
         return trafficLights;
     }
+    
+    /**
+     * Get the edge at the given screen position (for route selection)
+     * Returns the network edge ID (not the visual edge)
+     */
+    public String getEdgeIdAt(double screenX, double screenY, CoordinateTransform transform) {
+        for (Edge edge : edges) {
+            Lane lane = edge.getLaneAt(screenX, screenY, transform);
+            if (lane != null) {
+                // Return the network edge ID
+                return edge.getNetworkEdge().id;
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Get the Edge object at the given screen position
+     */
+    public Edge getEdgeAt(double screenX, double screenY, CoordinateTransform transform) {
+        for (Edge edge : edges) {
+            Lane lane = edge.getLaneAt(screenX, screenY, transform);
+            if (lane != null) {
+                return edge;
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Get an Edge by its network ID
+     */
+    public Edge getEdgeById(String edgeId) {
+        for (Edge edge : edges) {
+            if (edge.getNetworkEdge().id.equals(edgeId)) {
+                return edge;
+            }
+        }
+        return null;
+    }
 }

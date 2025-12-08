@@ -6,6 +6,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Separator;
 import javafx.scene.layout.VBox;
+import java.util.function.Consumer;
 
 /**
  * Control panel for simulation and view controls
@@ -16,6 +17,12 @@ public class ControlPanel {
     private SimulationRunner runner;
     private ViewManager viewManager;
     private TrafficManager trafficManager;
+    private VehicleAddPanel vehicleAddPanel;
+
+    // Callbacks for route selection mode
+    private Runnable onStartRouteSelection;
+    private Consumer<Boolean> onRouteSelectionModeChange;
+    private Runnable onVehicleAdded;
 
     public ControlPanel(SimulationRunner runner, ViewManager viewManager, DashBoard dashboard,
             TrafficManager trafficManager) {
@@ -44,7 +51,7 @@ public class ControlPanel {
         // Style the panel
         controlPanel.setPadding(new Insets(10));
         controlPanel.setSpacing(8);
-        controlPanel.setStyle("-fx-background-color: #2b2b2b;");
+        controlPanel.setStyle("-fx-background-color: #0D1B2A;");
         controlPanel.setMinWidth(300);
         controlPanel.setMaxWidth(300);
 
@@ -55,16 +62,17 @@ public class ControlPanel {
         scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         scrollPane.setMinWidth(300);
         scrollPane.setMaxWidth(300);
-        scrollPane.setStyle("-fx-background: #2b2b2b; -fx-background-color: #2b2b2b;");
+        scrollPane.setStyle("-fx-background: #0D1B2A; -fx-background-color: #0D1B2A;");
     }
 
     private void addSimulationControls() {
-        Label simLabel = new Label("=== SIMULATION ===");
+        Label simLabel = new Label("―――SIMULATION―――");
         simLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14;");
 
-        Button playBtn = createButton("Play");
-        Button pauseBtn = createButton("Pause");
-        Button stopBtn = createButton("Stop");
+        Button playBtn = createButton("➤ Play");
+        Button pauseBtn = createButton("⏸Pause");
+        Button stopBtn = createButton("⏹ Stop");
+        Button addVehicleBtn = createButton("🚗 Add Vehicle");
 
         playBtn.setOnAction(e -> {
             if (runner != null) {
@@ -89,16 +97,25 @@ public class ControlPanel {
             System.exit(0);
         });
 
-        controlPanel.getChildren().addAll(simLabel, playBtn, pauseBtn, stopBtn);
+        // Style the Add Vehicle button with a distinctive color
+        String addVehicleStyle = "-fx-background-color: #415A77; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 8; -fx-font-weight: bold;";
+        String addVehicleHoverStyle = "-fx-background-color: #778DA9; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 8; -fx-font-weight: bold;";
+        addVehicleBtn.setStyle(addVehicleStyle);
+        addVehicleBtn.setOnMouseEntered(e -> addVehicleBtn.setStyle(addVehicleHoverStyle));
+        addVehicleBtn.setOnMouseExited(e -> addVehicleBtn.setStyle(addVehicleStyle));
+
+        addVehicleBtn.setOnAction(e -> showVehicleAddPanel());
+
+        controlPanel.getChildren().addAll(simLabel, playBtn, pauseBtn, stopBtn, addVehicleBtn);
     }
 
     private void addViewControls() {
-        Label viewLabel = new Label("=== VIEW ===");
+        Label viewLabel = new Label("―――VIEW―――");
         viewLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14;");
 
-        Button zoomIn = createButton("Zoom In");
-        Button zoomOut = createButton("Zoom Out");
-        Button reset = createButton("Reset View");
+        Button zoomIn = createButton("+ Zoom In");
+        Button zoomOut = createButton("- Zoom Out");
+        Button reset = createButton("⟲ Reset View");
 
         zoomIn.setOnAction(e -> viewManager.zoomToCenter(1.2));
         zoomOut.setOnAction(e -> viewManager.zoomToCenter(0.8));
@@ -111,9 +128,8 @@ public class ControlPanel {
         Button btn = new Button(text);
         btn.setPrefWidth(250);
 
-        String buttonStyle = "-fx-background-color: #3c3f41; -fx-text-fill: white; " +
-                "-fx-font-size: 12; -fx-padding: 8;";
-        String buttonHoverStyle = buttonStyle + "-fx-background-color: #4c4f51;";
+        String buttonStyle = "-fx-background-color: #1B263B; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 8;";
+        String buttonHoverStyle = buttonStyle + "-fx-background-color: #415A77;";
 
         btn.setStyle(buttonStyle);
         btn.setOnMouseEntered(e -> btn.setStyle(buttonHoverStyle));
@@ -126,13 +142,37 @@ public class ControlPanel {
         return scrollPane;
     }
 
+    /**
+     * Set callbacks for route selection mode
+     */
+    public void setRouteSelectionCallbacks(Runnable onStartRouteSelection, Consumer<Boolean> onRouteSelectionModeChange, Runnable onVehicleAdded) {
+        this.onStartRouteSelection = onStartRouteSelection;
+        this.onRouteSelectionModeChange = onRouteSelectionModeChange;
+        this.onVehicleAdded = onVehicleAdded;
+    }
+
+    /**
+     * Show the vehicle add panel
+     */
+    public void showVehicleAddPanel() {
+        vehicleAddPanel = new VehicleAddPanel(runner, trafficManager, this::showNormalControls, onStartRouteSelection, onRouteSelectionModeChange, onVehicleAdded);
+        scrollPane.setContent(vehicleAddPanel);
+    }
+
+    /**
+     * Get the current vehicle add panel (for adding edges to route)
+     */
+    public VehicleAddPanel getVehicleAddPanel() {
+        return vehicleAddPanel;
+    }
+
     public void showTrafficLightControl(TrafficLight tl) {
-        TrafficLightControlPanel tlPanel = new TrafficLightControlPanel(tl, runner, trafficManager,
-                this::showNormalControls);
+        TrafficLightControlPanel tlPanel = new TrafficLightControlPanel(tl, runner, trafficManager, this::showNormalControls);
         scrollPane.setContent(tlPanel.getPanel());
     }
 
     public void showNormalControls() {
+        vehicleAddPanel = null; // Clear reference
         scrollPane.setContent(controlPanel);
     }
 }

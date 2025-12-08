@@ -191,4 +191,51 @@ public class Edge {
     public Junction getToJunction() {
         return toJunction;
     }
+
+    /**
+     * Highlight this edge (for vehicle injection route selection visualization)
+     */
+    public void highlight(GraphicsContext g, CoordinateTransform transform, Color color) {
+        // Calculate edge direction
+        double dx = toX - fromX;
+        double dy = toY - fromY;
+        double length = Math.sqrt(dx * dx + dy * dy);
+
+        if (length < 0.001)
+            return;
+
+        // Normalize direction
+        double dirX = dx / length;
+        double dirY = dy / length;
+
+        // Get junction radii
+        double fromRadius = fromJunction != null ? fromJunction.getRadiusInDirection(dirX, dirY) : 0;
+        double toRadius = toJunction != null ? toJunction.getRadiusInDirection(-dirX, -dirY) : 0;
+
+        // Clip edge at junction boundaries (avoid highlighting over junctions)
+        double startX = fromX + fromRadius * dirX;
+        double startY = fromY + fromRadius * dirY;
+        double endX = toX - toRadius * dirX;
+        double endY = toY - toRadius * dirY;
+
+        double x1 = transform.worldToScreenX(startX);
+        double y1 = transform.worldToScreenY(startY);
+        double x2 = transform.worldToScreenX(endX);
+        double y2 = transform.worldToScreenY(endY);
+
+        double totalWidth = networkEdge.getTotalWidth() * 2; // Bidirectional
+        double screenWidth = transform.worldToScreenSize(totalWidth);
+
+        // Draw highlighted overlay
+        g.setStroke(Color.color(color.getRed(), color.getGreen(), color.getBlue(), 0.7));
+        g.setLineWidth(screenWidth + 4);
+        g.setLineDashes(10, 5);
+        g.strokeLine(x1, y1, x2, y2);
+        g.setLineDashes();
+
+        // Draw solid inner highlight
+        g.setStroke(Color.color(color.getRed(), color.getGreen(), color.getBlue(), 0.4));
+        g.setLineWidth(screenWidth);
+        g.strokeLine(x1, y1, x2, y2);
+    }
 }

@@ -53,7 +53,7 @@ public class TrafficLightControlPanel {
         panel = new VBox(12);
         panel.setAlignment(Pos.TOP_CENTER);
         panel.setPadding(new Insets(10));
-        panel.setStyle("-fx-background-color: #2b2b2b;");
+        panel.setStyle("-fx-background-color: #0D1B2A;");
 
         // Back button
         Button backBtn = createButton("← Back");
@@ -65,7 +65,7 @@ public class TrafficLightControlPanel {
 
         // Info section
         VBox infoBox = new VBox(8);
-        infoBox.setStyle("-fx-background-color: #3c3f41; -fx-padding: 10; -fx-background-radius: 5;");
+        infoBox.setStyle("-fx-background-color: #1B263B; -fx-padding: 10; -fx-background-radius: 5;");
 
         Label junctionLabel = new Label("Junction: " + selectedLight.getJunctionId());
         junctionLabel.setStyle("-fx-text-fill: #aaaaaa; -fx-font-size: 12;");
@@ -88,7 +88,7 @@ public class TrafficLightControlPanel {
 
         TextField currentStateField = new TextField();
         currentStateField.setEditable(false);
-        currentStateField.setStyle("-fx-background-color: #1e1e1e; -fx-text-fill: #00ff00; " +
+        currentStateField.setStyle("-fx-background-color: #1B263B; -fx-text-fill: #00ff00; " +
                 "-fx-font-family: monospace; -fx-font-size: 12;");
 
         // Update current state periodically
@@ -128,9 +128,9 @@ public class TrafficLightControlPanel {
         forceRedBtn.setOnAction(e -> forceRed());
 
         autoBtn = createButton("⟲ Return to AUTO");
-        String blueStyle = "-fx-background-color: #1976D2; -fx-text-fill: white; " +
+        String blueStyle = "-fx-background-color: #415A77; -fx-text-fill: white; " +
                 "-fx-font-size: 12; -fx-padding: 10;";
-        String blueHover = "-fx-background-color: #2196F3; -fx-text-fill: white; " +
+        String blueHover = "-fx-background-color: #778DA9; -fx-text-fill: white; " +
                 "-fx-font-size: 12; -fx-padding: 10;";
         autoBtn.setStyle(blueStyle);
         autoBtn.setOnMouseEntered(e -> autoBtn.setStyle(blueHover));
@@ -311,6 +311,14 @@ public class TrafficLightControlPanel {
     private Button createButton(String text) {
         Button btn = new Button(text);
         btn.setPrefWidth(250);
+
+        String buttonStyle = "-fx-background-color: #1B263B; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 8;";
+        String buttonHoverStyle = buttonStyle + "-fx-background-color: #415A77;";
+
+        btn.setStyle(buttonStyle);
+        btn.setOnMouseEntered(e -> btn.setStyle(buttonHoverStyle));
+        btn.setOnMouseExited(e -> btn.setStyle(buttonStyle));
+
         return btn;
     }
 

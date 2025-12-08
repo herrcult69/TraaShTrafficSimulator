@@ -8,6 +8,8 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.scene.control.ScrollPane;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 
@@ -19,6 +21,7 @@ import java.util.concurrent.ExecutorService;
  * - Multi-level scaling: base scale + user zoom + pan offset
  * - Object-oriented rendering with hit detection
  * - 60fps animation with background simulation thread
+ * - Vehicle injection with route selection
  */
 public class TrafficSimulatorApp extends Application {
     private static final String NETWORK_FILE = "resource/network.net.xml";
@@ -33,6 +36,12 @@ public class TrafficSimulatorApp extends Application {
     private ViewManager viewManager;
     private Object selectedElement;
     private Object hoveredElement;
+    private ControlPanel controlPanel;
+
+    // Route selection mode
+    private boolean routeSelectionMode = false;
+    private List<String> selectedRouteEdges = new ArrayList<>();
+    private Edge hoveredEdge = null;
 
     // Dashboard fields
     private DashBoard dashboard;
@@ -76,7 +85,14 @@ public class TrafficSimulatorApp extends Application {
         exec.submit(runner);
 
         // Create control panel with all UI components
-        ControlPanel controlPanel = new ControlPanel(runner, viewManager, dashboard, scene);
+        controlPanel = new ControlPanel(runner, viewManager, dashboard, scene);
+
+        // Set up route selection callbacks
+        controlPanel.setRouteSelectionCallbacks(
+                this::onStartRouteSelection,
+                this::onRouteSelectionModeChange,
+                this::onVehicleAdded);
+
         ScrollPane scrollPane = controlPanel.getScrollPane();
 
         BorderPane root = new BorderPane();
@@ -124,11 +140,31 @@ public class TrafficSimulatorApp extends Application {
         canvas.setOnScroll(e -> viewManager.zoomToPoint(e.getDeltaY() > 0 ? 1.1 : 0.9, e.getX(), e.getY()));
         canvas.setOnMousePressed(e -> viewManager.startPan(e.getX(), e.getY()));
         canvas.setOnMouseDragged(e -> viewManager.updatePan(e.getX(), e.getY()));
-        canvas.setOnMouseMoved(
-                e -> hoveredElement = scene.getElementAt(e.getX(), e.getY(), viewManager.getTransform()));
+        canvas.setOnMouseMoved(e -> {
+            if (routeSelectionMode) {
+                // In route selection mode, highlight edges
+                hoveredEdge = scene.getEdgeAt(e.getX(), e.getY(), viewManager.getTransform());
+            } else {
+                hoveredElement = scene.getElementAt(e.getX(), e.getY(), viewManager.getTransform());
+            }
+        });
 
         // Click detection
         canvas.setOnMouseClicked(e -> {
+            // Handle route selection mode
+            if (routeSelectionMode) {
+                String edgeId = scene.getEdgeIdAt(e.getX(), e.getY(), viewManager.getTransform());
+                if (edgeId != null) {
+                    // Add edge to route via the VehicleAddPanel
+                    VehicleAddPanel vehicleAddPanel = controlPanel.getVehicleAddPanel();
+                    if (vehicleAddPanel != null) {
+                        vehicleAddPanel.addEdgeToRoute(edgeId);
+                        selectedRouteEdges.add(edgeId);
+                    }
+                }
+                return;
+            }
+
             Object clickedElement = scene.getElementAt(e.getX(), e.getY(), viewManager.getTransform());
             selectedElement = clickedElement;
 
@@ -176,9 +212,19 @@ public class TrafficSimulatorApp extends Application {
         scene.render(g, viewManager.getTransform());
         scene.renderHighlight(g, viewManager.getTransform(), selectedElement, hoveredElement);
 
+        // Render route selection highlights
+        if (routeSelectionMode) {
+            renderRouteSelection(g);
+        }
+
         // Draw info box
-        if (selectedElement != null) {
+        if (selectedElement != null && !routeSelectionMode) {
             drawInfoBox(g, selectedElement);
+        }
+
+        // Draw route selection instructions when in route mode
+        if (routeSelectionMode) {
+            drawRouteSelectionOverlay(g);
         }
 
         // Update dashboard at reduced frequency
@@ -261,6 +307,121 @@ public class TrafficSimulatorApp extends Application {
         data.motorcycleCount = motoCount;
         data.emergencyCount = emergencyCount;
         dashboard.update(data);
+    }
+
+    //Route Selection Mode Methods (Open new overlay from the current control panel)
+
+    private void onStartRouteSelection() {
+        selectedRouteEdges.clear();
+        System.out.println("Route selection mode started");
+    }
+
+    private void onRouteSelectionModeChange(Boolean active) {
+        routeSelectionMode = active;
+        if (!active) {
+            hoveredEdge = null;
+            System.out.println("Route selection mode ended. Selected " + selectedRouteEdges.size() + " edges.");
+        }
+    }
+
+    private void onVehicleAdded() {
+        selectedRouteEdges.clear();
+        routeSelectionMode = false;
+        hoveredEdge = null;
+        System.out.println("Vehicle added successfully!");
+    }
+
+    private void renderRouteSelection(GraphicsContext g) {
+        VehicleAddPanel vehicleAddPanel = controlPanel.getVehicleAddPanel();
+        if (vehicleAddPanel == null)
+            return;
+
+        // Highlight start edge in green
+        String startEdgeId = vehicleAddPanel.getStartEdge();
+        if (startEdgeId != null) {
+            Edge startEdge = scene.getEdgeById(startEdgeId);
+            if (startEdge != null) {
+                startEdge.highlight(g, viewManager.getTransform(), Color.LIMEGREEN);
+            }
+        }
+
+        // Highlight end edge in red 
+        // You will sometime sees the end edge as blue, but it's actually red, the vehicle made an U-turn at the end of the map, repeate the end edge (Check the Notice in TraaSAdapter.java)
+        String endEdgeId = vehicleAddPanel.getEndEdge();
+        if (endEdgeId != null) {
+            Edge endEdge = scene.getEdgeById(endEdgeId);
+            if (endEdge != null) {
+                endEdge.highlight(g, viewManager.getTransform(), Color.ORANGERED);
+            }
+        }
+
+        // Highlight computed route edges in cyan
+        List<String> route = vehicleAddPanel.getSelectedRoute();
+        for (String edgeId : route) {
+            // Skip start and end (they have their own colors)
+            if (edgeId.equals(startEdgeId) || edgeId.equals(endEdgeId))
+                continue;
+
+            Edge edge = scene.getEdgeById(edgeId);
+            if (edge != null) {
+                edge.highlight(g, viewManager.getTransform(), Color.CYAN);
+            }
+        }
+
+        // Highlight hovered edge in yellow (if not already selected)
+        if (hoveredEdge != null) {
+            String hoveredId = hoveredEdge.getNetworkEdge().id;
+            if (!hoveredId.equals(startEdgeId) && !hoveredId.equals(endEdgeId)
+                    && !route.contains(hoveredId)) {
+                hoveredEdge.highlight(g, viewManager.getTransform(), Color.YELLOW);
+            }
+        }
+    }
+
+    private void drawRouteSelectionOverlay(GraphicsContext g) {
+        VehicleAddPanel vehicleAddPanel = controlPanel.getVehicleAddPanel();
+
+        double x = 10;
+        double y = 10;
+        double width = 300;
+        double height = 100;
+
+        // Semi-transparent background
+        g.setFill(Color.rgb(30, 30, 30, 0.9));
+        g.fillRect(x, y, width, height);
+        g.setStroke(Color.LIMEGREEN);
+        g.setLineWidth(2);
+        g.strokeRect(x, y, width, height);
+
+        // Title
+        g.setFill(Color.LIMEGREEN);
+        g.fillText("🚗 ROUTE SELECTION MODE", x + 10, y + 20);
+
+        // Instructions based on state
+        g.setFill(Color.WHITE);
+        if (vehicleAddPanel != null) {
+            String startEdge = vehicleAddPanel.getStartEdge();
+            String endEdge = vehicleAddPanel.getEndEdge();
+
+            if (startEdge == null) {
+                g.setFill(Color.LIMEGREEN);
+                g.fillText("➤ Click START edge (shown in GREEN)", x + 10, y + 45);
+            } else if (endEdge == null) {
+                g.fillText("✓ Start: " + startEdge, x + 10, y + 40);
+                g.setFill(Color.ORANGERED);
+                g.fillText("➤ Click END edge (shown in RED)", x + 10, y + 60);
+            } else {
+                g.setFill(Color.LIMEGREEN);
+                g.fillText("✓ Start: " + startEdge, x + 10, y + 40);
+                g.setFill(Color.ORANGERED);
+                g.fillText("✓ End: " + endEdge, x + 10, y + 55);
+                g.setFill(Color.CYAN);
+                g.fillText("Route: " + vehicleAddPanel.getSelectedRoute().size() + " edges",
+                        x + 10, y + 75);
+            }
+        } else {
+            g.fillText("Click on road edges to select route", x + 10, y + 40);
+        }
     }
 
     public static void main(String[] args) {

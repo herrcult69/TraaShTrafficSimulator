@@ -3,9 +3,13 @@ import it.polito.appeal.traci.SumoTraciConnection;
 import de.tudresden.sumo.cmd.Vehicle;
 import de.tudresden.sumo.cmd.Trafficlight;
 import de.tudresden.sumo.cmd.Simulation;
+import de.tudresden.sumo.cmd.Route;
+import de.tudresden.sumo.cmd.Edge;
 import de.tudresden.sumo.objects.SumoLinkList;
 import de.tudresden.sumo.objects.SumoPosition2D;
+import de.tudresden.sumo.objects.SumoStringList;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @SuppressWarnings("unchecked")
@@ -65,6 +69,91 @@ public class TraaSAdapter {
     public SumoLinkList getControlledLinks(String trafficLightId) throws Exception {
         return (SumoLinkList) conn.do_job_get(
                 Trafficlight.getControlledLinks(trafficLightId));
+    }
+
+    // Vehicle Injection and Route Management
+
+    // !!! IMPORTANT, PLEASE READ THE COMMENTS AND OFFICAL DOCUMENT BEFORE EDITING THE CODE!!!
+    
+    /** Notice: The current code doesnt allow lane changing (e.g: start at dir2_lane0 will also end in dir2_lane0)
+     * because the current SUMO route is edge-based instead of lane-based.
+     * so some best route will be ignored due to lane changing, attempting to make U-turn or opposite route heading direction.
+     * please refer to the official doc for lane-based routing if needed (I will work on it anyway tho, didnt see this coming)
+     */
+
+    // THE DEVELOPEMENT START HERE
+
+    /**
+     * Add a new route to SUMO
+     * 
+     * @param routeId Unique route identifier
+     * @param edges   List of edge IDs that form the route
+     */
+    public void addRoute(String routeId, List<String> edges) throws Exception {
+        SumoStringList edgeList = new SumoStringList();
+        for (String edge : edges) {
+            edgeList.add(edge);
+        }
+        conn.do_job_set(Route.add(routeId, edgeList));
+    }
+
+    /**
+     * Add a new vehicle to the simulation
+     * 
+     * @param vehicleId    Unique vehicle identifier
+     * @param routeId      The route ID for this vehicle to follow
+     * @param vehicleClass The vehicle class (passenger, truck, bus, motorcycle,
+     *                     emergency)
+     */
+    public void addVehicle(String vehicleId, String routeId, String vehicleClass)
+            throws Exception {
+        // Add vehicle with the specified route
+        // Use "DEFAULT_VEHTYPE" as the type - SUMO's built-in default vehicle type
+        // The vehicle class is already encoded in the ID prefix for our visual rendering
+        double currentTime = getSimulationTime();
+        conn.do_job_set(Vehicle.add(
+                vehicleId,              // vehicle ID
+                "DEFAULT_VEHTYPE",      // use SUMO's default vehicle type
+                routeId,                // route ID
+                (int) currentTime + 1,  // depart time (next simulation step)
+                0.0,                    // depart position (0 = start of route)
+                0.0,                    // depart speed (0 = use default)
+                (byte) 0                // depart lane (0 = first lane)
+        ));
+    }
+
+    /**
+     * Get list of all edge IDs in the network
+     */
+    public List<String> getEdgeIds() throws Exception {
+        return (List<String>) conn.do_job_get(Edge.getIDList());
+    }
+
+    /**
+     * Get list of all route IDs
+     */
+    public List<String> getRouteIds() throws Exception {
+        return (List<String>) conn.do_job_get(Route.getIDList());
+    }
+
+    /**
+     * Find a valid route between two edges using SUMO's routing
+     * 
+     * @param fromEdge Starting edge ID
+     * @param toEdge   Destination edge ID
+     * @return List of edge IDs forming the route, or null if no route found
+     */
+    public List<String> findRoute(String fromEdge, String toEdge) throws Exception {
+        // Use Simulation.findRoute to get a valid path
+        de.tudresden.sumo.objects.SumoStage stage = (de.tudresden.sumo.objects.SumoStage) conn
+                .do_job_get(Simulation.findRoute(fromEdge, toEdge, "DEFAULT_VEHTYPE",
+                        getSimulationTime(), 0));
+
+        // Extract edge IDs from the stage
+        if (stage != null && stage.edges != null && !stage.edges.isEmpty()) {
+            return new ArrayList<>(stage.edges);
+        }
+        return null;
     }
 
 }

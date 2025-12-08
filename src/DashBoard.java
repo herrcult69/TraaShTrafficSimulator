@@ -30,7 +30,7 @@ public class DashBoard extends VBox {
     public DashBoard() {
         super(12);
         setPadding(new Insets(15, 10, 0, 10));
-        setStyle("-fx-background-color: #2b2b2b;");
+        setStyle("-fx-background-color: #0D1B2A;");
         setAlignment(Pos.CENTER);
         setMaxWidth(280);
 
@@ -38,8 +38,7 @@ public class DashBoard extends VBox {
     }
 
     private void initializeComponents() {
-        Label title = createHeaderLabel("=== DASHBOARD ===");
-
+        Label title = createHeaderLabel("―――DASHBOARD―――");
         Label simSection = createSectionLabel("Simulation");
         simTimeLabel = createDataLabel("Time: 0.0s");
         activeVehiclesLabel = createDataLabel("Active: 0");
@@ -71,7 +70,7 @@ public class DashBoard extends VBox {
         speedChart.setMaxWidth(280);
         speedChart.setCreateSymbols(false);
         speedChart.setAnimated(false);
-        speedChart.setStyle("-fx-background-color: #2b2b2b; -fx-title-side: top;");
+        speedChart.setStyle("-fx-background-color: #0D1B2A; -fx-title-side: top; -fx-text-fill: #778DA9;-fx-font-weight: bold; -fx-font-size: 10;");
 
         speedSeries = new XYChart.Series<>();
         speedChart.getData().add(speedSeries);
@@ -86,7 +85,7 @@ public class DashBoard extends VBox {
     private Label createHeaderLabel(String text) {
         Label label = new Label(text);
         label.setFont(Font.font("Monospace", FontWeight.BOLD, 16));
-        label.setTextFill(Color.web("#ffffff"));
+        label.setTextFill(Color.web("white"));
         label.setAlignment(Pos.CENTER);
         label.setMaxWidth(Double.MAX_VALUE);
         return label;
@@ -95,7 +94,7 @@ public class DashBoard extends VBox {
     private Label createSectionLabel(String text) {
         Label label = new Label(text);
         label.setFont(Font.font("Monospace", FontWeight.BOLD, 13));
-        label.setTextFill(Color.web("#4a9eff"));
+        label.setTextFill(Color.web("white"));
         label.setPadding(new Insets(10, 0, 5, 0));
         label.setAlignment(Pos.CENTER);
         label.setMaxWidth(Double.MAX_VALUE);
@@ -105,7 +104,7 @@ public class DashBoard extends VBox {
     private Label createDataLabel(String text) {
         Label label = new Label(text);
         label.setFont(Font.font("Monospace", 12));
-        label.setTextFill(Color.web("#cccccc"));
+        label.setTextFill(Color.web("#778DA9"));
         label.setAlignment(Pos.CENTER);
         label.setMaxWidth(Double.MAX_VALUE);
         return label;
