@@ -134,9 +134,10 @@ public class TrafficLight {
         double clippedEndX = edgeToX - toRadius * dirX;
         double clippedEndY = edgeToY - toRadius * dirY;
 
-        // Position traffic light exactly at the stop line
-        double baseX = clippedEndX;
-        double baseY = clippedEndY;
+        // Position traffic light slightly before the stop line (1.5 meters forward for better clickability)
+        double forwardOffset = 1.5; // meters forward from stop line
+        double baseX = clippedEndX - forwardOffset * dirX;
+        double baseY = clippedEndY - forwardOffset * dirY;
 
         // Position signal at the specific lane center
         // Each lane has a specific offset from the edge centerline
@@ -338,6 +339,18 @@ public class TrafficLight {
 
     public List<Signal> getSignals() {
         return signals;
+    }
+    
+    /**
+     * Get list of link indices controlled by this traffic light, sorted in ascending order
+     */
+    public List<Integer> getLinkIndices() {
+        List<Integer> indices = new ArrayList<>();
+        for (Signal signal : signals) {
+            indices.add(signal.linkIndex);
+        }
+        indices.sort(Integer::compareTo);
+        return indices;
     }
 
     public boolean isManualMode() {

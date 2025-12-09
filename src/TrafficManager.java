@@ -53,18 +53,24 @@ public class TrafficManager {
     }
 
     private void initializeTrafficLightsFromConnections(List<NetworkParser.Connection> connections) {
-        // Group connections by traffic light ID
-        Map<String, List<NetworkParser.Connection>> connectionsByTL = new HashMap<>();
+        // Group connections by traffic light ID AND incoming edge
+        // This creates separate TrafficLight objects for each incoming road
+        Map<String, List<NetworkParser.Connection>> connectionsByEdge = new HashMap<>();
         
         for (NetworkParser.Connection conn : connections) {
             if (conn.tl != null && !conn.tl.isEmpty()) {
-                connectionsByTL.computeIfAbsent(conn.tl, k -> new ArrayList<>()).add(conn);
+                // Key: "junctionId:fromEdge" - creates separate TL per incoming edge
+                String key = conn.tl + ":" + conn.from;
+                connectionsByEdge.computeIfAbsent(key, k -> new ArrayList<>()).add(conn);
             }
         }
 
-        // Create traffic light objects with signals
-        for (Map.Entry<String, List<NetworkParser.Connection>> entry : connectionsByTL.entrySet()) {
-            String junctionId = entry.getKey();
+        // Create traffic light objects - one per incoming edge at each junction
+        for (Map.Entry<String, List<NetworkParser.Connection>> entry : connectionsByEdge.entrySet()) {
+            String key = entry.getKey();
+            String[] parts = key.split(":");
+            String junctionId = parts[0];
+            String fromEdge = parts[1];
             List<NetworkParser.Connection> tlConnections = entry.getValue();
 
             Junction junction = visualJunctionIndex.get(junctionId);
@@ -75,7 +81,7 @@ public class TrafficManager {
 
             TrafficLight trafficLight = new TrafficLight(junctionId, junction);
 
-            // Create a signal for each connection
+            // Create a signal for each connection from this specific edge
             for (NetworkParser.Connection conn : tlConnections) {
                 TrafficLight.Signal signal = new TrafficLight.Signal(
                     conn.from,
@@ -93,7 +99,7 @@ public class TrafficManager {
             trafficLights.add(trafficLight);
         }
 
-        System.out.println("Initialized " + trafficLights.size() + " traffic lights with " + 
+        System.out.println("Initialized " + trafficLights.size() + " traffic lights (one per incoming edge) with " + 
                          connections.stream().filter(c -> c.tl != null).count() + " total signals");
     }
 

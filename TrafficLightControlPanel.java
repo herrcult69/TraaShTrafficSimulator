@@ -1,3 +1,12 @@
+// BACKUP FILE - TrafficLightControlPanel with force red/green logic
+// Saved on 2025-12-09 for future reference
+// This contains the full manual control implementation including:
+// - Force Green button
+// - Force Red button  
+// - Return to Auto button
+// - Individual traffic light control (modifying only specific link indices)
+// - State management and UI updates
+
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -21,7 +30,6 @@ public class TrafficLightControlPanel {
     private Button forceGreenBtn;
     private Button forceRedBtn;
     private Button autoBtn;
-    private TextField currentStateField;
 
     // Button styles
     private final String greenStyle = "-fx-background-color: #2E7D32; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;";
@@ -39,9 +47,15 @@ public class TrafficLightControlPanel {
         this.trafficManager = trafficManager;
         this.onBackPressed = onBackPressed;
         createUI();
-        
-        // Update UI to reflect current mode state
-        updateModeDisplay();
+
+        // Update UI to reflect current manual mode state
+        if (light.isManualMode()) {
+            statusLabel.setText("Mode: MANUAL");
+            statusLabel.setStyle("-fx-text-fill: #FF9800; -fx-font-weight: bold; -fx-font-size: 14;");
+            autoBtn.setDisable(false);
+        }
+
+        // Update button highlighting to show current state
         updateButtonStates();
     }
 
@@ -76,6 +90,7 @@ public class TrafficLightControlPanel {
         Label linksLabel = new Label("Controls Links: " + linkIndices.toString());
         linksLabel.setStyle("-fx-text-fill: #aaaaaa; -fx-font-size: 12;");
         linksLabel.setWrapText(true);
+
         statusLabel = new Label("Mode: AUTO");
         statusLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-weight: bold; -fx-font-size: 14;");
 
@@ -85,7 +100,7 @@ public class TrafficLightControlPanel {
         Label currentStateLabel = new Label("Current State:");
         currentStateLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 12;");
 
-        currentStateField = new TextField();
+        TextField currentStateField = new TextField();
         currentStateField.setEditable(false);
         currentStateField.setStyle("-fx-background-color: #1e1e1e; -fx-text-fill: #00ff00; " +
                 "-fx-font-family: monospace; -fx-font-size: 12;");
@@ -94,25 +109,28 @@ public class TrafficLightControlPanel {
         new javafx.animation.AnimationTimer() {
             @Override
             public void handle(long now) {
-                updateStateDisplay();
+                String state = selectedLight.getCurrentState();
+                if (state != null && !state.isEmpty()) {
+                    currentStateField.setText(state);
+                    // Show tooltip with signal info
+                    StringBuilder tooltip = new StringBuilder("Signal states:\n");
+                    for (TrafficLight.Signal signal : selectedLight.getSignals()) {
+                        tooltip.append("Link ").append(signal.linkIndex).append(": ");
+                        if (signal.linkIndex < state.length()) {
+                            tooltip.append(state.charAt(signal.linkIndex));
+                        }
+                        tooltip.append("\n");
+                    }
+                    currentStateField.setTooltip(new javafx.scene.control.Tooltip(tooltip.toString()));
+                }
             }
         }.start();
 
         // Quick control buttons
-        Label quickControlLabel = new Label("Selective Control:");
+        Label quickControlLabel = new Label("Quick Controls:");
         quickControlLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 12;");
 
-        // Count traffic lights at this junction
-        int junctionTLCount = (int) trafficManager.getTrafficLights().stream()
-            .filter(tl -> tl.getJunctionId().equals(selectedLight.getJunctionId()))
-            .count();
-
-        Label infoText = new Label("⚠ Changes only this traffic light's signals (links " + linkIndices + ")\n" +
-                                   "⚠ Puts entire junction (" + junctionTLCount + " traffic lights) in MANUAL mode");
-        infoText.setStyle("-fx-text-fill: #FFA726; -fx-font-size: 10;");
-        infoText.setWrapText(true);
-
-        forceGreenBtn = createButton("Force GREEN (This Light Only)");
+        forceGreenBtn = createButton("Force GREEN");
         forceGreenBtn.setStyle(greenStyle);
         forceGreenBtn.setOnMouseEntered(e -> {
             if (!isCurrentlyGreen())
@@ -121,7 +139,7 @@ public class TrafficLightControlPanel {
         forceGreenBtn.setOnMouseExited(e -> updateButtonStates());
         forceGreenBtn.setOnAction(e -> forceGreen());
 
-        forceRedBtn = createButton("Force RED (This Light Only)");
+        forceRedBtn = createButton("Force RED");
         forceRedBtn.setStyle(redStyle);
         forceRedBtn.setOnMouseEntered(e -> {
             if (!isCurrentlyRed())
@@ -130,7 +148,7 @@ public class TrafficLightControlPanel {
         forceRedBtn.setOnMouseExited(e -> updateButtonStates());
         forceRedBtn.setOnAction(e -> forceRed());
 
-        autoBtn = createButton("⟲ Return Junction to AUTO");
+        autoBtn = createButton("⟲ Return to AUTO");
         String blueStyle = "-fx-background-color: #1976D2; -fx-text-fill: white; " +
                 "-fx-font-size: 12; -fx-padding: 10;";
         String blueHover = "-fx-background-color: #2196F3; -fx-text-fill: white; " +
@@ -139,7 +157,12 @@ public class TrafficLightControlPanel {
         autoBtn.setOnMouseEntered(e -> autoBtn.setStyle(blueHover));
         autoBtn.setOnMouseExited(e -> autoBtn.setStyle(blueStyle));
         autoBtn.setOnAction(e -> returnToAuto());
-        autoBtn.setDisable(true);
+        autoBtn.setDisable(true); // Initially disabled
+
+        // Warning label
+        Label warningLabel = new Label("⚠ Manual control overrides SUMO's automatic timing");
+        warningLabel.setStyle("-fx-text-fill: #FFA726; -fx-font-size: 10;");
+        warningLabel.setWrapText(true);
 
         // Add all elements
         panel.getChildren().addAll(
@@ -151,39 +174,10 @@ public class TrafficLightControlPanel {
                 currentStateField,
                 new javafx.scene.control.Separator(),
                 quickControlLabel,
-                infoText,
                 forceGreenBtn,
                 forceRedBtn,
-                autoBtn);
-    }
-
-    private void updateStateDisplay() {
-        String state = selectedLight.getCurrentState();
-        if (state != null && !state.isEmpty()) {
-            // Highlight this traffic light's controlled links
-            List<Integer> linkIndices = selectedLight.getLinkIndices();
-            StringBuilder display = new StringBuilder();
-            for (int i = 0; i < state.length(); i++) {
-                if (linkIndices.contains(i)) {
-                    display.append("[").append(state.charAt(i)).append("]");
-                } else {
-                    display.append(state.charAt(i));
-                }
-            }
-            currentStateField.setText(display.toString());
-
-            // Tooltip
-            StringBuilder tooltip = new StringBuilder("Full junction state: " + state + "\n\n");
-            tooltip.append("This traffic light controls:\n");
-            for (TrafficLight.Signal signal : selectedLight.getSignals()) {
-                tooltip.append("  Link ").append(signal.linkIndex).append(": ");
-                if (signal.linkIndex < state.length()) {
-                    tooltip.append(state.charAt(signal.linkIndex));
-                }
-                tooltip.append(" (").append(signal.fromEdge).append(" → ").append(signal.toEdge).append(")\n");
-            }
-            currentStateField.setTooltip(new javafx.scene.control.Tooltip(tooltip.toString()));
-        }
+                autoBtn,
+                warningLabel);
     }
 
     private void forceGreen() {
@@ -193,10 +187,10 @@ public class TrafficLightControlPanel {
             return;
         }
 
-        // Get this traffic light's link indices
+        // Get sorted link indices for this traffic light
         List<Integer> linkIndices = selectedLight.getLinkIndices();
         
-        // Modify ONLY this traffic light's links to 'G'
+        // Set only the controlled links to 'G' (green with priority)
         char[] state = currentState.toCharArray();
         for (int linkIndex : linkIndices) {
             if (linkIndex < state.length) {
@@ -205,12 +199,9 @@ public class TrafficLightControlPanel {
         }
 
         String newState = new String(state);
-        System.out.println("=== SELECTIVE CONTROL: Force GREEN ===");
-        System.out.println("Traffic Light: " + selectedLight.getJunctionId());
-        System.out.println("Controlled Links: " + linkIndices);
-        System.out.println("Old State: " + currentState);
-        System.out.println("New State: " + newState);
-        System.out.println("Changed positions: " + linkIndices);
+        System.out.println("Force GREEN - Link indices: " + linkIndices + 
+                         "\nOld state: " + currentState + 
+                         "\nNew state: " + newState);
         
         applyState(newState);
         enterManualMode();
@@ -224,10 +215,10 @@ public class TrafficLightControlPanel {
             return;
         }
 
-        // Get this traffic light's link indices
+        // Get sorted link indices for this traffic light
         List<Integer> linkIndices = selectedLight.getLinkIndices();
         
-        // Modify ONLY this traffic light's links to 'r'
+        // Set only the controlled links to 'r' (red)
         char[] state = currentState.toCharArray();
         for (int linkIndex : linkIndices) {
             if (linkIndex < state.length) {
@@ -236,12 +227,9 @@ public class TrafficLightControlPanel {
         }
 
         String newState = new String(state);
-        System.out.println("=== SELECTIVE CONTROL: Force RED ===");
-        System.out.println("Traffic Light: " + selectedLight.getJunctionId());
-        System.out.println("Controlled Links: " + linkIndices);
-        System.out.println("Old State: " + currentState);
-        System.out.println("New State: " + newState);
-        System.out.println("Changed positions: " + linkIndices);
+        System.out.println("Force RED - Link indices: " + linkIndices + 
+                         "\nOld state: " + currentState + 
+                         "\nNew state: " + newState);
         
         applyState(newState);
         enterManualMode();
@@ -256,18 +244,15 @@ public class TrafficLightControlPanel {
                 return;
             }
 
-            // Apply the modified state to the junction
             adapter.setTrafficLightState(selectedLight.getJunctionId(), newState);
-            
-            // Mark this traffic light as in manual mode
+
+            // Update ONLY the selected traffic light, not all at the junction
             selectedLight.setManualMode(true);
             selectedLight.setState(newState);
-            
-            // Synchronize manual mode across ALL traffic lights at this junction
-            setJunctionManualMode(selectedLight.getJunctionId(), true);
 
-            System.out.println("Applied selective state change to junction " + 
-                             selectedLight.getJunctionId() + " (manual mode synced across junction)");
+            System.out.println("Applied state to specific traffic light at junction " + 
+                             selectedLight.getJunctionId() + " (signals: " + 
+                             selectedLight.getSignals().size() + ")");
 
         } catch (Exception e) {
             showError("Failed to set state: " + e.getMessage());
@@ -283,14 +268,11 @@ public class TrafficLightControlPanel {
                 return;
             }
 
-            // Return SUMO to automatic control
+            // Return SUMO to automatic control by setting default program
             adapter.setTrafficLightProgram(selectedLight.getJunctionId(), "0");
 
-            // Clear manual mode for this traffic light
+            // Update ONLY the selected traffic light to auto mode
             selectedLight.setManualMode(false);
-            
-            // Synchronize auto mode across ALL traffic lights at this junction
-            setJunctionManualMode(selectedLight.getJunctionId(), false);
 
             statusLabel.setText("Mode: AUTO");
             statusLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-weight: bold; -fx-font-size: 14;");
@@ -299,9 +281,11 @@ public class TrafficLightControlPanel {
             forceRedBtn.setDisable(false);
             autoBtn.setDisable(true);
 
+            // Reset button styles
             updateButtonStates();
 
-            System.out.println("Returned to AUTO mode for junction " + selectedLight.getJunctionId() + " (auto mode synced across junction)");
+            System.out.println("Returned to AUTO mode for specific traffic light at junction " + 
+                             selectedLight.getJunctionId());
 
         } catch (Exception e) {
             showError("Failed to return to auto: " + e.getMessage());
@@ -327,17 +311,12 @@ public class TrafficLightControlPanel {
         if (state == null || state.isEmpty())
             return false;
 
-        // Check if ALL this traffic light's links are green
-        List<Integer> linkIndices = selectedLight.getLinkIndices();
-        for (int linkIndex : linkIndices) {
-            if (linkIndex < state.length()) {
-                char c = state.charAt(linkIndex);
-                if (c != 'G' && c != 'g') {
-                    return false;
-                }
+        for (TrafficLight.Signal signal : selectedLight.getSignals()) {
+            if (signal.linkIndex < state.length() && (state.charAt(signal.linkIndex) == 'G' || state.charAt(signal.linkIndex) == 'g')) {
+                return true;
             }
         }
-        return true;
+        return false;
     }
 
     private boolean isCurrentlyRed() {
@@ -345,56 +324,20 @@ public class TrafficLightControlPanel {
         if (state == null || state.isEmpty())
             return false;
 
-        // Check if ALL this traffic light's links are red
-        List<Integer> linkIndices = selectedLight.getLinkIndices();
-        for (int linkIndex : linkIndices) {
-            if (linkIndex < state.length()) {
-                char c = state.charAt(linkIndex);
-                if (c != 'r' && c != 'R') {
-                    return false;
-                }
+        for (TrafficLight.Signal signal : selectedLight.getSignals()) {
+            if (signal.linkIndex < state.length() && (state.charAt(signal.linkIndex) == 'r' || state.charAt(signal.linkIndex) == 'R')) {
+                return true;
             }
         }
-        return true;
+        return false;
     }
 
     private void enterManualMode() {
         statusLabel.setText("Mode: MANUAL");
         statusLabel.setStyle("-fx-text-fill: #FF9800; -fx-font-weight: bold; -fx-font-size: 14;");
+
+        // Keep force buttons enabled so you can keep changing states in manual mode
         autoBtn.setDisable(false);
-    }
-    
-    /**
-     * Update the UI to reflect the current mode state
-     * Called when opening the panel to show remembered mode
-     */
-    private void updateModeDisplay() {
-        if (selectedLight.isManualMode()) {
-            statusLabel.setText("Mode: MANUAL");
-            statusLabel.setStyle("-fx-text-fill: #FF9800; -fx-font-weight: bold; -fx-font-size: 14;");
-            autoBtn.setDisable(false);
-        } else {
-            statusLabel.setText("Mode: AUTO");
-            statusLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-weight: bold; -fx-font-size: 14;");
-            autoBtn.setDisable(true);
-        }
-    }
-    
-    /**
-     * Set manual/auto mode for ALL traffic lights at the same junction
-     * This keeps mode synchronized while allowing individual force control
-     */
-    private void setJunctionManualMode(String junctionId, boolean manualMode) {
-        List<TrafficLight> allLights = trafficManager.getTrafficLights();
-        int count = 0;
-        for (TrafficLight light : allLights) {
-            if (light.getJunctionId().equals(junctionId)) {
-                light.setManualMode(manualMode);
-                count++;
-            }
-        }
-        System.out.println("Synchronized " + (manualMode ? "MANUAL" : "AUTO") + 
-                         " mode across " + count + " traffic lights at junction " + junctionId);
     }
 
     private void showError(String message) {
