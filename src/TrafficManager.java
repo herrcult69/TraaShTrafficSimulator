@@ -47,42 +47,63 @@ public class TrafficManager {
             }
         }
         System.out.println("Created " + edges.size() + " edges");
+
+        // Initialize traffic lights from connections
+        initializeTrafficLightsFromConnections(network.connections);
     }
 
-    public void initializeTrafficLightsFromSUMO(TraaSAdapter adapter) {
-        try {
-            List<String> tlIds = adapter.getTrafficLightIds();
-
-            for (String junctionId : tlIds) {
-                Junction junction = visualJunctionIndex.get(junctionId);
-                if (junction == null)
-                    continue;
-
-                SumoLinkList linkList = adapter.getControlledLinks(junctionId);
-                if (linkList == null || linkList.isEmpty())
-                    continue;
-
-                // Group links by incoming edge
-                Map<String, List<Integer>> linksByEdge = new HashMap<>();
-                for (int linkIdx = 0; linkIdx < linkList.size(); linkIdx++) {
-                    SumoLink link = linkList.get(linkIdx);
-                    String fromEdge = link.from.substring(0, link.from.lastIndexOf('_'));
-                    linksByEdge.computeIfAbsent(fromEdge, k -> new ArrayList<>()).add(linkIdx);
-                }
-
-                // Create traffic lights and classify links
-                for (Map.Entry<String, List<Integer>> entry : linksByEdge.entrySet()) {
-                    TrafficLight tl = new TrafficLight(junctionId, junction, entry.getKey());
-                    tl.classifyLinks(entry.getValue());
-                    tl.calculatePosition(edges);
-                    trafficLights.add(tl);
-                }
+    private void initializeTrafficLightsFromConnections(List<NetworkParser.Connection> connections) {
+        // Group connections by traffic light ID
+        Map<String, List<NetworkParser.Connection>> connectionsByTL = new HashMap<>();
+        
+        for (NetworkParser.Connection conn : connections) {
+            if (conn.tl != null && !conn.tl.isEmpty()) {
+                connectionsByTL.computeIfAbsent(conn.tl, k -> new ArrayList<>()).add(conn);
             }
-            System.out.println("Initialized " + trafficLights.size() + " traffic lights from SUMO");
-        } catch (Exception e) {
-            System.err.println("Error initializing traffic lights: " + e.getMessage());
-            e.printStackTrace();
         }
+
+        // Create traffic light objects with signals
+        for (Map.Entry<String, List<NetworkParser.Connection>> entry : connectionsByTL.entrySet()) {
+            String junctionId = entry.getKey();
+            List<NetworkParser.Connection> tlConnections = entry.getValue();
+
+            Junction junction = visualJunctionIndex.get(junctionId);
+            if (junction == null) {
+                System.out.println("WARNING: Junction not found for traffic light: " + junctionId);
+                continue;
+            }
+
+            TrafficLight trafficLight = new TrafficLight(junctionId, junction);
+
+            // Create a signal for each connection
+            for (NetworkParser.Connection conn : tlConnections) {
+                TrafficLight.Signal signal = new TrafficLight.Signal(
+                    conn.from,
+                    conn.fromLane,
+                    conn.to,
+                    conn.toLane,
+                    conn.linkIndex,
+                    conn.dir
+                );
+                trafficLight.addSignal(signal);
+            }
+
+            // Calculate positions for all signals
+            trafficLight.calculatePositions(edges);
+            trafficLights.add(trafficLight);
+        }
+
+        System.out.println("Initialized " + trafficLights.size() + " traffic lights with " + 
+                         connections.stream().filter(c -> c.tl != null).count() + " total signals");
+    }
+
+    /**
+     * This method is now deprecated - traffic lights are initialized from network connections
+     * Keep it for backward compatibility but it won't create new traffic lights
+     */
+    @Deprecated
+    public void initializeTrafficLightsFromSUMO(TraaSAdapter adapter) {
+        System.out.println("Traffic lights are now initialized from network connections in initializeFromNetwork()");
     }
 
     public void updateVehicles(Map<String, double[]> vehiclePositions) {

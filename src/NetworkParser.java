@@ -44,6 +44,31 @@ public class NetworkParser {
         }
     }
 
+    public static class Connection {
+        public final String from;        // From edge ID
+        public final String to;          // To edge ID
+        public final int fromLane;       // Source lane index
+        public final int toLane;         // Destination lane index
+        public final String via;         // Internal edge
+        public final String tl;          // Traffic light ID (if controlled)
+        public final int linkIndex;      // Link index in TLS state
+        public final String dir;         // Direction (s=straight, l=left, r=right, etc.)
+        public final String state;       // Initial state
+
+        public Connection(String from, String to, int fromLane, int toLane, 
+                         String via, String tl, int linkIndex, String dir, String state) {
+            this.from = from;
+            this.to = to;
+            this.fromLane = fromLane;
+            this.toLane = toLane;
+            this.via = via;
+            this.tl = tl;
+            this.linkIndex = linkIndex;
+            this.dir = dir;
+            this.state = state;
+        }
+    }
+
     public static class Edge {
         public final String id;
         public final String from;
@@ -71,11 +96,14 @@ public class NetworkParser {
     public static class NetworkData {
         public final List<Junction> junctions;
         public final List<Edge> edges;
+        public final List<Connection> connections;
         public final double minX, maxX, minY, maxY;
 
-        public NetworkData(List<Junction> js, List<Edge> es, double minX, double maxX, double minY, double maxY) {
+        public NetworkData(List<Junction> js, List<Edge> es, List<Connection> conns, 
+                          double minX, double maxX, double minY, double maxY) {
             this.junctions = js;
             this.edges = es;
+            this.connections = conns;
             this.minX = minX;
             this.maxX = maxX;
             this.minY = minY;
@@ -171,6 +199,28 @@ public class NetworkParser {
             }
         }
 
-        return new NetworkData(junctions, edges, minX, maxX, minY, maxY);
+        // Parse connections
+        NodeList connectionNodes = doc.getElementsByTagName("connection");
+        List<Connection> connections = new ArrayList<>();
+        for (int i = 0; i < connectionNodes.getLength(); i++) {
+            Element connElem = (Element) connectionNodes.item(i);
+            
+            String from = connElem.getAttribute("from");
+            String to = connElem.getAttribute("to");
+            int fromLane = connElem.hasAttribute("fromLane") 
+                ? Integer.parseInt(connElem.getAttribute("fromLane")) : 0;
+            int toLane = connElem.hasAttribute("toLane") 
+                ? Integer.parseInt(connElem.getAttribute("toLane")) : 0;
+            String via = connElem.hasAttribute("via") ? connElem.getAttribute("via") : "";
+            String tl = connElem.hasAttribute("tl") ? connElem.getAttribute("tl") : null;
+            int linkIndex = connElem.hasAttribute("linkIndex") 
+                ? Integer.parseInt(connElem.getAttribute("linkIndex")) : -1;
+            String dir = connElem.hasAttribute("dir") ? connElem.getAttribute("dir") : "";
+            String state = connElem.hasAttribute("state") ? connElem.getAttribute("state") : "";
+            
+            connections.add(new Connection(from, to, fromLane, toLane, via, tl, linkIndex, dir, state));
+        }
+
+        return new NetworkData(junctions, edges, connections, minX, maxX, minY, maxY);
     }
 }

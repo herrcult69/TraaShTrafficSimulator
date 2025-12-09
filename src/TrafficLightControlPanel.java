@@ -70,17 +70,25 @@ public class TrafficLightControlPanel {
         Label junctionLabel = new Label("Junction: " + selectedLight.getJunctionId());
         junctionLabel.setStyle("-fx-text-fill: #aaaaaa; -fx-font-size: 12;");
 
-        Label edgeLabel = new Label("Approach: " + selectedLight.getApproachEdgeId());
-        edgeLabel.setStyle("-fx-text-fill: #aaaaaa; -fx-font-size: 12;");
+        // Get signal count and link indices
+        int signalCount = selectedLight.getSignals().size();
+        StringBuilder linkIndices = new StringBuilder();
+        for (TrafficLight.Signal signal : selectedLight.getSignals()) {
+            if (linkIndices.length() > 0) linkIndices.append(", ");
+            linkIndices.append(signal.linkIndex);
+        }
 
-        Label linksLabel = new Label("Controls Links: " + selectedLight.getLinkIndices().toString());
+        Label signalLabel = new Label("Signals: " + signalCount + " connections");
+        signalLabel.setStyle("-fx-text-fill: #aaaaaa; -fx-font-size: 12;");
+
+        Label linksLabel = new Label("Controls Links: " + linkIndices.toString());
         linksLabel.setStyle("-fx-text-fill: #aaaaaa; -fx-font-size: 12;");
         linksLabel.setWrapText(true);
 
         statusLabel = new Label("Mode: AUTO");
         statusLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-weight: bold; -fx-font-size: 14;");
 
-        infoBox.getChildren().addAll(junctionLabel, edgeLabel, linksLabel, statusLabel);
+        infoBox.getChildren().addAll(junctionLabel, signalLabel, linksLabel, statusLabel);
 
         // Current state display
         Label currentStateLabel = new Label("Current State:");
@@ -98,9 +106,16 @@ public class TrafficLightControlPanel {
                 String state = selectedLight.getCurrentState();
                 if (state != null && !state.isEmpty()) {
                     currentStateField.setText(state);
-                    // Highlight controlled indices
-                    currentStateField.setTooltip(new javafx.scene.control.Tooltip(
-                            "Link indices " + selectedLight.getLinkIndices() + " are highlighted"));
+                    // Show tooltip with signal info
+                    StringBuilder tooltip = new StringBuilder("Signal states:\n");
+                    for (TrafficLight.Signal signal : selectedLight.getSignals()) {
+                        tooltip.append("Link ").append(signal.linkIndex).append(": ");
+                        if (signal.linkIndex < state.length()) {
+                            tooltip.append(state.charAt(signal.linkIndex));
+                        }
+                        tooltip.append("\n");
+                    }
+                    currentStateField.setTooltip(new javafx.scene.control.Tooltip(tooltip.toString()));
                 }
             }
         }.start();
@@ -168,9 +183,9 @@ public class TrafficLightControlPanel {
 
         // Set all controlled links to 'G' (green with priority)
         char[] state = currentState.toCharArray();
-        for (int idx : selectedLight.getLinkIndices()) {
-            if (idx < state.length) {
-                state[idx] = 'G';
+        for (TrafficLight.Signal signal : selectedLight.getSignals()) {
+            if (signal.linkIndex < state.length) {
+                state[signal.linkIndex] = 'G';
             }
         }
 
@@ -188,9 +203,9 @@ public class TrafficLightControlPanel {
 
         // Set all controlled links to 'r' (red)
         char[] state = currentState.toCharArray();
-        for (int idx : selectedLight.getLinkIndices()) {
-            if (idx < state.length) {
-                state[idx] = 'r';
+        for (TrafficLight.Signal signal : selectedLight.getSignals()) {
+            if (signal.linkIndex < state.length) {
+                state[signal.linkIndex] = 'r';
             }
         }
 
@@ -270,8 +285,8 @@ public class TrafficLightControlPanel {
         if (state == null || state.isEmpty())
             return false;
 
-        for (int idx : selectedLight.getLinkIndices()) {
-            if (idx < state.length() && (state.charAt(idx) == 'G' || state.charAt(idx) == 'g')) {
+        for (TrafficLight.Signal signal : selectedLight.getSignals()) {
+            if (signal.linkIndex < state.length() && (state.charAt(signal.linkIndex) == 'G' || state.charAt(signal.linkIndex) == 'g')) {
                 return true;
             }
         }
@@ -283,8 +298,8 @@ public class TrafficLightControlPanel {
         if (state == null || state.isEmpty())
             return false;
 
-        for (int idx : selectedLight.getLinkIndices()) {
-            if (idx < state.length() && (state.charAt(idx) == 'r' || state.charAt(idx) == 'R')) {
+        for (TrafficLight.Signal signal : selectedLight.getSignals()) {
+            if (signal.linkIndex < state.length() && (state.charAt(signal.linkIndex) == 'r' || state.charAt(signal.linkIndex) == 'R')) {
                 return true;
             }
         }

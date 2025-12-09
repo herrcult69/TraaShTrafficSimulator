@@ -57,7 +57,7 @@ public class TrafficSimulatorApp extends Application {
         dashboard = new DashBoard();
 
         // Start simulation
-        runner = new SimulationRunner(CONFIG_FILE, false);
+        runner = new SimulationRunner(CONFIG_FILE, true);
 
         // Set up listener to initialize traffic lights when SUMO connects
         runner.setConnectionListener(adapter -> {
@@ -134,8 +134,8 @@ public class TrafficSimulatorApp extends Application {
 
             if (clickedElement instanceof TrafficLight) {
                 TrafficLight tl = (TrafficLight) clickedElement;
-                System.out.println("Clicked: Traffic Light - Junction: " + tl.getJunctionId() + " Approach: "
-                        + tl.getApproachEdgeId());
+                System.out.println("Clicked: Traffic Light - Junction: " + tl.getJunctionId() + 
+                        " Signals: " + tl.getSignals().size());
                 controlPanel.showTrafficLightControl(tl);
             } else {
                 // Hide traffic light control panel when clicking anything else

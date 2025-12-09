@@ -158,6 +158,10 @@ public class Lane {
         return index;
     }
 
+    public double getOffsetFromCenter() {
+        return offsetFromCenter;
+    }
+
     public double getCenterX1() {
         return x1;
     }
