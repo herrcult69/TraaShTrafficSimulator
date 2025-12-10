@@ -9,10 +9,15 @@ public class TrafficLight {
     private static final Color YELLOW = Color.rgb(255, 255, 0);
     private static final Color GREEN = Color.rgb(0, 255, 0);
     private static final Color GRAY = Color.rgb(80, 80, 80);
-    private static final Color RED_DIM = Color.rgb(60, 0, 0);
-    private static final Color YELLOW_DIM = Color.rgb(60, 60, 0);
-    private static final Color GREEN_DIM = Color.rgb(0, 60, 0);
-    private static final Color BG_DARK = Color.rgb(40, 40, 40);
+    
+    // Dimension constants
+    private static final double DEFAULT_LANE_WIDTH = 3.2;
+    private static final double FORWARD_OFFSET = 3.0;
+    private static final double LINE_LENGTH_FACTOR = 0.7;
+    private static final double LINE_WIDTH_FACTOR = 0.15;
+    private static final double ARROW_SIZE_FACTOR = 1.5;
+    private static final double CLICK_RADIUS_FACTOR = 0.6;
+    private static final double HIGHLIGHT_RADIUS_FACTOR = 0.8;
 
     // Individual signal representing one connection
     public static class Signal {
@@ -134,10 +139,9 @@ public class TrafficLight {
         double clippedEndX = edgeToX - toRadius * dirX;
         double clippedEndY = edgeToY - toRadius * dirY;
 
-        // Position traffic light slightly before the stop line (1.5 meters forward for better clickability)
-        double forwardOffset = 1.5; // meters forward from stop line
-        double baseX = clippedEndX - forwardOffset * dirX;
-        double baseY = clippedEndY - forwardOffset * dirY;
+        // Position traffic light forward from the stop line (toward junction) for better clickability
+        double baseX = clippedEndX + FORWARD_OFFSET * dirX;
+        double baseY = clippedEndY + FORWARD_OFFSET * dirY;
 
         // Position signal at the specific lane center
         // Each lane has a specific offset from the edge centerline
@@ -208,43 +212,57 @@ public class TrafficLight {
     private void renderSignal(GraphicsContext g, CoordinateTransform transform, Signal signal) {
         double screenX = transform.worldToScreenX(signal.x);
         double screenY = transform.worldToScreenY(signal.y);
-        
-        // Signal line length proportional to lane width
-        double laneWidth = 3.2; // Default SUMO lane width in meters
-        double lineLength = Math.max(3, transform.worldToScreenSize(laneWidth * 0.7));
-        double lineWidth = Math.max(2, lineLength * 0.15);
-
-        // Get signal color
+        double lineLength = calculateLineLength(transform);
+        double lineWidth = Math.max(2, lineLength * LINE_WIDTH_FACTOR);
         Color activeColor = getSignalColor(signal.linkIndex);
 
-        // Save graphics state
         g.save();
         g.translate(screenX, screenY);
-        
-        // Apply base rotation (perpendicular to road)
         g.rotate(signal.rotationAngle);
         
-        // Now apply direction-specific rotation and draw line
-        // Direction codes: s=straight, l=left, r=right, L=strong left, R=strong right, t=turn around
-        double directionAngle = getDirectionAngle(signal.direction);
-        g.rotate(directionAngle);
-        
-        // Draw the directional line indicator
         g.setStroke(activeColor);
         g.setLineWidth(lineWidth);
-        g.setLineCap(javafx.scene.canvas.Canvas.class.isInstance(g.getCanvas()) 
-            ? javafx.scene.shape.StrokeLineCap.ROUND 
-            : javafx.scene.shape.StrokeLineCap.ROUND);
+        g.setLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
         
-        // Draw line from center outward in the direction
-        g.strokeLine(0, 0, 0, -lineLength);
-        
-        // Add arrow head for better direction indication
-        double arrowSize = lineWidth * 1.5;
-        g.strokeLine(0, -lineLength, -arrowSize, -lineLength + arrowSize);
-        g.strokeLine(0, -lineLength, arrowSize, -lineLength + arrowSize);
+        if (signal.direction != null && signal.direction.equals("t")) {
+            drawTurnAroundArrow(g, lineLength, lineWidth);
+        } else {
+            drawDirectionalArrow(g, signal.direction, lineLength, lineWidth);
+        }
 
         g.restore();
+    }
+
+    private double calculateLineLength(CoordinateTransform transform) {
+        return Math.max(3, transform.worldToScreenSize(DEFAULT_LANE_WIDTH * LINE_LENGTH_FACTOR));
+    }
+
+    private void drawTurnAroundArrow(GraphicsContext g, double lineLength, double lineWidth) {
+        double sideOffset = lineLength * 0.5;
+        double arrowSize = lineWidth * ARROW_SIZE_FACTOR;
+        
+        // Draw horizontal line to the side
+        g.strokeLine(0, 0, -sideOffset, 0);
+        
+        // Draw arrow pointing backward
+        g.strokeLine(-sideOffset, 0, -sideOffset, lineLength);
+        
+        // Draw arrow head
+        g.strokeLine(-sideOffset, lineLength, -sideOffset - arrowSize, lineLength - arrowSize);
+        g.strokeLine(-sideOffset, lineLength, -sideOffset + arrowSize, lineLength - arrowSize);
+    }
+
+    private void drawDirectionalArrow(GraphicsContext g, String direction, double lineLength, double lineWidth) {
+        double directionAngle = getDirectionAngle(direction);
+        g.rotate(directionAngle);
+        
+        // Draw line from center outward
+        g.strokeLine(0, 0, 0, -lineLength);
+        
+        // Draw arrow head
+        double arrowSize = lineWidth * ARROW_SIZE_FACTOR;
+        g.strokeLine(0, -lineLength, -arrowSize, -lineLength + arrowSize);
+        g.strokeLine(0, -lineLength, arrowSize, -lineLength + arrowSize);
     }
 
     /**
@@ -253,24 +271,17 @@ public class TrafficLight {
      */
     private double getDirectionAngle(String direction) {
         if (direction == null || direction.isEmpty()) {
-            return 0; // Default to straight
+            return 0;
         }
         
         switch (direction.charAt(0)) {
-            case 's': // straight
-                return 0;
-            case 'l': // slight left
-                return -30;
-            case 'L': // left
-                return -60;
-            case 'r': // slight right
-                return 30;
-            case 'R': // right
-                return 60;
-            case 't': // turn around
-                return 180;
-            default:
-                return 0;
+            case 's': return 0;      // straight
+            case 'l': return -30;    // slight left
+            case 'L': return -60;    // left
+            case 'r': return 30;     // slight right
+            case 'R': return 60;     // right
+            case 't': return 180;    // turn around (not used when drawTurnAroundArrow is called)
+            default: return 0;
         }
     }
 
@@ -287,15 +298,12 @@ public class TrafficLight {
     private boolean containsSignal(double screenX, double screenY, CoordinateTransform transform, Signal signal) {
         double lightScreenX = transform.worldToScreenX(signal.x);
         double lightScreenY = transform.worldToScreenY(signal.y);
-        double laneWidth = 3.2;
-        double lineLength = Math.max(3, transform.worldToScreenSize(laneWidth * 0.7));
-        double clickRadius = Math.max(lineLength * 0.6, 5);
+        double lineLength = calculateLineLength(transform);
+        double clickRadius = Math.max(lineLength * CLICK_RADIUS_FACTOR, 5);
 
         double dx = screenX - lightScreenX;
         double dy = screenY - lightScreenY;
-        double distance = Math.sqrt(dx * dx + dy * dy);
-
-        return distance <= clickRadius;
+        return Math.sqrt(dx * dx + dy * dy) <= clickRadius;
     }
 
     public void highlight(GraphicsContext g, CoordinateTransform transform, Color color) {
@@ -308,15 +316,12 @@ public class TrafficLight {
     private void highlightSignal(GraphicsContext g, CoordinateTransform transform, Signal signal, Color color) {
         double screenX = transform.worldToScreenX(signal.x);
         double screenY = transform.worldToScreenY(signal.y);
-        double laneWidth = 3.2;
-        double lineLength = Math.max(3, transform.worldToScreenSize(laneWidth * 0.7));
-        double radius = lineLength * 0.8;
+        double lineLength = calculateLineLength(transform);
+        double radius = lineLength * HIGHLIGHT_RADIUS_FACTOR;
 
-        // Draw semi-transparent circle
         g.setFill(Color.color(color.getRed(), color.getGreen(), color.getBlue(), 0.2));
         g.fillOval(screenX - radius, screenY - radius, radius * 2, radius * 2);
 
-        // Draw dashed border
         g.setStroke(color);
         g.setLineWidth(2.0);
         g.setLineDashes(6, 3);
