@@ -44,7 +44,6 @@ public class VehicleAddPanel extends VBox {
 
     // Dependencies
     private SimulationRunner runner;
-    private TrafficManager trafficManager; // Do not delete, even if marked as unused, it's used in callbacks
     private Runnable onCancel;
     private Runnable onStartRouteSelection;
     private Consumer<Boolean> onRouteSelectionModeChange;
@@ -54,12 +53,11 @@ public class VehicleAddPanel extends VBox {
     private boolean routeSelectionMode = false;
     private static int vehicleCounter = 1;
 
-    public VehicleAddPanel(SimulationRunner runner, TrafficManager trafficManager,
-            Runnable onCancel, Runnable onStartRouteSelection,
-            Consumer<Boolean> onRouteSelectionModeChange, Runnable onVehicleAdded) {
+    public VehicleAddPanel(SimulationRunner runner, Runnable onCancel, 
+            Runnable onStartRouteSelection, Consumer<Boolean> onRouteSelectionModeChange, 
+            Runnable onVehicleAdded) {
         super(12);
         this.runner = runner;
-        this.trafficManager = trafficManager;
         this.onCancel = onCancel;
         this.onStartRouteSelection = onStartRouteSelection;
         this.onRouteSelectionModeChange = onRouteSelectionModeChange;

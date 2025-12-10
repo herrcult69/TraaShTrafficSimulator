@@ -155,7 +155,7 @@ public class ControlPanel {
      * Show the vehicle add panel
      */
     public void showVehicleAddPanel() {
-        vehicleAddPanel = new VehicleAddPanel(runner, trafficManager, this::showNormalControls, onStartRouteSelection, onRouteSelectionModeChange, onVehicleAdded);
+        vehicleAddPanel = new VehicleAddPanel(runner, this::showNormalControls, onStartRouteSelection, onRouteSelectionModeChange, onVehicleAdded);
         scrollPane.setContent(vehicleAddPanel);
     }
 
