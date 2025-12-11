@@ -100,15 +100,6 @@ public class TrafficManager {
                          connections.stream().filter(c -> c.tl != null).count() + " total signals");
     }
 
-    /**
-     * This method is now deprecated - traffic lights are initialized from network connections
-     * Keep it for backward compatibility but it won't create new traffic lights
-     */
-    @Deprecated
-    public void initializeTrafficLightsFromSUMO(TraaSAdapter adapter) {
-        System.out.println("Traffic lights are now initialized from network connections in initializeFromNetwork()");
-    }
-
     public void updateVehicles(Map<String, double[]> vehiclePositions) {
         // Update existing vehicles and create new ones
         for (Map.Entry<String, double[]> entry : vehiclePositions.entrySet()) {
