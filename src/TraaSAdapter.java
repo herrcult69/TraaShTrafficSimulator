@@ -73,16 +73,6 @@ public class TraaSAdapter {
 
     // Vehicle Injection and Route Management
 
-    // !!! IMPORTANT, PLEASE READ THE COMMENTS AND OFFICAL DOCUMENT BEFORE EDITING THE CODE!!!
-    
-    /** Notice: The current code doesnt allow lane changing (e.g: start at dir2_lane0 will also end in dir2_lane0)
-     * because the current SUMO route is edge-based instead of lane-based.
-     * so some best route will be ignored due to lane changing, attempting to make U-turn or opposite route heading direction.
-     * please refer to the official doc for lane-based routing if needed (I will work on it anyway tho, didnt see this coming)
-     */
-
-    // THE DEVELOPEMENT START HERE
-
     /**
      * Add a new route to SUMO
      * 

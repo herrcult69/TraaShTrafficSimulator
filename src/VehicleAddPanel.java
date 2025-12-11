@@ -10,7 +10,6 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 
 /**
  * Panel for adding new vehicles to the simulation.
@@ -46,15 +45,15 @@ public class VehicleAddPanel extends VBox {
     private SimulationRunner runner;
     private Runnable onCancel;
     private Runnable onStartRouteSelection;
-    private Consumer<Boolean> onRouteSelectionModeChange;
+    private java.util.function.Consumer<Boolean> onRouteSelectionModeChange;
     private Runnable onVehicleAdded;
 
     // State
     private boolean routeSelectionMode = false;
     private static int vehicleCounter = 1;
 
-    public VehicleAddPanel(SimulationRunner runner, Runnable onCancel, 
-            Runnable onStartRouteSelection, Consumer<Boolean> onRouteSelectionModeChange, 
+    public VehicleAddPanel(SimulationRunner runner, Runnable onCancel,
+            Runnable onStartRouteSelection, java.util.function.Consumer<Boolean> onRouteSelectionModeChange,
             Runnable onVehicleAdded) {
         super(12);
         this.runner = runner;
@@ -71,11 +70,11 @@ public class VehicleAddPanel extends VBox {
     private void createUI() {
         setAlignment(Pos.TOP_CENTER);
         setPadding(new Insets(15));
-        setStyle("-fx-background-color: #0D1B2A;");
+        setStyle("-fx-background-color: " + UIStyles.BG_PRIMARY + ";");
         setSpacing(10);
 
         // Back button
-        Button backBtn = createButton("← Back");
+        Button backBtn = UIStyles.createStyledButton("← Back");
         backBtn.setOnAction(e -> {
             exitRouteSelectionMode();
             onCancel.run();
@@ -83,63 +82,74 @@ public class VehicleAddPanel extends VBox {
 
         // Title
         Label titleLabel = new Label("ADD NEW VEHICLE");
-        titleLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 16;");
+        titleLabel.setStyle(UIStyles.TITLE_STYLE);
 
         // Vehicle Type Selection
         Label typeLabel = new Label("Vehicle Type:");
-        typeLabel.setStyle("-fx-text-fill: white; -fx-font-size: 12;");
+        typeLabel.setStyle(UIStyles.LABEL_STYLE);
 
         vehicleTypeCombo = new ComboBox<>();
         vehicleTypeCombo.getItems().addAll(VEHICLE_TYPES);
         vehicleTypeCombo.setValue(VEHICLE_TYPES[0]);
         vehicleTypeCombo.setPrefWidth(250);
-        vehicleTypeCombo.setStyle("-fx-background-color: #1B263B; -fx-text-fill: white;");
+        vehicleTypeCombo.setStyle(UIStyles.COMBO_BOX_STYLE);
+        vehicleTypeCombo.setButtonCell(new javafx.scene.control.ListCell<String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item);
+                    setStyle("-fx-text-fill: white;");
+                }
+            }
+        });
         vehicleTypeCombo.setOnAction(e -> updateVehicleId());
 
         // Vehicle ID
         Label idLabel = new Label("Vehicle ID (auto-generated):");
-        idLabel.setStyle("-fx-text-fill: white; -fx-font-size: 12;");
+        idLabel.setStyle(UIStyles.LABEL_STYLE);
 
         vehicleIdField = new TextField();
         vehicleIdField.setPrefWidth(250);
-        vehicleIdField.setStyle("-fx-background-color: #1B263B; -fx-text-fill: white; -fx-font-family: monospace;");
+        vehicleIdField.setStyle(UIStyles.INPUT_FIELD_STYLE + " -fx-font-family: monospace;");
         updateVehicleId();
 
         // Route Section
         Label routeLabel = new Label("Route Selection:");
-        routeLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 12;");
+        routeLabel.setStyle(UIStyles.LABEL_STYLE + " -fx-font-weight: bold;");
 
         instructionLabel = new Label("Click 'Select Route' then pick START and END edges");
-        instructionLabel.setStyle("-fx-text-fill: #FFA726; -fx-font-size: 11;");
+        instructionLabel.setStyle("-fx-text-fill: " + UIStyles.TEXT_WARNING + "; -fx-font-size: 11;");
         instructionLabel.setWrapText(true);
 
         // Start/End edge labels
         startEdgeLabel = new Label("Start: (not selected)");
-        startEdgeLabel.setStyle("-fx-text-fill: #778DA9; -fx-font-size: 11;");
+        startEdgeLabel.setStyle(UIStyles.LABEL_SECONDARY_STYLE);
 
         endEdgeLabel = new Label("End: (not selected)");
-        endEdgeLabel.setStyle("-fx-text-fill: #778DA9; -fx-font-size: 11;");
+        endEdgeLabel.setStyle(UIStyles.LABEL_SECONDARY_STYLE);
 
         // Route list (shows computed path)
         Label computedRouteLabel = new Label("Computed Route:");
-        computedRouteLabel.setStyle("-fx-text-fill: #778DA9; -fx-font-size: 11;");
+        computedRouteLabel.setStyle(UIStyles.LABEL_SECONDARY_STYLE);
 
         routeListView = new ListView<>();
         routeListView.setPrefHeight(100);
-        routeListView.setStyle("-fx-background-color: #1B263B; -fx-control-inner-background: #1B263B;");
+        routeListView.setStyle("-fx-background-color: " + UIStyles.BG_SECONDARY + "; -fx-control-inner-background: " + UIStyles.BG_SECONDARY + ";");
 
         // Route action buttons
         HBox routeButtons = new HBox(8);
         routeButtons.setAlignment(Pos.CENTER);
 
-        addEdgeBtn = createButton("Select Route");
+        addEdgeBtn = UIStyles.createStyledButton("Select Route");
         addEdgeBtn.setPrefWidth(120);
-        addEdgeBtn.setStyle("-fx-background-color: #415A77; -fx-text-fill: white; -fx-font-size: 11; -fx-padding: 8;");
+        UIStyles.applyAccentButtonStyle(addEdgeBtn);
         addEdgeBtn.setOnAction(e -> toggleRouteSelectionMode());
 
-        clearRouteBtn = createButton("🗑 Clear");
+        clearRouteBtn = UIStyles.createStyledButton("🗑 Clear");
         clearRouteBtn.setPrefWidth(120);
-        clearRouteBtn.setStyle("-fx-background-color: #1B263B; -fx-text-fill: white; -fx-font-size: 11; -fx-padding: 8;");
         clearRouteBtn.setOnAction(e -> clearRoute());
 
         routeButtons.getChildren().addAll(addEdgeBtn, clearRouteBtn);
@@ -150,12 +160,10 @@ public class VehicleAddPanel extends VBox {
         statusLabel.setWrapText(true);
 
         // Confirm/Cancel buttons
-        confirmBtn = createButton("✓ Add Vehicle");
-        confirmBtn.setStyle("-fx-background-color: #415A77; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;");
+        confirmBtn = UIStyles.createAccentButton("✓ Add Vehicle");
         confirmBtn.setOnAction(e -> addVehicle());
 
-        cancelBtn = createButton("✕ Cancel");
-        cancelBtn.setStyle("-fx-background-color: #1B263B; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;");
+        cancelBtn = UIStyles.createStyledButton("✕ Cancel");
         cancelBtn.setOnAction(e -> {
             exitRouteSelectionMode();
             onCancel.run();
@@ -178,12 +186,12 @@ public class VehicleAddPanel extends VBox {
 
     private VBox createInfoBox() {
         VBox infoBox = new VBox(5);
-        infoBox.setStyle("-fx-background-color: #1B263B; -fx-padding: 10; -fx-background-radius: 5;");
+        infoBox.setStyle(UIStyles.INFO_BOX_STYLE);
 
         Label infoLabel = new Label("ℹ How to add a vehicle:");
-        infoLabel.setStyle("-fx-text-fill: #778DA9; -fx-font-weight: bold; -fx-font-size: 11;");
+        infoLabel.setStyle(UIStyles.INFO_LABEL_STYLE);
 
-        String stepStyle = "-fx-text-fill: #778DA9; -fx-font-size: 10;";
+        String stepStyle = "-fx-text-fill: " + UIStyles.TEXT_SECONDARY + "; -fx-font-size: 10;";
         Label step1 = new Label("1. Select vehicle type");
         Label step2 = new Label("2. Click 'Select Route'");
         Label step3 = new Label("3. Click START edge (green)");
@@ -230,27 +238,20 @@ public class VehicleAddPanel extends VBox {
         // Pause simulation when entering route selection mode
         if (runner != null && !runner.isPaused()) {
             runner.pause();
-            statusLabel.setText("Simulation paused for route selection");
-            statusLabel.setStyle("-fx-text-fill: #FFA726; -fx-font-size: 11;");
+            updateStatusLabel("Simulation paused for route selection", UIStyles.TEXT_WARNING);
         }
 
         addEdgeBtn.setText("✓ Done Selecting");
         addEdgeBtn.setStyle("-fx-background-color: #415A77; -fx-text-fill: white; -fx-font-size: 11; -fx-padding: 8;");
 
         if (startEdge == null) {
-            instructionLabel.setText("Click on the START edge (where vehicle spawns)");
-            instructionLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-size: 11;");
+            updateInstructionLabel("Click on the START edge (where vehicle spawns)", UIStyles.TEXT_SUCCESS);
         } else if (endEdge == null) {
-            instructionLabel.setText("Click on the END edge (destination)");
-            instructionLabel.setStyle("-fx-text-fill: #EF5350; -fx-font-size: 11;");
+            updateInstructionLabel("Click on the END edge (destination)", UIStyles.TEXT_ERROR);
         }
 
-        if (onRouteSelectionModeChange != null) {
-            onRouteSelectionModeChange.accept(true);
-        }
-        if (onStartRouteSelection != null) {
-            onStartRouteSelection.run();
-        }
+        if (onRouteSelectionModeChange != null) onRouteSelectionModeChange.accept(true);
+        if (onStartRouteSelection != null) onStartRouteSelection.run();
     }
 
     private void exitRouteSelectionModeUI() {
@@ -258,27 +259,20 @@ public class VehicleAddPanel extends VBox {
         addEdgeBtn.setStyle("-fx-background-color: #415A77; -fx-text-fill: white; -fx-font-size: 11; -fx-padding: 8;");
 
         if (selectedRoute.isEmpty() && startEdge != null && endEdge != null) {
-            instructionLabel.setText("No valid route found. Try different edges.");
-            instructionLabel.setStyle("-fx-text-fill: #EF5350; -fx-font-size: 11;");
+            updateInstructionLabel("No valid route found. Try different edges.", UIStyles.TEXT_ERROR);
         } else if (!selectedRoute.isEmpty()) {
-            instructionLabel.setText("Route computed: " + selectedRoute.size() + " edges");
-            instructionLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-size: 11;");
+            updateInstructionLabel("Route computed: " + selectedRoute.size() + " edges", UIStyles.TEXT_SUCCESS);
         } else {
-            instructionLabel.setText("Select start and end edges");
-            instructionLabel.setStyle("-fx-text-fill: #778DA9; -fx-font-size: 11;");
+            updateInstructionLabel("Select start and end edges", UIStyles.TEXT_SECONDARY);
         }
 
-        if (onRouteSelectionModeChange != null) {
-            onRouteSelectionModeChange.accept(false);
-        }
+        if (onRouteSelectionModeChange != null) onRouteSelectionModeChange.accept(false);
     }
 
     private void exitRouteSelectionMode() {
         if (routeSelectionMode) {
             routeSelectionMode = false;
-            if (onRouteSelectionModeChange != null) {
-                onRouteSelectionModeChange.accept(false);
-            }
+            if (onRouteSelectionModeChange != null) onRouteSelectionModeChange.accept(false);
         }
     }
 
@@ -292,12 +286,9 @@ public class VehicleAddPanel extends VBox {
             startEdge = edgeId;
             userSelectedEdges.clear();
             userSelectedEdges.add(edgeId);
-            startEdgeLabel.setText("Start: " + edgeId);
-            startEdgeLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-size: 11; -fx-font-weight: bold;");
-            statusLabel.setText("Start edge selected. Now click END edge.");
-            statusLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-size: 11;");
-            instructionLabel.setText("Click on the END edge (destination)");
-            instructionLabel.setStyle("-fx-text-fill: #EF5350; -fx-font-size: 11;");
+            updateEdgeLabelStyle(startEdgeLabel, "Start: " + edgeId, UIStyles.TEXT_SUCCESS, true);
+            updateStatusLabel("Start edge selected. Now click END edge.", UIStyles.TEXT_SUCCESS);
+            updateInstructionLabel("Click on the END edge (destination)", UIStyles.TEXT_ERROR);
             return;
         }
 
@@ -305,8 +296,7 @@ public class VehicleAddPanel extends VBox {
         if (endEdge == null && !edgeId.equals(startEdge)) {
             endEdge = edgeId;
             userSelectedEdges.add(edgeId);
-            endEdgeLabel.setText("End: " + edgeId);
-            endEdgeLabel.setStyle("-fx-text-fill: #EF5350; -fx-font-size: 11; -fx-font-weight: bold;");
+            updateEdgeLabelStyle(endEdgeLabel, "End: " + edgeId, UIStyles.TEXT_ERROR, true);
             computeRoute();
             return;
         }
@@ -315,8 +305,7 @@ public class VehicleAddPanel extends VBox {
         if (endEdge != null && !edgeId.equals(startEdge)) {
             endEdge = edgeId;
             userSelectedEdges.set(1, edgeId);
-            endEdgeLabel.setText("End: " + edgeId);
-            endEdgeLabel.setStyle("-fx-text-fill: #EF5350; -fx-font-size: 11; -fx-font-weight: bold;");
+            updateEdgeLabelStyle(endEdgeLabel, "End: " + edgeId, UIStyles.TEXT_ERROR, true);
             computeRoute();
         }
     }
@@ -333,8 +322,7 @@ public class VehicleAddPanel extends VBox {
                 return;
             }
 
-            statusLabel.setText("Computing route...");
-            statusLabel.setStyle("-fx-text-fill: #FFA726; -fx-font-size: 11;");
+            updateStatusLabel("Computing route...", UIStyles.TEXT_WARNING);
 
             // Use SUMO to find valid route
             List<String> route = adapter.findRoute(startEdge, endEdge);
@@ -348,9 +336,8 @@ public class VehicleAddPanel extends VBox {
                 routeListView.getItems().addAll(route);
 
                 statusLabel.setText("✓ Route found: " + route.size() + " edges");
-                statusLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-weight: bold; -fx-font-size: 11;");
-                instructionLabel.setText("Route ready! Click 'Add Vehicle' or change edges.");
-                instructionLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-size: 11;");
+                statusLabel.setStyle("-fx-text-fill: " + UIStyles.TEXT_SUCCESS + "; -fx-font-weight: bold; -fx-font-size: 11;");
+                updateInstructionLabel("Route ready! Click 'Add Vehicle' or change edges.", UIStyles.TEXT_SUCCESS);
             } else {
                 selectedRoute.clear();
                 routeListView.getItems().clear();
@@ -370,14 +357,10 @@ public class VehicleAddPanel extends VBox {
         userSelectedEdges.clear();
         routeListView.getItems().clear();
 
-        startEdgeLabel.setText("Start: (not selected)");
-        startEdgeLabel.setStyle("-fx-text-fill: #778DA9; -fx-font-size: 11;");
-        endEdgeLabel.setText("End: (not selected)");
-        endEdgeLabel.setStyle("-fx-text-fill: #778DA9; -fx-font-size: 11;");
-        statusLabel.setText("Route cleared");
-        statusLabel.setStyle("-fx-text-fill: #778DA9; -fx-font-size: 11;");
-        instructionLabel.setText("Click 'Select Route' then pick START and END edges");
-        instructionLabel.setStyle("-fx-text-fill: #FFA726; -fx-font-size: 11;");
+        updateEdgeLabelStyle(startEdgeLabel, "Start: (not selected)", UIStyles.TEXT_SECONDARY, false);
+        updateEdgeLabelStyle(endEdgeLabel, "End: (not selected)", UIStyles.TEXT_SECONDARY, false);
+        updateStatusLabel("Route cleared", UIStyles.TEXT_SECONDARY);
+        updateInstructionLabel("Click 'Select Route' then pick START and END edges", UIStyles.TEXT_WARNING);
     }
 
     private void addVehicle() {
@@ -410,7 +393,7 @@ public class VehicleAddPanel extends VBox {
             adapter.addVehicle(vehicleId, routeId, vehicleClass);
 
             statusLabel.setText("✓ Vehicle '" + vehicleId + "' added successfully!");
-            statusLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-weight: bold; -fx-font-size: 11;");
+            statusLabel.setStyle("-fx-text-fill: " + UIStyles.TEXT_SUCCESS + "; -fx-font-weight: bold; -fx-font-size: 11;");
 
             // Increment counter for next vehicle
             vehicleCounter++;
@@ -425,9 +408,7 @@ public class VehicleAddPanel extends VBox {
             updateVehicleId();
 
             // Notify that vehicle was added
-            if (onVehicleAdded != null) {
-                onVehicleAdded.run();
-            }
+            if (onVehicleAdded != null) onVehicleAdded.run();
 
             System.out.println("Added vehicle: " + vehicleId + " with route: " + selectedRoute);
 
@@ -438,23 +419,25 @@ public class VehicleAddPanel extends VBox {
     }
 
     private void showError(String message) {
-        statusLabel.setText("❌ " + message);
-        statusLabel.setStyle("-fx-text-fill: #EF5350; -fx-font-size: 11;");
+        updateStatusLabel("X " + message, UIStyles.TEXT_ERROR);
     }
 
-    private Button createButton(String text) {
-        Button btn = new Button(text);
-        btn.setPrefWidth(250);
+    // Helper methods for consistent label styling
+    private void updateEdgeLabelStyle(Label label, String text, String color, boolean bold) {
+        label.setText(text);
+        String style = "-fx-text-fill: " + color + "; -fx-font-size: 11;";
+        if (bold) style += " -fx-font-weight: bold;";
+        label.setStyle(style);
+    }
 
-        String buttonStyle = "-fx-background-color: #1B263B; -fx-text-fill: white; " +
-                "-fx-font-size: 12; -fx-padding: 8;";
-        String buttonHoverStyle = buttonStyle + "-fx-background-color: #415A77;";
+    private void updateStatusLabel(String text, String color) {
+        statusLabel.setText(text);
+        statusLabel.setStyle("-fx-text-fill: " + color + "; -fx-font-size: 11;");
+    }
 
-        btn.setStyle(buttonStyle);
-        btn.setOnMouseEntered(e -> btn.setStyle(buttonHoverStyle));
-        btn.setOnMouseExited(e -> btn.setStyle(buttonStyle));
-
-        return btn;
+    private void updateInstructionLabel(String text, String color) {
+        instructionLabel.setText(text);
+        instructionLabel.setStyle("-fx-text-fill: " + color + "; -fx-font-size: 11;");
     }
 
     // Getters

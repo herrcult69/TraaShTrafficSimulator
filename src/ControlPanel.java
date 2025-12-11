@@ -51,7 +51,7 @@ public class ControlPanel {
         // Style the panel
         controlPanel.setPadding(new Insets(10));
         controlPanel.setSpacing(8);
-        controlPanel.setStyle("-fx-background-color: #0D1B2A;");
+        controlPanel.setStyle("-fx-background-color: " + UIStyles.BG_PRIMARY + ";");
         controlPanel.setMinWidth(300);
         controlPanel.setMaxWidth(300);
 
@@ -62,17 +62,17 @@ public class ControlPanel {
         scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         scrollPane.setMinWidth(300);
         scrollPane.setMaxWidth(300);
-        scrollPane.setStyle("-fx-background: #0D1B2A; -fx-background-color: #0D1B2A;");
+        scrollPane.setStyle("-fx-background: " + UIStyles.BG_PRIMARY + "; -fx-background-color: " + UIStyles.BG_PRIMARY + ";");
     }
 
     private void addSimulationControls() {
         Label simLabel = new Label("―――SIMULATION―――");
         simLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14;");
 
-        Button playBtn = createButton("[>] Play");
-        Button pauseBtn = createButton("[=] Pause");
-        Button stopBtn = createButton("[#] Stop");
-        Button addVehicleBtn = createButton("[@] Add Vehicle");
+        Button playBtn = UIStyles.createStyledButton("[>] Play");
+        Button pauseBtn = UIStyles.createStyledButton("[=] Pause");
+        Button stopBtn = UIStyles.createStyledButton("[#] Stop");
+        Button addVehicleBtn = UIStyles.createAccentButton("[@] Add Vehicle");
 
         playBtn.setOnAction(e -> {
             if (runner != null) {
@@ -97,13 +97,6 @@ public class ControlPanel {
             System.exit(0);
         });
 
-        // Style the Add Vehicle button with a distinctive color
-        String addVehicleStyle = "-fx-background-color: #415A77; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 8; -fx-font-weight: bold;";
-        String addVehicleHoverStyle = "-fx-background-color: #778DA9; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 8; -fx-font-weight: bold;";
-        addVehicleBtn.setStyle(addVehicleStyle);
-        addVehicleBtn.setOnMouseEntered(e -> addVehicleBtn.setStyle(addVehicleHoverStyle));
-        addVehicleBtn.setOnMouseExited(e -> addVehicleBtn.setStyle(addVehicleStyle));
-
         addVehicleBtn.setOnAction(e -> showVehicleAddPanel());
 
         controlPanel.getChildren().addAll(simLabel, playBtn, pauseBtn, stopBtn, addVehicleBtn);
@@ -113,29 +106,15 @@ public class ControlPanel {
         Label viewLabel = new Label("―――VIEW―――");
         viewLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14;");
 
-        Button zoomIn = createButton("+ Zoom In");
-        Button zoomOut = createButton("- Zoom Out");
-        Button reset = createButton("⟲ Reset View");
+        Button zoomIn = UIStyles.createStyledButton("+ Zoom In");
+        Button zoomOut = UIStyles.createStyledButton("- Zoom Out");
+        Button reset = UIStyles.createStyledButton("⟲ Reset View");
 
         zoomIn.setOnAction(e -> viewManager.zoomToCenter(1.2));
         zoomOut.setOnAction(e -> viewManager.zoomToCenter(0.8));
         reset.setOnAction(e -> viewManager.resetView());
 
         controlPanel.getChildren().addAll(viewLabel, zoomIn, zoomOut, reset);
-    }
-
-    private Button createButton(String text) {
-        Button btn = new Button(text);
-        btn.setPrefWidth(250);
-
-        String buttonStyle = "-fx-background-color: #1B263B; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 8;";
-        String buttonHoverStyle = buttonStyle + "-fx-background-color: #415A77;";
-
-        btn.setStyle(buttonStyle);
-        btn.setOnMouseEntered(e -> btn.setStyle(buttonHoverStyle));
-        btn.setOnMouseExited(e -> btn.setStyle(buttonStyle));
-
-        return btn;
     }
 
     public ScrollPane getScrollPane() {
@@ -155,7 +134,8 @@ public class ControlPanel {
      * Show the vehicle add panel
      */
     public void showVehicleAddPanel() {
-        vehicleAddPanel = new VehicleAddPanel(runner, this::showNormalControls, onStartRouteSelection, onRouteSelectionModeChange, onVehicleAdded);
+        vehicleAddPanel = new VehicleAddPanel(runner, this::showNormalControls,
+                onStartRouteSelection, onRouteSelectionModeChange, onVehicleAdded);
         scrollPane.setContent(vehicleAddPanel);
     }
 

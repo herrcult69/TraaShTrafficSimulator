@@ -52,19 +52,19 @@ public class TrafficLightControlPanel {
         panel = new VBox(12);
         panel.setAlignment(Pos.TOP_CENTER);
         panel.setPadding(new Insets(10));
-        panel.setStyle("-fx-background-color: #0D1B2A;");
+        panel.setStyle("-fx-background-color: " + UIStyles.BG_PRIMARY + ";");
 
         // Back button
-        Button backBtn = createButton("← Back");
+        Button backBtn = UIStyles.createStyledButton("← Back");
         backBtn.setOnAction(e -> onBackPressed.run());
 
         // Title
         Label titleLabel = new Label("TRAFFIC LIGHT CONTROL");
-        titleLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 16;");
+        titleLabel.setStyle(UIStyles.TITLE_STYLE);
 
         // Info section
         VBox infoBox = new VBox(8);
-        infoBox.setStyle("-fx-background-color: #1B263B; -fx-padding: 10; -fx-background-radius: 5;");
+        infoBox.setStyle(UIStyles.INFO_BOX_STYLE);
 
         Label junctionLabel = new Label("Junction: " + selectedLight.getJunctionId());
         junctionLabel.setStyle("-fx-text-fill: #aaaaaa; -fx-font-size: 12;");
@@ -86,12 +86,11 @@ public class TrafficLightControlPanel {
 
         // Current state display
         Label currentStateLabel = new Label("Current State:");
-        currentStateLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 12;");
+        currentStateLabel.setStyle(UIStyles.LABEL_STYLE + " -fx-font-weight: bold;");
 
         currentStateField = new TextField();
         currentStateField.setEditable(false);
-        currentStateField.setStyle("-fx-background-color: #1B263B; -fx-text-fill: #00ff00; " +
-                "-fx-font-family: monospace; -fx-font-size: 12;");
+        currentStateField.setStyle(UIStyles.MONOSPACE_FIELD_STYLE);
 
         // Update current state periodically
         new javafx.animation.AnimationTimer() {
@@ -103,7 +102,7 @@ public class TrafficLightControlPanel {
 
         // Quick control buttons
         Label quickControlLabel = new Label("Selective Control:");
-        quickControlLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 12;");
+        quickControlLabel.setStyle(UIStyles.LABEL_STYLE + " -fx-font-weight: bold;");
 
         // Count traffic lights at this junction
         int junctionTLCount = (int) trafficManager.getTrafficLights().stream()
@@ -115,7 +114,8 @@ public class TrafficLightControlPanel {
         infoText.setStyle("-fx-text-fill: #FFA726; -fx-font-size: 10;");
         infoText.setWrapText(true);
 
-        forceGreenBtn = createButton("Force GREEN (This Light Only)");
+        forceGreenBtn = new Button("Force GREEN (This Light Only)");
+        forceGreenBtn.setPrefWidth(250);
         forceGreenBtn.setStyle(GREEN_STYLE);
         forceGreenBtn.setOnMouseEntered(e -> {
             if (!isCurrentlyGreen())
@@ -124,7 +124,8 @@ public class TrafficLightControlPanel {
         forceGreenBtn.setOnMouseExited(e -> updateButtonStates());
         forceGreenBtn.setOnAction(e -> forceGreen());
 
-        forceRedBtn = createButton("Force RED (This Light Only)");
+        forceRedBtn = new Button("Force RED (This Light Only)");
+        forceRedBtn.setPrefWidth(250);
         forceRedBtn.setStyle(RED_STYLE);
         forceRedBtn.setOnMouseEntered(e -> {
             if (!isCurrentlyRed())
@@ -133,7 +134,8 @@ public class TrafficLightControlPanel {
         forceRedBtn.setOnMouseExited(e -> updateButtonStates());
         forceRedBtn.setOnAction(e -> forceRed());
 
-        autoBtn = createButton("⟲ Return Junction to AUTO");
+        autoBtn = new Button("⟲ Return Junction to AUTO");
+        autoBtn.setPrefWidth(250);
         autoBtn.setStyle(AUTO_STYLE);
         autoBtn.setOnMouseEntered(e -> autoBtn.setStyle(AUTO_HOVER));
         autoBtn.setOnMouseExited(e -> autoBtn.setStyle(AUTO_STYLE));
@@ -186,61 +188,40 @@ public class TrafficLightControlPanel {
     }
 
     private void forceGreen() {
-        String currentState = selectedLight.getCurrentState();
-        if (currentState == null || currentState.isEmpty()) {
-            showError("Cannot get current state from SUMO");
-            return;
-        }
-
-        // Get this traffic light's link indices
-        List<Integer> linkIndices = selectedLight.getLinkIndices();
-        
-        // Modify ONLY this traffic light's links to 'G'
-        char[] state = currentState.toCharArray();
-        for (int linkIndex : linkIndices) {
-            if (linkIndex < state.length) {
-                state[linkIndex] = 'G';
-            }
-        }
-
-        String newState = new String(state);
-        System.out.println("=== SELECTIVE CONTROL: Force GREEN ===");
-        System.out.println("Traffic Light: " + selectedLight.getJunctionId());
-        System.out.println("Controlled Links: " + linkIndices);
-        System.out.println("Old State: " + currentState);
-        System.out.println("New State: " + newState);
-        System.out.println("Changed positions: " + linkIndices);
-        
-        applyState(newState);
-        enterManualMode();
-        updateButtonStates();
+        forceSignalState('G', "GREEN");
     }
 
     private void forceRed() {
+        forceSignalState('r', "RED");
+    }
+
+    /**
+     * Force all signals of this traffic light to a specific state
+     * @param stateChar The character to set ('G' for green, 'r' for red)
+     * @param stateName Human-readable name for logging
+     */
+    private void forceSignalState(char stateChar, String stateName) {
         String currentState = selectedLight.getCurrentState();
         if (currentState == null || currentState.isEmpty()) {
             showError("Cannot get current state from SUMO");
             return;
         }
 
-        // Get this traffic light's link indices
         List<Integer> linkIndices = selectedLight.getLinkIndices();
-        
-        // Modify ONLY this traffic light's links to 'r'
         char[] state = currentState.toCharArray();
+        
         for (int linkIndex : linkIndices) {
             if (linkIndex < state.length) {
-                state[linkIndex] = 'r';
+                state[linkIndex] = stateChar;
             }
         }
 
         String newState = new String(state);
-        System.out.println("=== SELECTIVE CONTROL: Force RED ===");
+        System.out.println("=== SELECTIVE CONTROL: Force " + stateName + " ===");
         System.out.println("Traffic Light: " + selectedLight.getJunctionId());
         System.out.println("Controlled Links: " + linkIndices);
         System.out.println("Old State: " + currentState);
         System.out.println("New State: " + newState);
-        System.out.println("Changed positions: " + linkIndices);
         
         applyState(newState);
         enterManualMode();
@@ -322,36 +303,34 @@ public class TrafficLightControlPanel {
     }
 
     private boolean isCurrentlyGreen() {
-        String state = selectedLight.getCurrentState();
-        if (state == null || state.isEmpty())
-            return false;
-
-        // Check if ALL this traffic light's links are green
-        List<Integer> linkIndices = selectedLight.getLinkIndices();
-        for (int linkIndex : linkIndices) {
-            if (linkIndex < state.length()) {
-                char c = state.charAt(linkIndex);
-                if (c != 'G' && c != 'g') {
-                    return false;
-                }
-            }
-        }
-        return true;
+        return isCurrentlyInState('G', 'g');
     }
 
     private boolean isCurrentlyRed() {
-        String state = selectedLight.getCurrentState();
-        if (state == null || state.isEmpty())
-            return false;
+        return isCurrentlyInState('r', 'R');
+    }
 
-        // Check if ALL this traffic light's links are red
+    /**
+     * Check if all traffic light signals match any of the given states
+     * @param validStates Valid state characters (case-sensitive)
+     * @return true if all links match one of the valid states
+     */
+    private boolean isCurrentlyInState(char... validStates) {
+        String state = selectedLight.getCurrentState();
+        if (state == null || state.isEmpty()) return false;
+
         List<Integer> linkIndices = selectedLight.getLinkIndices();
         for (int linkIndex : linkIndices) {
             if (linkIndex < state.length()) {
                 char c = state.charAt(linkIndex);
-                if (c != 'r' && c != 'R') {
-                    return false;
+                boolean matches = false;
+                for (char validState : validStates) {
+                    if (c == validState) {
+                        matches = true;
+                        break;
+                    }
                 }
+                if (!matches) return false;
             }
         }
         return true;
@@ -403,20 +382,6 @@ public class TrafficLightControlPanel {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
-    }
-
-    private Button createButton(String text) {
-        Button btn = new Button(text);
-        btn.setPrefWidth(250);
-
-        String buttonStyle = "-fx-background-color: #1B263B; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 8;";
-        String buttonHoverStyle = buttonStyle + "-fx-background-color: #415A77;";
-
-        btn.setStyle(buttonStyle);
-        btn.setOnMouseEntered(e -> btn.setStyle(buttonHoverStyle));
-        btn.setOnMouseExited(e -> btn.setStyle(buttonStyle));
-
-        return btn;
     }
 
     public VBox getPanel() {

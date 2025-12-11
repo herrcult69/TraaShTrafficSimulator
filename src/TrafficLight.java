@@ -12,10 +12,10 @@ public class TrafficLight {
     
     // Dimension constants
     private static final double DEFAULT_LANE_WIDTH = 3.2;
-    private static final double FORWARD_OFFSET = 3.0;
-    private static final double LINE_LENGTH_FACTOR = 0.7;
+    private static final double FORWARD_OFFSET = 1.0;
+    private static final double LINE_LENGTH_FACTOR = 0.5;
     private static final double LINE_WIDTH_FACTOR = 0.15;
-    private static final double ARROW_SIZE_FACTOR = 1.5;
+    private static final double ARROW_SIZE_FACTOR = 1;
     private static final double CLICK_RADIUS_FACTOR = 0.6;
     private static final double HIGHLIGHT_RADIUS_FACTOR = 0.8;
 

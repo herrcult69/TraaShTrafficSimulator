@@ -98,95 +98,8 @@ public class TrafficSimulatorApp extends Application {
         stage.setScene(mainScene);
         stage.setTitle("Traffic Simulator - OOP Architecture");
 
-        // Make canvas fill the available space (subtract fixed right panel width)
-        canvas.widthProperty().bind(root.widthProperty().subtract(300));
-        canvas.heightProperty().bind(root.heightProperty());
-
-        // Update view when canvas size changes
-        canvas.widthProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal.doubleValue() > 0 && canvas.getHeight() > 0) {
-                viewManager.resetView();
-            }
-        });
-        canvas.heightProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal.doubleValue() > 0 && canvas.getWidth() > 0) {
-                transform = new CoordinateTransform(newVal.doubleValue());
-                viewManager.setTransform(transform);
-                viewManager.resetView();
-            }
-        });
-
-        stage.show();
-
-        // Initialize view after stage is shown and canvas has proper size
-        Platform.runLater(() -> {
-            if (canvas.getWidth() > 0 && canvas.getHeight() > 0) {
-                viewManager.resetView();
-            }
-        });
-
-        // Animation and interactions
-        new javafx.animation.AnimationTimer() {
-            public void handle(long now) {
-                draw();
-            }
-        }.start();
-
-        canvas.setOnScroll(e -> viewManager.zoomToPoint(e.getDeltaY() > 0 ? 1.1 : 0.9, e.getX(), e.getY()));
-        canvas.setOnMousePressed(e -> viewManager.startPan(e.getX(), e.getY()));
-        canvas.setOnMouseDragged(e -> viewManager.updatePan(e.getX(), e.getY()));
-        canvas.setOnMouseMoved(e -> {
-            if (routeSelectionMode) {
-                // In route selection mode, highlight edges
-                hoveredEdge = scene.getEdgeAt(e.getX(), e.getY(), viewManager.getTransform());
-            } else {
-                hoveredElement = scene.getElementAt(e.getX(), e.getY(), viewManager.getTransform());
-            }
-        });
-
-        // Click detection
-        canvas.setOnMouseClicked(e -> {
-            // Handle route selection mode
-            if (routeSelectionMode) {
-                String edgeId = scene.getEdgeIdAt(e.getX(), e.getY(), viewManager.getTransform());
-                if (edgeId != null) {
-                    // Add edge to route via the VehicleAddPanel
-                    VehicleAddPanel vehicleAddPanel = controlPanel.getVehicleAddPanel();
-                    if (vehicleAddPanel != null) {
-                        vehicleAddPanel.addEdgeToRoute(edgeId);
-                        selectedRouteEdges.add(edgeId);
-                    }
-                }
-                return;
-            }
-
-            Object clickedElement = scene.getElementAt(e.getX(), e.getY(), viewManager.getTransform());
-            selectedElement = clickedElement;
-
-            if (clickedElement instanceof TrafficLight) {
-                TrafficLight tl = (TrafficLight) clickedElement;
-                System.out.println("Clicked: Traffic Light - Junction: " + tl.getJunctionId() + 
-                        " Signals: " + tl.getSignals().size());
-                controlPanel.showTrafficLightControl(tl);
-            } else {
-                // Hide traffic light control panel when clicking anything else
-                controlPanel.showNormalControls();
-
-                if (clickedElement != null) {
-                    System.out.println("Clicked: " + clickedElement.getClass().getSimpleName());
-                    if (clickedElement instanceof Junction) {
-                        Junction junction = (Junction) clickedElement;
-                        System.out.println("Junction ID: " + junction.getId() + " Type: " + junction.getType());
-                    } else if (clickedElement instanceof Lane) {
-                        Lane lane = (Lane) clickedElement;
-                        System.out.println("Lane ID: " + lane.getId());
-                    } else if (clickedElement instanceof Vehicle) {
-                        Vehicle vehicle = (Vehicle) clickedElement;
-                        System.out.println("Vehicle ID: " + vehicle.getId() + " Type: " + vehicle.getType());
-                    }
-                }
-            }
-        });
+        setupCanvas(root, stage);
+        setupEventHandlers();
 
         stage.setOnCloseRequest(e -> {
             runner.stop();
@@ -265,42 +178,8 @@ public class TrafficSimulatorApp extends Application {
     private void updateDashboard() {
         DashBoard.DashBoardData data = new DashBoard.DashBoardData();
 
-        var positions = runner.getVehiclePositions();
-        var speeds = runner.getVehicleSpeeds();
-
-        data.simTime = runner.getSimulationTime(); // Use actual SUMO time
-
-        double totalSpeed = 0.0;
-        int carCount = 0, truckCount = 0, busCount = 0, motoCount = 0, emergencyCount = 0;
-        int totalVehicles = positions.size();
-
-        for (var entry : positions.entrySet()) {
-            String id = entry.getKey();
-
-            // Count vehicle types
-            if (id.startsWith("car"))
-                carCount++;
-            else if (id.startsWith("truck"))
-                truckCount++;
-            else if (id.startsWith("bus"))
-                busCount++;
-            else if (id.startsWith("moto"))
-                motoCount++;
-            else if (id.startsWith("ambu"))
-                emergencyCount++;
-
-            // Get speed
-            double speed = speeds.getOrDefault(id, 0.0);
-            totalSpeed += speed;
-        }
-
-        data.activeVehicles = totalVehicles;
-        data.avgSpeed = totalVehicles > 0 ? totalSpeed / totalVehicles : 0.0;
-        data.carCount = carCount;
-        data.truckCount = truckCount;
-        data.busCount = busCount;
-        data.motorcycleCount = motoCount;
-        data.emergencyCount = emergencyCount;
+        data.simTime = runner.getSimulationTime();
+        collectVehicleMetrics(data);
         dashboard.update(data);
     }
 
@@ -327,50 +206,34 @@ public class TrafficSimulatorApp extends Application {
     }
 
     private void renderRouteSelection(GraphicsContext g) {
-        VehicleAddPanel vehicleAddPanel = controlPanel.getVehicleAddPanel();
-        if (vehicleAddPanel == null)
-            return;
+        VehicleAddPanel panel = controlPanel.getVehicleAddPanel();
+        if (panel == null) return;
 
-        // Highlight start edge in green
-        String startEdgeId = vehicleAddPanel.getStartEdge();
-        if (startEdgeId != null) {
-            Edge startEdge = scene.getEdgeById(startEdgeId);
-            if (startEdge != null) {
-                startEdge.highlight(g, viewManager.getTransform(), Color.LIMEGREEN);
+        CoordinateTransform t = viewManager.getTransform();
+        highlightEdge(panel.getStartEdge(), Color.LIMEGREEN, g, t);
+        highlightEdge(panel.getEndEdge(), Color.ORANGERED, g, t);
+        
+        String start = panel.getStartEdge();
+        String end = panel.getEndEdge();
+        for (String edgeId : panel.getSelectedRoute()) {
+            if (!edgeId.equals(start) && !edgeId.equals(end)) {
+                highlightEdge(edgeId, Color.CYAN, g, t);
             }
         }
 
-        // Highlight end edge in red 
-        // You will sometime sees the end edge as blue, but it's actually red, the vehicle made an U-turn at the end of the map, repeate the end edge (Check the Notice in TraaSAdapter.java)
-        String endEdgeId = vehicleAddPanel.getEndEdge();
-        if (endEdgeId != null) {
-            Edge endEdge = scene.getEdgeById(endEdgeId);
-            if (endEdge != null) {
-                endEdge.highlight(g, viewManager.getTransform(), Color.ORANGERED);
-            }
-        }
-
-        // Highlight computed route edges in cyan
-        List<String> route = vehicleAddPanel.getSelectedRoute();
-        for (String edgeId : route) {
-            // Skip start and end (they have their own colors)
-            if (edgeId.equals(startEdgeId) || edgeId.equals(endEdgeId))
-                continue;
-
-            Edge edge = scene.getEdgeById(edgeId);
-            if (edge != null) {
-                edge.highlight(g, viewManager.getTransform(), Color.CYAN);
-            }
-        }
-
-        // Highlight hovered edge in yellow (if not already selected)
         if (hoveredEdge != null) {
             String hoveredId = hoveredEdge.getNetworkEdge().id;
-            if (!hoveredId.equals(startEdgeId) && !hoveredId.equals(endEdgeId)
-                    && !route.contains(hoveredId)) {
-                hoveredEdge.highlight(g, viewManager.getTransform(), Color.YELLOW);
+            if (!hoveredId.equals(start) && !hoveredId.equals(end) 
+                    && !panel.getSelectedRoute().contains(hoveredId)) {
+                hoveredEdge.highlight(g, t, Color.YELLOW);
             }
         }
+    }
+
+    private void highlightEdge(String edgeId, Color color, GraphicsContext g, CoordinateTransform t) {
+        if (edgeId == null) return;
+        Edge edge = scene.getEdgeById(edgeId);
+        if (edge != null) edge.highlight(g, t, color);
     }
 
     private void drawRouteSelectionOverlay(GraphicsContext g) {
@@ -417,6 +280,116 @@ public class TrafficSimulatorApp extends Application {
         } else {
             g.fillText("Click on road edges to select route", x + 10, y + 40);
         }
+    }
+
+    // Setup methods
+    private void setupCanvas(BorderPane root, Stage stage) {
+        canvas.widthProperty().bind(root.widthProperty().subtract(300));
+        canvas.heightProperty().bind(root.heightProperty());
+
+        canvas.widthProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal.doubleValue() > 0 && canvas.getHeight() > 0) viewManager.resetView();
+        });
+        canvas.heightProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal.doubleValue() > 0 && canvas.getWidth() > 0) {
+                transform = new CoordinateTransform(newVal.doubleValue());
+                viewManager.setTransform(transform);
+                viewManager.resetView();
+            }
+        });
+
+        stage.show();
+        Platform.runLater(() -> {
+            if (canvas.getWidth() > 0 && canvas.getHeight() > 0) viewManager.resetView();
+        });
+
+        new javafx.animation.AnimationTimer() {
+            public void handle(long now) { draw(); }
+        }.start();
+    }
+
+    private void setupEventHandlers() {
+        canvas.setOnScroll(e -> viewManager.zoomToPoint(e.getDeltaY() > 0 ? 1.1 : 0.9, e.getX(), e.getY()));
+        canvas.setOnMousePressed(e -> viewManager.startPan(e.getX(), e.getY()));
+        canvas.setOnMouseDragged(e -> viewManager.updatePan(e.getX(), e.getY()));
+        canvas.setOnMouseMoved(e -> {
+            hoveredElement = routeSelectionMode 
+                ? scene.getEdgeAt(e.getX(), e.getY(), viewManager.getTransform())
+                : scene.getElementAt(e.getX(), e.getY(), viewManager.getTransform());
+            if (routeSelectionMode) hoveredEdge = (Edge) hoveredElement;
+        });
+        canvas.setOnMouseClicked(e -> handleCanvasClick(e.getX(), e.getY()));
+    }
+
+    private void handleCanvasClick(double x, double y) {
+        if (routeSelectionMode) {
+            handleRouteSelectionClick(x, y);
+            return;
+        }
+
+        Object clicked = scene.getElementAt(x, y, viewManager.getTransform());
+        selectedElement = clicked;
+
+        if (clicked instanceof TrafficLight) {
+            TrafficLight tl = (TrafficLight) clicked;
+            System.out.println("Clicked: Traffic Light - Junction: " + tl.getJunctionId() + 
+                    " Signals: " + tl.getSignals().size());
+            controlPanel.showTrafficLightControl(tl);
+        } else {
+            controlPanel.showNormalControls();
+            if (clicked != null) logClickedElement(clicked);
+        }
+    }
+
+    private void handleRouteSelectionClick(double x, double y) {
+        String edgeId = scene.getEdgeIdAt(x, y, viewManager.getTransform());
+        if (edgeId != null) {
+            VehicleAddPanel panel = controlPanel.getVehicleAddPanel();
+            if (panel != null) {
+                panel.addEdgeToRoute(edgeId);
+                selectedRouteEdges.add(edgeId);
+            }
+        }
+    }
+
+    private void logClickedElement(Object element) {
+        System.out.println("Clicked: " + element.getClass().getSimpleName());
+        if (element instanceof Junction) {
+            Junction j = (Junction) element;
+            System.out.println("Junction ID: " + j.getId() + " Type: " + j.getType());
+        } else if (element instanceof Lane) {
+            System.out.println("Lane ID: " + ((Lane) element).getId());
+        } else if (element instanceof Vehicle) {
+            Vehicle v = (Vehicle) element;
+            System.out.println("Vehicle ID: " + v.getId() + " Type: " + v.getType());
+        }
+    }
+
+    private void collectVehicleMetrics(DashBoard.DashBoardData data) {
+        var positions = runner.getVehiclePositions();
+        var speeds = runner.getVehicleSpeeds();
+        
+        double totalSpeed = 0.0;
+        int[] counts = new int[5]; // car, truck, bus, moto, emergency
+        
+        for (var entry : positions.entrySet()) {
+            String id = entry.getKey();
+            if (id.startsWith("car")) counts[0]++;
+            else if (id.startsWith("truck")) counts[1]++;
+            else if (id.startsWith("bus")) counts[2]++;
+            else if (id.startsWith("moto")) counts[3]++;
+            else if (id.startsWith("ambu")) counts[4]++;
+            totalSpeed += speeds.getOrDefault(id, 0.0);
+        }
+        
+        int total = positions.size();
+        data.activeVehicles = total;
+        data.avgSpeed = total > 0 ? totalSpeed / total : 0.0;
+        data.carCount = counts[0];
+        data.truckCount = counts[1];
+        data.busCount = counts[2];
+        data.motorcycleCount = counts[3];
+        data.emergencyCount = counts[4];
     }
 
     public static void main(String[] args) {
