@@ -59,16 +59,11 @@ public class TrafficSimulatorApp extends Application {
         // Start simulation
         runner = new SimulationRunner(CONFIG_FILE, true);
 
-        // Set up listener to initialize traffic lights when SUMO connects
+        // Traffic lights are now initialized from network connections in initializeFromNetwork()
+        // No need for separate SUMO initialization
         runner.setConnectionListener(adapter -> {
             Platform.runLater(() -> {
-                try {
-                    scene.initializeTrafficLightsFromSUMO(adapter);
-                    System.out.println("Traffic lights initialized from SUMO");
-                } catch (Exception e) {
-                    System.err.println("Error initializing traffic lights: " + e.getMessage());
-                    e.printStackTrace();
-                }
+                System.out.println("SUMO connected - traffic lights already initialized from network");
             });
         });
 

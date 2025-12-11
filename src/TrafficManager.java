@@ -4,8 +4,6 @@ import java.util.Map;
 import java.util.HashMap;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
-import de.tudresden.sumo.objects.SumoLinkList;
-import de.tudresden.sumo.objects.SumoLink;
 
 public class TrafficManager {
     private List<Junction> junctions;
@@ -70,7 +68,6 @@ public class TrafficManager {
             String key = entry.getKey();
             String[] parts = key.split(":");
             String junctionId = parts[0];
-            String fromEdge = parts[1];
             List<NetworkParser.Connection> tlConnections = entry.getValue();
 
             Junction junction = visualJunctionIndex.get(junctionId);

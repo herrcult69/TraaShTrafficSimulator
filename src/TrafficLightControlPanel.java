@@ -23,14 +23,17 @@ public class TrafficLightControlPanel {
     private Button autoBtn;
     private TextField currentStateField;
 
-    // Button styles
-    private final String greenStyle = "-fx-background-color: #2E7D32; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;";
-    private final String greenHover = "-fx-background-color: #388E3C; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;";
-    private final String greenActive = "-fx-background-color: #1B5E20; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10; -fx-border-color: #4CAF50; -fx-border-width: 3;";
+    // Button styles - static final for efficiency and consistency
+    private static final String GREEN_STYLE = "-fx-background-color: #2E7D32; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;";
+    private static final String GREEN_HOVER = "-fx-background-color: #388E3C; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;";
+    private static final String GREEN_ACTIVE = "-fx-background-color: #1B5E20; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10; -fx-border-color: #4CAF50; -fx-border-width: 3;";
 
-    private final String redStyle = "-fx-background-color: #C62828; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;";
-    private final String redHover = "-fx-background-color: #D32F2F; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;";
-    private final String redActive = "-fx-background-color: #B71C1C; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10; -fx-border-color: #EF5350; -fx-border-width: 3;";
+    private static final String RED_STYLE = "-fx-background-color: #C62828; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;";
+    private static final String RED_HOVER = "-fx-background-color: #D32F2F; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;";
+    private static final String RED_ACTIVE = "-fx-background-color: #B71C1C; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10; -fx-border-color: #EF5350; -fx-border-width: 3;";
+
+    private static final String AUTO_STYLE = "-fx-background-color: #1565C0; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;";
+    private static final String AUTO_HOVER = "-fx-background-color: #1976D2; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;";
 
     public TrafficLightControlPanel(TrafficLight light, SimulationRunner runner, TrafficManager trafficManager,
             Runnable onBackPressed) {
@@ -113,31 +116,27 @@ public class TrafficLightControlPanel {
         infoText.setWrapText(true);
 
         forceGreenBtn = createButton("Force GREEN (This Light Only)");
-        forceGreenBtn.setStyle(greenStyle);
+        forceGreenBtn.setStyle(GREEN_STYLE);
         forceGreenBtn.setOnMouseEntered(e -> {
             if (!isCurrentlyGreen())
-                forceGreenBtn.setStyle(greenHover);
+                forceGreenBtn.setStyle(GREEN_HOVER);
         });
         forceGreenBtn.setOnMouseExited(e -> updateButtonStates());
         forceGreenBtn.setOnAction(e -> forceGreen());
 
         forceRedBtn = createButton("Force RED (This Light Only)");
-        forceRedBtn.setStyle(redStyle);
+        forceRedBtn.setStyle(RED_STYLE);
         forceRedBtn.setOnMouseEntered(e -> {
             if (!isCurrentlyRed())
-                forceRedBtn.setStyle(redHover);
+                forceRedBtn.setStyle(RED_HOVER);
         });
         forceRedBtn.setOnMouseExited(e -> updateButtonStates());
         forceRedBtn.setOnAction(e -> forceRed());
 
         autoBtn = createButton("⟲ Return Junction to AUTO");
-        String blueStyle = "-fx-background-color: #1976D2; -fx-text-fill: white; " +
-                "-fx-font-size: 12; -fx-padding: 10;";
-        String blueHover = "-fx-background-color: #2196F3; -fx-text-fill: white; " +
-                "-fx-font-size: 12; -fx-padding: 10;";
-        autoBtn.setStyle(blueStyle);
-        autoBtn.setOnMouseEntered(e -> autoBtn.setStyle(blueHover));
-        autoBtn.setOnMouseExited(e -> autoBtn.setStyle(blueStyle));
+        autoBtn.setStyle(AUTO_STYLE);
+        autoBtn.setOnMouseEntered(e -> autoBtn.setStyle(AUTO_HOVER));
+        autoBtn.setOnMouseExited(e -> autoBtn.setStyle(AUTO_STYLE));
         autoBtn.setOnAction(e -> returnToAuto());
         autoBtn.setDisable(true);
 
@@ -311,14 +310,14 @@ public class TrafficLightControlPanel {
 
     private void updateButtonStates() {
         if (isCurrentlyGreen()) {
-            forceGreenBtn.setStyle(greenActive);
-            forceRedBtn.setStyle(redStyle);
+            forceGreenBtn.setStyle(GREEN_ACTIVE);
+            forceRedBtn.setStyle(RED_STYLE);
         } else if (isCurrentlyRed()) {
-            forceGreenBtn.setStyle(greenStyle);
-            forceRedBtn.setStyle(redActive);
+            forceGreenBtn.setStyle(GREEN_STYLE);
+            forceRedBtn.setStyle(RED_ACTIVE);
         } else {
-            forceGreenBtn.setStyle(greenStyle);
-            forceRedBtn.setStyle(redStyle);
+            forceGreenBtn.setStyle(GREEN_STYLE);
+            forceRedBtn.setStyle(RED_STYLE);
         }
     }
 
