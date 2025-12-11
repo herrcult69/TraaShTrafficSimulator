@@ -69,10 +69,10 @@ public class ControlPanel {
         Label simLabel = new Label("―――SIMULATION―――");
         simLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14;");
 
-        Button playBtn = createButton("➤ Play");
-        Button pauseBtn = createButton("⏸Pause");
-        Button stopBtn = createButton("⏹ Stop");
-        Button addVehicleBtn = createButton("🚗 Add Vehicle");
+        Button playBtn = createButton("[>] Play");
+        Button pauseBtn = createButton("[=] Pause");
+        Button stopBtn = createButton("[#] Stop");
+        Button addVehicleBtn = createButton("[@] Add Vehicle");
 
         playBtn.setOnAction(e -> {
             if (runner != null) {

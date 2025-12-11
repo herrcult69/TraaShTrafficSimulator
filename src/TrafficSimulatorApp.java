@@ -395,7 +395,7 @@ public class TrafficSimulatorApp extends Application {
 
         // Title
         g.setFill(Color.LIMEGREEN);
-        g.fillText("🚗 ROUTE SELECTION MODE", x + 10, y + 20);
+        g.fillText("ROUTE SELECTION MODE", x + 10, y + 20);
 
         // Instructions based on state
         g.setFill(Color.WHITE);
@@ -405,11 +405,11 @@ public class TrafficSimulatorApp extends Application {
 
             if (startEdge == null) {
                 g.setFill(Color.LIMEGREEN);
-                g.fillText("➤ Click START edge (shown in GREEN)", x + 10, y + 45);
+                g.fillText("[>] Click START edge (shown in GREEN)", x + 10, y + 45);
             } else if (endEdge == null) {
                 g.fillText("✓ Start: " + startEdge, x + 10, y + 40);
                 g.setFill(Color.ORANGERED);
-                g.fillText("➤ Click END edge (shown in RED)", x + 10, y + 60);
+                g.fillText("[>] Click END edge (shown in RED)", x + 10, y + 60);
             } else {
                 g.setFill(Color.LIMEGREEN);
                 g.fillText("✓ Start: " + startEdge, x + 10, y + 40);
