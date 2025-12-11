@@ -91,16 +91,15 @@ public class TrafficLight {
             return;
         }
 
-        // Map SUMO lane index to visual lane index
-        // Edge has lanes: [dir1_0, dir1_1, ..., dir2_0, dir2_1, ...]
-        // SUMO lane index maps to dir2 lanes (positive offset side)
-        int numLanesPerDirection = fromEdge.getNetworkEdge().getNumLanes();
-        int visualLaneIndex = numLanesPerDirection + signal.fromLaneIndex; // Map to dir2
+        // SUMO lane index directly maps to visual lane index
+        // Each edge contains only lanes for its specific direction
+        int visualLaneIndex = signal.fromLaneIndex;
         
         // Check if lane index is valid
-        if (visualLaneIndex >= fromEdge.getLanes().size()) {
+        if (visualLaneIndex < 0 || visualLaneIndex >= fromEdge.getLanes().size()) {
             System.out.println("WARNING: Lane index " + visualLaneIndex + 
-                             " out of bounds for edge " + signal.fromEdge);
+                             " out of bounds for edge " + signal.fromEdge + 
+                             " (has " + fromEdge.getLanes().size() + " lanes)");
             return;
         }
 
