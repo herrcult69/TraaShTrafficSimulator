@@ -225,12 +225,23 @@ public class Edge {
         double endX = toX - toRadius * dirX;
         double endY = toY - toRadius * dirY;
 
-        double x1 = transform.worldToScreenX(startX);
-        double y1 = transform.worldToScreenY(startY);
-        double x2 = transform.worldToScreenX(endX);
-        double y2 = transform.worldToScreenY(endY);
+        // Calculate perpendicular vector for offset
+        double perpX = dy / length;
+        double perpY = -dx / length;
 
-        double totalWidth = networkEdge.getTotalWidth() * 2; // Bidirectional
+        // Apply same offset as render() - position edge on its side of the road
+        double totalWidth = networkEdge.getTotalWidth();
+        double halfWidth = totalWidth / 2.0;
+        double offsetStartX = startX + halfWidth * perpX;
+        double offsetStartY = startY + halfWidth * perpY;
+        double offsetEndX = endX + halfWidth * perpX;
+        double offsetEndY = endY + halfWidth * perpY;
+
+        double x1 = transform.worldToScreenX(offsetStartX);
+        double y1 = transform.worldToScreenY(offsetStartY);
+        double x2 = transform.worldToScreenX(offsetEndX);
+        double y2 = transform.worldToScreenY(offsetEndY);
+
         double screenWidth = transform.worldToScreenSize(totalWidth);
 
         // Draw highlighted overlay
