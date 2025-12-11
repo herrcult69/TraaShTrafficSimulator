@@ -12,9 +12,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Panel for adding new vehicles to the simulation.
- * Allows selection of vehicle type and route building by selecting start/end edges.
- * SUMO automatically finds a valid path between the selected edges.
+ * Panel for adding new vehicles to the simulation interactively.
+ * Allows selection of vehicle type and route building by clicking start and end edges on the map.
+ * SUMO automatically computes a valid path between the selected edges using its routing algorithm.
+ * Supports auto-generated vehicle IDs and provides visual feedback during route selection.
+ *
+ * @author M A T^2 H Team
+ * @version 2.0 
+ * @see SimulationRunner
+ * @see TraaSAdapter
+ * @see Edge
+ * @see ControlPanel
  */
 public class VehicleAddPanel extends VBox {
 
@@ -52,6 +60,15 @@ public class VehicleAddPanel extends VBox {
     private boolean routeSelectionMode = false;
     private static int vehicleCounter = 1;
 
+    /**
+     * Constructs a new vehicle addition panel with necessary callbacks.
+     * 
+     * @param runner The simulation runner for SUMO communication
+     * @param onCancel Callback invoked when user cancels vehicle addition
+     * @param onStartRouteSelection Callback invoked when route selection starts
+     * @param onRouteSelectionModeChange Callback for route selection mode changes (true = active)
+     * @param onVehicleAdded Callback invoked when vehicle is successfully added
+     */
     public VehicleAddPanel(SimulationRunner runner, Runnable onCancel,
             Runnable onStartRouteSelection, java.util.function.Consumer<Boolean> onRouteSelectionModeChange,
             Runnable onVehicleAdded) {
@@ -67,6 +84,10 @@ public class VehicleAddPanel extends VBox {
         createUI();
     }
 
+    /**
+     * Creates the complete UI for the vehicle addition panel.
+     * Includes vehicle type selector, ID field, route selection controls, and action buttons.
+     */
     private void createUI() {
         setAlignment(Pos.TOP_CENTER);
         setPadding(new Insets(15));
@@ -184,6 +205,11 @@ public class VehicleAddPanel extends VBox {
                 confirmBtn, cancelBtn, infoBox);
     }
 
+    /**
+     * Creates an informational box with step-by-step instructions for adding a vehicle.
+     * 
+     * @return A VBox containing the help instructions
+     */
     private VBox createInfoBox() {
         VBox infoBox = new VBox(5);
         infoBox.setStyle(UIStyles.INFO_BOX_STYLE);
@@ -210,7 +236,10 @@ public class VehicleAddPanel extends VBox {
         return infoBox;
     }
 
-    // Update vehicle ID field based on selected type and counter
+    /**
+     * Updates the vehicle ID field based on the selected vehicle type and counter.
+     * Generates IDs like "car_new_1", "truck_new_2", etc.
+     */
     private void updateVehicleId() {
         String type = vehicleTypeCombo.getValue();
         String prefix = switch (type) {
@@ -224,6 +253,9 @@ public class VehicleAddPanel extends VBox {
         vehicleIdField.setText(prefix + vehicleCounter);
     }
 
+    /**
+     * Toggles between route selection mode and normal mode.
+     */
     private void toggleRouteSelectionMode() {
         routeSelectionMode = !routeSelectionMode;
 
@@ -234,6 +266,9 @@ public class VehicleAddPanel extends VBox {
         }
     }
 
+    /**
+     * Enters route selection mode, pauses simulation, and updates UI for edge selection.
+     */
     private void enterRouteSelectionMode() {
         // Pause simulation when entering route selection mode
         if (runner != null && !runner.isPaused()) {
@@ -254,6 +289,9 @@ public class VehicleAddPanel extends VBox {
         if (onStartRouteSelection != null) onStartRouteSelection.run();
     }
 
+    /**
+     * Exits route selection mode and updates UI to show route status or instructions.
+     */
     private void exitRouteSelectionModeUI() {
         addEdgeBtn.setText("📍 Select Route");
         addEdgeBtn.setStyle("-fx-background-color: #415A77; -fx-text-fill: white; -fx-font-size: 11; -fx-padding: 8;");
@@ -269,6 +307,9 @@ public class VehicleAddPanel extends VBox {
         if (onRouteSelectionModeChange != null) onRouteSelectionModeChange.accept(false);
     }
 
+    /**
+     * Cleanly exits route selection mode by disabling it and notifying callbacks.
+     */
     private void exitRouteSelectionMode() {
         if (routeSelectionMode) {
             routeSelectionMode = false;
@@ -276,7 +317,12 @@ public class VehicleAddPanel extends VBox {
         }
     }
 
-    // Called when user clicks on an edge during route selection
+    /**
+     * Adds an edge to the route during route selection mode.
+     * First click sets start edge (green), second click sets end edge (red) and computes route.
+     * 
+     * @param edgeId The ID of the clicked edge
+     */
     public void addEdgeToRoute(String edgeId) {
         if (!routeSelectionMode)
             return;
@@ -310,7 +356,10 @@ public class VehicleAddPanel extends VBox {
         }
     }
 
-    // Compute route using SUMO between selected start and end edges
+    /**
+     * Computes a route using SUMO's routing algorithm between the selected start and end edges.
+     * Displays the computed route in the route list view.
+     */
     private void computeRoute() {
         if (startEdge == null || endEdge == null)
             return;
@@ -350,6 +399,9 @@ public class VehicleAddPanel extends VBox {
         }
     }
 
+    /**
+     * Clears the current route selection, resetting start/end edges and route list.
+     */
     private void clearRoute() {
         startEdge = null;
         endEdge = null;
@@ -363,6 +415,10 @@ public class VehicleAddPanel extends VBox {
         updateInstructionLabel("Click 'Select Route' then pick START and END edges", UIStyles.TEXT_WARNING);
     }
 
+    /**
+     * Adds the configured vehicle to the SUMO simulation.
+     * Validates inputs, creates route in SUMO, adds vehicle, and resets the form.
+     */
     private void addVehicle() {
         // Validation
         if (selectedRoute.size() < 2) {
@@ -418,11 +474,23 @@ public class VehicleAddPanel extends VBox {
         }
     }
 
+    /**
+     * Displays an error message in the status label.
+     * 
+     * @param message The error message to display
+     */
     private void showError(String message) {
         updateStatusLabel("X " + message, UIStyles.TEXT_ERROR);
     }
 
-    // Helper methods for consistent label styling
+    /**
+     * Updates an edge label with consistent styling.
+     * 
+     * @param label The label to update
+     * @param text The new text
+     * @param color The text color
+     * @param bold Whether to apply bold styling
+     */
     private void updateEdgeLabelStyle(Label label, String text, String color, boolean bold) {
         label.setText(text);
         String style = "-fx-text-fill: " + color + "; -fx-font-size: 11;";
@@ -430,29 +498,60 @@ public class VehicleAddPanel extends VBox {
         label.setStyle(style);
     }
 
+    /**
+     * Updates the status label with colored text.
+     * 
+     * @param text The status message
+     * @param color The text color
+     */
     private void updateStatusLabel(String text, String color) {
         statusLabel.setText(text);
         statusLabel.setStyle("-fx-text-fill: " + color + "; -fx-font-size: 11;");
     }
 
+    /**
+     * Updates the instruction label with colored text.
+     * 
+     * @param text The instruction message
+     * @param color The text color
+     */
     private void updateInstructionLabel(String text, String color) {
         instructionLabel.setText(text);
         instructionLabel.setStyle("-fx-text-fill: " + color + "; -fx-font-size: 11;");
     }
 
-    // Getters
+    /**
+     * Checks if the panel is currently in route selection mode.
+     * 
+     * @return true if route selection is active
+     */
     public boolean isRouteSelectionMode() {
         return routeSelectionMode;
     }
 
+    /**
+     * Returns a copy of the currently selected route.
+     * 
+     * @return List of edge IDs in the route
+     */
     public List<String> getSelectedRoute() {
         return new ArrayList<>(selectedRoute);
     }
 
+    /**
+     * Returns the start edge ID.
+     * 
+     * @return The start edge ID, or null if not selected
+     */
     public String getStartEdge() {
         return startEdge;
     }
 
+    /**
+     * Returns the end edge ID.
+     * 
+     * @return The end edge ID, or null if not selected
+     */
     public String getEndEdge() {
         return endEdge;
     }

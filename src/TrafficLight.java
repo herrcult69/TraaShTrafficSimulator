@@ -3,6 +3,27 @@ import javafx.scene.paint.Color;
 import java.util.List;
 import java.util.ArrayList;
 
+/**
+ * Represents a traffic light controlling connections at a junction.
+ * 
+ * <p>A traffic light consists of multiple signals, where each signal controls a specific
+ * lane-to-lane connection at the junction. Key features:
+ * <ul>
+ *   <li>Multiple signals per junction (one per incoming edge)</li>
+ *   <li>Each signal displays a directional arrow (straight, left, right, turn-around)</li>
+ *   <li>Signal colors: red, yellow, green, or gray (off)</li>
+ *   <li>Manual control mode allows overriding automatic SUMO control</li>
+ *   <li>Precise positioning at lane stop lines</li>
+ * </ul>
+ * 
+ * <p>The traffic light state is represented as a string where each character controls
+ * one signal: 'G'/'g' = green, 'y'/'Y' = yellow, 'r'/'R' = red, 'o' = off.</p>
+ *
+ * @author M A T^2 H Team
+ * @version 2.0 
+ * @see TrafficManager
+ * @see Junction
+ */
 public class TrafficLight {
     // Color constants
     private static final Color RED = Color.rgb(255, 0, 0);
@@ -19,17 +40,40 @@ public class TrafficLight {
     private static final double CLICK_RADIUS_FACTOR = 0.6;
     private static final double HIGHLIGHT_RADIUS_FACTOR = 0.8;
 
-    // Individual signal representing one connection
+    /**
+     * Represents an individual signal controlling one lane-to-lane connection.
+     * Each signal has its own position, direction, and link index in the traffic light state.
+     */
     public static class Signal {
+        /** Source edge ID */
         public String fromEdge;
+        /** Source lane index */
         public int fromLaneIndex;
+        /** Destination edge ID */
         public String toEdge;
+        /** Destination lane index */
         public int toLaneIndex;
+        /** Index in the traffic light state string */
         public int linkIndex;
-        public double x, y;
+        /** Signal position X coordinate in world space */
+        public double x;
+        /** Signal position Y coordinate in world space */
+        public double y;
+        /** Rotation angle for the signal display */
         public double rotationAngle;
-        public String direction;  // s, l, r, t, etc.
+        /** Direction code: 's'=straight, 'l'/'L'=left, 'r'/'R'=right, 't'=turn around */
+        public String direction;
         
+        /**
+         * Constructs a new Signal.
+         * 
+         * @param fromEdge Source edge ID
+         * @param fromLaneIndex Source lane index
+         * @param toEdge Destination edge ID
+         * @param toLaneIndex Destination lane index
+         * @param linkIndex Index in traffic light state string
+         * @param direction Direction code for arrow display
+         */
         public Signal(String fromEdge, int fromLaneIndex, String toEdge, int toLaneIndex, 
                      int linkIndex, String direction) {
             this.fromEdge = fromEdge;
@@ -47,11 +91,24 @@ public class TrafficLight {
     private String currentState;
     private boolean manualMode = false;
 
+    /**
+     * Data class containing traffic light state information from SUMO.
+     */
     public static class TrafficLightData {
+        /** The state string (e.g., "GGrr") controlling all signals */
         public String state;
+        /** List of controlled lane IDs */
         public List<String> controlledLanes;
+        /** Number of links controlled */
         public int linkCount;
 
+        /**
+         * Constructs TrafficLightData.
+         * 
+         * @param state The state string
+         * @param lanes List of controlled lanes
+         * @param linkCount Number of links
+         */
         public TrafficLightData(String state, List<String> lanes, int linkCount) {
             this.state = state;
             this.controlledLanes = lanes;
@@ -59,6 +116,12 @@ public class TrafficLight {
         }
     }
 
+    /**
+     * Constructs a new traffic light for a specific junction.
+     * 
+     * @param junctionId The junction ID this traffic light belongs to
+     * @param junction The Junction object for position reference
+     */
     public TrafficLight(String junctionId, Junction junction) {
         this.junctionId = junctionId;
         this.junction = junction;
@@ -66,16 +129,34 @@ public class TrafficLight {
         this.currentState = "";
     }
 
+    /**
+     * Adds a signal to this traffic light.
+     * 
+     * @param signal The signal to add
+     */
     public void addSignal(Signal signal) {
         this.signals.add(signal);
     }
 
+    /**
+     * Calculates the world positions for all signals based on their controlled lanes.
+     * Must be called after all signals are added and before rendering.
+     * 
+     * @param edges List of all edges in the network for position calculation
+     */
     public void calculatePositions(List<Edge> edges) {
         for (Signal signal : signals) {
             calculateSignalPosition(signal, edges);
         }
     }
 
+    /**
+     * Calculates the position and rotation for a single signal.
+     * Positions the signal at the stop line of the controlled lane.
+     * 
+     * @param signal The signal to position
+     * @param edges List of all edges for lookup
+     */
     private void calculateSignalPosition(Signal signal, List<Edge> edges) {
         // Find the edge this signal controls
         Edge fromEdge = null;
@@ -158,10 +239,21 @@ public class TrafficLight {
         signal.rotationAngle = -roadAngle + 90;
     }
 
+    /**
+     * Sets the current state of all signals from a state string.
+     * 
+     * @param fullState State string where each character controls one signal
+     */
     public void setState(String fullState) {
         this.currentState = fullState;
     }
 
+    /**
+     * Returns the color for a signal based on its link index in the state string.
+     * 
+     * @param linkIndex The signal's link index
+     * @return The color (RED, YELLOW, GREEN, or GRAY)
+     */
     private Color getSignalColor(int linkIndex) {
         if (currentState == null || currentState.isEmpty()) {
             return GRAY;
@@ -193,6 +285,11 @@ public class TrafficLight {
         }
     }
 
+    /**
+     * Returns the color of the first signal (for backward compatibility).
+     * 
+     * @return The current color of the first signal
+     */
     public Color getCurrentColor() {
         // For backward compatibility - return color of first signal
         if (signals.isEmpty()) {
@@ -201,6 +298,12 @@ public class TrafficLight {
         return getSignalColor(signals.get(0).linkIndex);
     }
 
+    /**
+     * Renders all signals of this traffic light.
+     * 
+     * @param g The graphics context to draw on
+     * @param transform The coordinate transformation
+     */
     public void render(GraphicsContext g, CoordinateTransform transform) {
         // Render each individual signal
         for (Signal signal : signals) {
@@ -208,6 +311,13 @@ public class TrafficLight {
         }
     }
 
+    /**
+     * Renders a single signal with directional arrow.
+     * 
+     * @param g The graphics context
+     * @param transform The coordinate transformation
+     * @param signal The signal to render
+     */
     private void renderSignal(GraphicsContext g, CoordinateTransform transform, Signal signal) {
         double screenX = transform.worldToScreenX(signal.x);
         double screenY = transform.worldToScreenY(signal.y);
@@ -284,6 +394,14 @@ public class TrafficLight {
         }
     }
 
+    /**
+     * Checks if a screen point is within any signal's clickable area.
+     * 
+     * @param screenX The X coordinate in screen space
+     * @param screenY The Y coordinate in screen space
+     * @param transform The coordinate transformation
+     * @return true if the point hits any signal
+     */
     public boolean contains(double screenX, double screenY, CoordinateTransform transform) {
         // Check if click is on any signal
         for (Signal signal : signals) {
@@ -294,6 +412,15 @@ public class TrafficLight {
         return false;
     }
 
+    /**
+     * Checks if a screen point is within a specific signal's clickable area.
+     * 
+     * @param screenX Screen X coordinate
+     * @param screenY Screen Y coordinate
+     * @param transform Coordinate transformation
+     * @param signal The signal to check
+     * @return true if within clickable radius
+     */
     private boolean containsSignal(double screenX, double screenY, CoordinateTransform transform, Signal signal) {
         double lightScreenX = transform.worldToScreenX(signal.x);
         double lightScreenY = transform.worldToScreenY(signal.y);
@@ -305,6 +432,14 @@ public class TrafficLight {
         return Math.sqrt(dx * dx + dy * dy) <= clickRadius;
     }
 
+    /**
+     * Highlights all signals of this traffic light with the specified color.
+     * Used for selection and hover effects.
+     * 
+     * @param g The graphics context for rendering
+     * @param transform The coordinate transformation
+     * @param color The highlight color
+     */
     public void highlight(GraphicsContext g, CoordinateTransform transform, Color color) {
         // Highlight all signals for this traffic light
         for (Signal signal : signals) {
@@ -329,24 +464,46 @@ public class TrafficLight {
     }
 
     // Getters
+    /**
+     * Returns the junction ID this traffic light belongs to.
+     * 
+     * @return The junction ID
+     */
     public String getJunctionId() {
         return junctionId;
     }
 
+    /**
+     * Returns the junction object for position reference.
+     * 
+     * @return The Junction
+     */
     public Junction getJunction() {
         return junction;
     }
 
+    /**
+     * Returns the current state string controlling all signals.
+     * 
+     * @return The state string (e.g., "GGrr")
+     */
     public String getCurrentState() {
         return currentState;
     }
 
+    /**
+     * Returns the list of all signals in this traffic light.
+     * 
+     * @return List of Signal objects
+     */
     public List<Signal> getSignals() {
         return signals;
     }
     
     /**
-     * Get list of link indices controlled by this traffic light, sorted in ascending order
+     * Returns list of link indices controlled by this traffic light, sorted in ascending order.
+     * 
+     * @return Sorted list of link indices
      */
     public List<Integer> getLinkIndices() {
         List<Integer> indices = new ArrayList<>();
@@ -357,10 +514,21 @@ public class TrafficLight {
         return indices;
     }
 
+    /**
+     * Returns whether this traffic light is in manual control mode.
+     * 
+     * @return true if in manual mode, false if automatic
+     */
     public boolean isManualMode() {
         return manualMode;
     }
 
+    /**
+     * Sets the manual control mode for this traffic light.
+     * When in manual mode, SUMO updates are ignored.
+     * 
+     * @param manualMode true for manual control, false for automatic
+     */
     public void setManualMode(boolean manualMode) {
         this.manualMode = manualMode;
     }

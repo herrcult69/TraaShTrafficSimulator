@@ -9,7 +9,30 @@ import javafx.scene.layout.VBox;
 import java.util.function.Consumer;
 
 /**
- * Control panel for simulation and view controls
+ * Main control panel for the simulation interface.
+ * Provides buttons for simulation control (play, pause, stop), view manipulation (zoom, pan),
+ * and access to specialized panels (vehicle addition, traffic light control).
+ * 
+ * <p>The panel is scrollable and maintains callbacks for route selection interactions.
+ * The control panel includes:
+ * <ul>
+ *   <li>Simulation control buttons: Play, Pause, Stop, Add Vehicle</li>
+ *   <li>View control buttons: Zoom In, Zoom Out, Reset View</li>
+ *   <li>Integration with DashBoard for real-time metrics display</li>
+ *   <li>Ability to switch to VehicleAddPanel and TrafficLightControlPanel</li>
+ * </ul>
+ * 
+ * <p>Callbacks can be set for route selection mode to notify when route selection starts,
+ * when the mode changes, and when a vehicle is added.</p>
+ * 
+ * @author M A T^2 H Team
+ * @version 2.0
+ * @see SimulationRunner
+ * @see ViewManager
+ * @see DashBoard
+ * @see VehicleAddPanel
+ * @see TrafficLightControlPanel
+ * @see TrafficLight
  */
 public class ControlPanel {
     private VBox controlPanel;
@@ -24,6 +47,14 @@ public class ControlPanel {
     private Consumer<Boolean> onRouteSelectionModeChange;
     private Runnable onVehicleAdded;
 
+    /**
+     * Constructs a new control panel with simulation and view controls.
+     * 
+     * @param runner The simulation runner for play/pause/stop control
+     * @param viewManager The view manager for zoom and pan operations
+     * @param dashboard The dashboard to display in the panel
+     * @param trafficManager The traffic manager for accessing traffic light data
+     */
     public ControlPanel(SimulationRunner runner, ViewManager viewManager, DashBoard dashboard,
             TrafficManager trafficManager) {
         this.runner = runner;
@@ -32,6 +63,11 @@ public class ControlPanel {
         createPanel(dashboard);
     }
 
+    /**
+     * Creates the main panel UI with simulation controls, view controls, and dashboard.
+     * 
+     * @param dashboard The dashboard component to include
+     */
     private void createPanel(DashBoard dashboard) {
         controlPanel = new VBox(10);
         controlPanel.setAlignment(Pos.TOP_CENTER);
@@ -64,7 +100,9 @@ public class ControlPanel {
         scrollPane.setMaxWidth(300);
         scrollPane.setStyle("-fx-background: " + UIStyles.BG_PRIMARY + "; -fx-background-color: " + UIStyles.BG_PRIMARY + ";");
     }
-
+    /**
+     * Adds simulation control buttons (play, pause, stop, add vehicle) to the panel.
+     */
     private void addSimulationControls() {
         Label simLabel = new Label("―――SIMULATION―――");
         simLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14;");
@@ -102,6 +140,9 @@ public class ControlPanel {
         controlPanel.getChildren().addAll(simLabel, playBtn, pauseBtn, stopBtn, addVehicleBtn);
     }
 
+    /**
+     * Adds view control buttons (zoom in, zoom out, reset) to the panel.
+     */
     private void addViewControls() {
         Label viewLabel = new Label("―――VIEW―――");
         viewLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14;");
@@ -117,12 +158,21 @@ public class ControlPanel {
         controlPanel.getChildren().addAll(viewLabel, zoomIn, zoomOut, reset);
     }
 
+    /**
+     * Returns the scroll pane containing the control panel.
+     * 
+     * @return The scrollable control panel
+     */
     public ScrollPane getScrollPane() {
         return scrollPane;
     }
 
     /**
-     * Set callbacks for route selection mode
+     * Sets callbacks for route selection mode interactions.
+     * 
+     * @param onStartRouteSelection Called when route selection begins
+     * @param onRouteSelectionModeChange Called when route selection mode changes (true = enabled)
+     * @param onVehicleAdded Called when a vehicle is successfully added
      */
     public void setRouteSelectionCallbacks(Runnable onStartRouteSelection, Consumer<Boolean> onRouteSelectionModeChange, Runnable onVehicleAdded) {
         this.onStartRouteSelection = onStartRouteSelection;
@@ -131,7 +181,7 @@ public class ControlPanel {
     }
 
     /**
-     * Show the vehicle add panel
+     * Displays the vehicle addition panel, replacing the normal control panel.
      */
     public void showVehicleAddPanel() {
         vehicleAddPanel = new VehicleAddPanel(runner, this::showNormalControls,
@@ -140,17 +190,27 @@ public class ControlPanel {
     }
 
     /**
-     * Get the current vehicle add panel (for adding edges to route)
+     * Returns the current vehicle add panel for edge selection during route creation.
+     * 
+     * @return The active vehicle add panel, or null if not showing
      */
     public VehicleAddPanel getVehicleAddPanel() {
         return vehicleAddPanel;
     }
 
+    /**
+     * Displays the traffic light control panel for the selected traffic light.
+     * 
+     * @param tl The traffic light to control
+     */
     public void showTrafficLightControl(TrafficLight tl) {
         TrafficLightControlPanel tlPanel = new TrafficLightControlPanel(tl, runner, trafficManager, this::showNormalControls);
         scrollPane.setContent(tlPanel.getPanel());
     }
 
+    /**
+     * Restores the normal control panel view, hiding any specialized panels.
+     */
     public void showNormalControls() {
         vehicleAddPanel = null; // Clear reference
         scrollPane.setContent(controlPanel);

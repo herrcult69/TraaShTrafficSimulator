@@ -3,6 +3,32 @@ import javafx.scene.paint.Color;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Represents a directed road edge (segment) between two junctions.
+ * 
+ * <p>An edge is a one-way road segment containing multiple lanes. Key features:
+ * <ul>
+ *   <li>Directional: Each physical road typically has two edges (one per direction)</li>
+ *   <li>Contains 1+ lanes positioned perpendicular to the edge centerline</li>
+ *   <li>Clipped at junction boundaries to avoid visual overlaps</li>
+ *   <li>Rendered with proper lane markings (center line and dividers)</li>
+ * </ul>
+ * 
+ * <p>Rendering includes:
+ * <ul>
+ *   <li>Road surface as a thick line</li>
+ *   <li>Yellow center line (drawn only for positive edge IDs to avoid duplication)</li>
+ *   <li>White dashed lane dividers between lanes</li>
+ *   <li>Proper clipping at source and destination junctions</li>
+ * </ul>
+ *
+ * @author M A T^2 H Team
+ * @version 2.0 
+ * @see Lane
+ * @see Junction
+ * @see NetworkParser.Edge
+ * @see TrafficManager
+ */
 public class Edge {
     private NetworkParser.Edge networkEdge;
     private double fromX, fromY, toX, toY; // World coordinates
@@ -10,6 +36,16 @@ public class Edge {
     private Junction toJunction;
     private List<Lane> lanes;
 
+    /**
+     * Constructs a new visual Edge from parsed network data.
+     * Automatically creates visual Lane objects for each lane in the network edge.
+     * 
+     * @param networkEdge The parsed edge data from SUMO network file
+     * @param from The source junction network data
+     * @param to The destination junction network data
+     * @param fromJunc The visual source junction object
+     * @param toJunc The visual destination junction object
+     */
     public Edge(NetworkParser.Edge networkEdge, NetworkParser.Junction from, NetworkParser.Junction to,
             Junction fromJunc, Junction toJunc) {
         this.networkEdge = networkEdge;
@@ -24,6 +60,10 @@ public class Edge {
         createLanes();
     }
 
+    /**
+     * Creates visual Lane objects for all lanes in this edge.
+     * Calculates each lane's offset from the edge centerline based on cumulative lane widths.
+     */
     private void createLanes() {
         // Create lanes directly from SUMO network data
         // SUMO already handles directionality with positive/negative edge IDs
@@ -46,6 +86,15 @@ public class Edge {
         }
     }
 
+    /**
+     * Returns the lane at the specified screen coordinates, or null if none.
+     * Used for hit detection when clicking on the edge.
+     * 
+     * @param screenX The X coordinate in screen space
+     * @param screenY The Y coordinate in screen space
+     * @param transform The coordinate transformation
+     * @return The lane at that position, or null
+     */
     public Lane getLaneAt(double screenX, double screenY, CoordinateTransform transform) {
         for (Lane lane : lanes) {
             if (lane.contains(screenX, screenY, transform)) {
@@ -55,6 +104,20 @@ public class Edge {
         return null;
     }
 
+    /**
+     * Renders the edge including road surface and lane markings.
+     * <p>
+     * The rendering process:
+     * <ol>
+     *   <li>Calculates junction-clipped endpoints</li>
+     *   <li>Draws road surface as a thick line</li>
+     *   <li>Draws yellow center line (one direction only)</li>
+     *   <li>Draws white dashed lane dividers</li>
+     * </ol>
+     * 
+     * @param g The graphics context to draw on
+     * @param transform The coordinate transformation
+     */
     public void render(GraphicsContext g, CoordinateTransform transform) {
         // Calculate edge direction
         double dx = toX - fromX;
@@ -167,40 +230,85 @@ public class Edge {
     }
 
     // Getters
+    /**
+     * Returns the original parsed network edge data.
+     * 
+     * @return The NetworkParser.Edge data
+     */
     public NetworkParser.Edge getNetworkEdge() {
         return networkEdge;
     }
 
+    /**
+     * Returns the list of visual lanes in this edge.
+     * 
+     * @return List of Lane objects
+     */
     public List<Lane> getLanes() {
         return lanes;
     }
 
+    /**
+     * Returns the source junction X coordinate in world space.
+     * 
+     * @return The X coordinate in meters
+     */
     public double getFromX() {
         return fromX;
     }
 
+    /**
+     * Returns the source junction Y coordinate in world space.
+     * 
+     * @return The Y coordinate in meters
+     */
     public double getFromY() {
         return fromY;
     }
 
+    /**
+     * Returns the destination junction X coordinate in world space.
+     * 
+     * @return The X coordinate in meters
+     */
     public double getToX() {
         return toX;
     }
 
+    /**
+     * Returns the destination junction Y coordinate in world space.
+     * 
+     * @return The Y coordinate in meters
+     */
     public double getToY() {
         return toY;
     }
 
+    /**
+     * Returns the source junction visual object.
+     * 
+     * @return The source Junction
+     */
     public Junction getFromJunction() {
         return fromJunction;
     }
 
+    /**
+     * Returns the destination junction visual object.
+     * 
+     * @return The destination Junction
+     */
     public Junction getToJunction() {
         return toJunction;
     }
 
     /**
-     * Highlight this edge (for vehicle injection route selection visualization)
+     * Highlights this edge with a colored overlay.
+     * Used during route selection to show selected edges.
+     * 
+     * @param g The graphics context to draw on
+     * @param transform The coordinate transformation
+     * @param color The highlight color
      */
     public void highlight(GraphicsContext g, CoordinateTransform transform, Color color) {
         // Calculate edge direction

@@ -5,7 +5,27 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Represents a road junction/intersection with proper geometry rendering.
+ * Represents a road junction (intersection) with precise polygon geometry rendering.
+ * 
+ * <p>Junctions are the connection points where multiple edges meet. Each junction has:
+ * <ul>
+ *   <li>Unique identifier and type (priority, traffic_light, etc.)</li>
+ *   <li>Center position in world coordinates</li>
+ *   <li>Boundary shape as a polygon (from SUMO network data)</li>
+ *   <li>Computed radius for edge clipping calculations</li>
+ * </ul>
+ * 
+ * <p>The junction shape is used for:
+ * <ul>
+ *   <li>Proper visual rendering of the intersection area</li>
+ *   <li>Hit detection for user interaction</li>
+ *   <li>Clipping edge endpoints to avoid overlapping junction geometry</li>
+ * </ul>
+ *
+ * @author M A T^2 H Team
+ * @version 2.0 
+ * @see Edge
+ * @see NetworkParser.Junction
  */
 public class Junction {
     // Constants for junction geometry
@@ -23,6 +43,12 @@ public class Junction {
     private List<Point2D> shape; // Junction boundary polygon
     private double radius; // Get the radius
 
+    /**
+     * Constructs a new visual Junction from parsed network data.
+     * Automatically parses the junction shape and calculates the radius.
+     * 
+     * @param networkJunction The parsed junction data from SUMO network file
+     */
     public Junction(NetworkParser.Junction networkJunction) {
         this.networkJunction = networkJunction;
         this.id = networkJunction.id;
@@ -38,6 +64,15 @@ public class Junction {
         calculateRadius();
     }
 
+    /**
+     * Checks if a screen point falls within the junction's boundary polygon.
+     * Uses point-in-polygon test for precise hit detection.
+     * 
+     * @param screenX The X coordinate in screen space
+     * @param screenY The Y coordinate in screen space
+     * @param transform The coordinate transformation
+     * @return true if the point is inside the junction boundary
+     */
     public boolean contains(double screenX, double screenY, CoordinateTransform transform) {
         if (shape == null || shape.size() < 3) {
             // Fallback to circular check
@@ -62,6 +97,13 @@ public class Junction {
         return result;
     }
 
+    /**
+     * Draws a semi-transparent polygon highlight over the junction when selected or hovered.
+     * 
+     * @param g The graphics context to draw on
+     * @param transform The coordinate transformation
+     * @param color The highlight color (transparency applied automatically)
+     */
     public void highlight(GraphicsContext g, CoordinateTransform transform, Color color) {
         if (shape == null || shape.size() < 3)
             return;
@@ -87,7 +129,11 @@ public class Junction {
     }
 
     /**
-     * Main rendering method - draws the junction geometry
+     * Main rendering method - draws the junction geometry.
+     * Skips internal junctions (temporary crossing segments) which have ':' in their ID.
+     * 
+     * @param g The graphics context to draw on
+     * @param transform The coordinate transformation
      */
     public void render(GraphicsContext g, CoordinateTransform transform) {
         // Skip internal junctions (those with ':' in ID)
@@ -101,7 +147,11 @@ public class Junction {
     }
 
     /**
-     * Renders junction with proper polygon shape from SUMO
+     * Renders the junction as a filled polygon using its boundary shape.
+     * The junction is drawn with a slightly lighter color than roads for visibility.
+     * 
+     * @param g The graphics context to draw on
+     * @param transform The coordinate transformation
      */
     private void renderPolygonJunction(GraphicsContext g, CoordinateTransform transform) {
         if (shape == null || shape.size() < 3)
@@ -121,6 +171,17 @@ public class Junction {
 
     }
 
+    /**
+     * Calculates the junction's effective radius in a specific direction.
+     * Used for clipping edge endpoints so they don't overlap the junction.
+     * <p>
+     * Finds the shape point most aligned with the given direction and returns
+     * its distance from the junction center.
+     * 
+     * @param dirX The X component of the direction vector (normalized)
+     * @param dirY The Y component of the direction vector (normalized)
+     * @return The radius in meters along that direction
+     */
     public double getRadiusInDirection(double dirX, double dirY) {
         if (shape.isEmpty()) {
             return DEFAULT_RADIUS;
@@ -150,6 +211,12 @@ public class Junction {
         return maxDist > 0 ? maxDist : DEFAULT_RADIUS;
     }
 
+    /**
+     * Parses the SUMO shape string into a list of 2D points.
+     * SUMO shape format is: "x1,y1 x2,y2 x3,y3 ..."
+     * 
+     * @param shapeStr The shape string from SUMO
+     */
     private void parseShape(String shapeStr) {
         // SUMO shape format: "x1,y1 x2,y2 x3,y3 ..."
         String[] points = shapeStr.trim().split("\\s+");
@@ -167,6 +234,10 @@ public class Junction {
         }
     }
 
+    /**
+     * Calculates the junction's maximum radius from its center to any shape point.
+     * Used for approximate distance calculations and default clipping.
+     */
     private void calculateRadius() {
         radius = DEFAULT_RADIUS;
         if (shape != null && !shape.isEmpty()) {
@@ -186,26 +257,56 @@ public class Junction {
     }
 
     // Getters
+    /**
+     * Returns the unique junction identifier.
+     * 
+     * @return The junction ID
+     */
     public String getId() {
         return id;
     }
 
+    /**
+     * Returns the X coordinate of the junction center in world space.
+     * 
+     * @return The X coordinate in meters
+     */
     public double getX() {
         return x;
     }
 
+    /**
+     * Returns the Y coordinate of the junction center in world space.
+     * 
+     * @return The Y coordinate in meters
+     */
     public double getY() {
         return y;
     }
 
+    /**
+     * Returns the junction type.
+     * 
+     * @return The type (e.g., "priority", "traffic_light", "right_before_left")
+     */
     public String getType() {
         return type;
     }
 
+    /**
+     * Returns a copy of the junction's boundary shape points.
+     * 
+     * @return List of 2D points defining the polygon boundary
+     */
     public List<Point2D> getShape() {
         return new ArrayList<>(shape);
     }
 
+    /**
+     * Returns the original parsed network junction data.
+     * 
+     * @return The NetworkParser.Junction data
+     */
     public NetworkParser.Junction getNetworkJunction() {
         return networkJunction;
     }

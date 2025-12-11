@@ -7,7 +7,17 @@ import javafx.scene.layout.VBox;
 import java.util.List;
 
 /**
- * Control panel for managing a selected traffic light
+ * Control panel for managing a selected traffic light manually.
+ * Provides selective control over individual traffic light signals while maintaining junction synchronization.
+ * Supports forcing green/red states for specific signals and returning to automatic SUMO control.
+ * Manual mode is synchronized across all traffic lights at the same junction to prevent conflicts.
+ *
+ * @author M A T^2 H Team
+ * @version 2.0 
+ * @see TrafficLight
+ * @see TrafficManager
+ * @see SimulationRunner
+ * @see ControlPanel
  */
 public class TrafficLightControlPanel {
     private VBox panel;
@@ -35,6 +45,14 @@ public class TrafficLightControlPanel {
     private static final String AUTO_STYLE = "-fx-background-color: #1565C0; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;";
     private static final String AUTO_HOVER = "-fx-background-color: #1976D2; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;";
 
+    /**
+     * Constructs a traffic light control panel for the specified light.
+     * 
+     * @param light The traffic light to control
+     * @param runner The simulation runner for SUMO communication
+     * @param trafficManager The traffic manager for junction-wide mode synchronization
+     * @param onBackPressed Callback invoked when back button is pressed
+     */
     public TrafficLightControlPanel(TrafficLight light, SimulationRunner runner, TrafficManager trafficManager,
             Runnable onBackPressed) {
         this.selectedLight = light;
@@ -48,6 +66,9 @@ public class TrafficLightControlPanel {
         updateButtonStates();
     }
 
+    /**
+     * Creates the control panel UI with traffic light info, state display, and control buttons.
+     */
     private void createUI() {
         panel = new VBox(12);
         panel.setAlignment(Pos.TOP_CENTER);
@@ -158,6 +179,10 @@ public class TrafficLightControlPanel {
                 autoBtn);
     }
 
+    /**
+     * Updates the current state display field with the traffic light's state.
+     * Highlights controlled links in square brackets for visual clarity.
+     */
     private void updateStateDisplay() {
         String state = selectedLight.getCurrentState();
         if (state != null && !state.isEmpty()) {
@@ -187,16 +212,24 @@ public class TrafficLightControlPanel {
         }
     }
 
+    /**
+     * Forces all signals of this traffic light to green state.
+     */
     private void forceGreen() {
         forceSignalState('G', "GREEN");
     }
 
+    /**
+     * Forces all signals of this traffic light to red state.
+     */
     private void forceRed() {
         forceSignalState('r', "RED");
     }
 
     /**
-     * Force all signals of this traffic light to a specific state
+     * Forces all signals of this traffic light to a specific state.
+     * Modifies only the controlled link indices while preserving other junction signals.
+     * 
      * @param stateChar The character to set ('G' for green, 'r' for red)
      * @param stateName Human-readable name for logging
      */
@@ -228,6 +261,11 @@ public class TrafficLightControlPanel {
         updateButtonStates();
     }
 
+    /**
+     * Applies a new traffic light state to SUMO and enters manual mode.
+     * 
+     * @param newState The complete junction state string to apply
+     */
     private void applyState(String newState) {
         try {
             TraaSAdapter adapter = runner.getAdapter();
@@ -255,6 +293,10 @@ public class TrafficLightControlPanel {
         }
     }
 
+    /**
+     * Returns the traffic light to automatic SUMO control.
+     * Synchronizes auto mode across all traffic lights at the junction.
+     */
     private void returnToAuto() {
         try {
             TraaSAdapter adapter = runner.getAdapter();
@@ -289,6 +331,10 @@ public class TrafficLightControlPanel {
         }
     }
 
+    /**
+     * Updates button visual states based on current traffic light signal states.
+     * Highlights active state (green or red) with bordered style.
+     */
     private void updateButtonStates() {
         if (isCurrentlyGreen()) {
             forceGreenBtn.setStyle(GREEN_ACTIVE);
@@ -302,16 +348,27 @@ public class TrafficLightControlPanel {
         }
     }
 
+    /**
+     * Checks if all controlled signals are currently in green state.
+     * 
+     * @return true if all signals are green ('G' or 'g')
+     */
     private boolean isCurrentlyGreen() {
         return isCurrentlyInState('G', 'g');
     }
 
+    /**
+     * Checks if all controlled signals are currently in red state.
+     * 
+     * @return true if all signals are red ('r' or 'R')
+     */
     private boolean isCurrentlyRed() {
         return isCurrentlyInState('r', 'R');
     }
 
     /**
-     * Check if all traffic light signals match any of the given states
+     * Checks if all traffic light signals match any of the given states.
+     * 
      * @param validStates Valid state characters (case-sensitive)
      * @return true if all links match one of the valid states
      */
@@ -336,6 +393,9 @@ public class TrafficLightControlPanel {
         return true;
     }
 
+    /**
+     * Enters manual control mode, updating UI to show manual status.
+     */
     private void enterManualMode() {
         statusLabel.setText("Mode: MANUAL");
         statusLabel.setStyle("-fx-text-fill: #FF9800; -fx-font-weight: bold; -fx-font-size: 14;");
@@ -343,8 +403,8 @@ public class TrafficLightControlPanel {
     }
     
     /**
-     * Update the UI to reflect the current mode state
-     * Called when opening the panel to show remembered mode
+     * Updates the UI to reflect the current mode state (manual or auto).
+     * Called when opening the panel to show the remembered mode from previous interactions.
      */
     private void updateModeDisplay() {
         if (selectedLight.isManualMode()) {
@@ -359,8 +419,11 @@ public class TrafficLightControlPanel {
     }
     
     /**
-     * Set manual/auto mode for ALL traffic lights at the same junction
-     * This keeps mode synchronized while allowing individual force control
+     * Sets manual or auto mode for ALL traffic lights at the same junction.
+     * This keeps mode synchronized across the junction while allowing individual signal control.
+     * 
+     * @param junctionId The junction ID
+     * @param manualMode true for manual mode, false for auto mode
      */
     private void setJunctionManualMode(String junctionId, boolean manualMode) {
         List<TrafficLight> allLights = trafficManager.getTrafficLights();
@@ -375,6 +438,11 @@ public class TrafficLightControlPanel {
                          " mode across " + count + " traffic lights at junction " + junctionId);
     }
 
+    /**
+     * Displays an error dialog with the specified message.
+     * 
+     * @param message The error message to display
+     */
     private void showError(String message) {
         javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
                 javafx.scene.control.Alert.AlertType.ERROR);
@@ -384,6 +452,11 @@ public class TrafficLightControlPanel {
         alert.showAndWait();
     }
 
+    /**
+     * Returns the panel's VBox container.
+     * 
+     * @return The panel VBox
+     */
     public VBox getPanel() {
         return panel;
     }

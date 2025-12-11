@@ -1,7 +1,28 @@
 import javafx.scene.canvas.Canvas;
 
 /**
- * Manages view transformations: zoom, pan, and coordinate system
+ * Manages view transformations including zoom, pan, and coordinate system scaling for the traffic network visualization.
+ * 
+ * <p>This class handles:
+ * <ul>
+ *   <li>Automatic fitting of the network to the canvas with proper margins</li>
+ *   <li>Interactive zooming (mouse wheel or buttons) while maintaining the zoom point</li>
+ *   <li>Interactive panning (mouse drag) for navigating the network</li>
+ *   <li>Updating the coordinate transform based on current view state</li>
+ * </ul>
+ * 
+ * <p>The view transformation consists of:
+ * <ul>
+ *   <li>Base scale: Calculated to fit the entire network in the canvas</li>
+ *   <li>User zoom: Interactive zoom level (1.0 = no zoom, >1.0 = zoomed in)</li>
+ *   <li>Base offset: Centers the network on the canvas</li>
+ *   <li>Pan offset: User's interactive panning adjustment</li>
+ * </ul>
+ * 
+ * @author M A T^2 H Team
+ * @version 2.0
+ * @see CoordinateTransform
+ * @see TrafficSimulatorApp
  */
 public class ViewManager {
     private Canvas canvas;
@@ -19,13 +40,23 @@ public class ViewManager {
     // Mouse drag state
     private double dragStartX, dragStartY, dragStartPanX, dragStartPanY;
 
+    /**
+     * Constructs a new view manager for the specified canvas and network.
+     * 
+     * @param canvas The canvas to manage the view for
+     * @param transform The coordinate transform to update
+     * @param network The network data containing bounds information
+     */
     public ViewManager(Canvas canvas, CoordinateTransform transform, NetworkParser.NetworkData network) {
         this.canvas = canvas;
         this.transform = transform;
         this.network = network;
     }
 
-    /** Fit entire network to canvas with margins and reset zoom/pan */
+    /**
+     * Resets the view to fit the entire network on the canvas with margins.
+     * Also resets user zoom and pan to default values.
+     */
     public void resetView() {
         double margin = 50;
         double netW = network.maxX - network.minX;
@@ -52,14 +83,27 @@ public class ViewManager {
         updateTransform();
     }
 
-    /** Zoom to screen center (for buttons) */
+    /**
+     * Zooms the view in or out, centered on the canvas center.
+     * Used by zoom buttons in the control panel.
+     * 
+     * @param factor The zoom factor (&gt;1.0 to zoom in, &lt;1.0 to zoom out)
+     */
     public void zoomToCenter(double factor) {
         double centerX = canvas.getWidth() / 2.0;
         double centerY = canvas.getHeight() / 2.0;
         zoomToPoint(factor, centerX, centerY);
     }
 
-    /** Zoom to specific point (for scroll wheel at cursor) */
+    /**
+     * Zooms the view in or out, centered on a specific screen point.
+     * Used by scroll wheel zooming to zoom toward/away from the cursor.
+     * Adjusts the pan to keep the world point under the cursor stationary.
+     * 
+     * @param factor The zoom factor (&gt;1.0 to zoom in, &lt;1.0 to zoom out)
+     * @param targetX The X coordinate in screen space to zoom toward
+     * @param targetY The Y coordinate in screen space to zoom toward
+     */
     public void zoomToPoint(double factor, double targetX, double targetY) {
         double worldX = transform.screenToWorldX(targetX);
         double worldY = transform.screenToWorldY(targetY);
@@ -79,7 +123,12 @@ public class ViewManager {
         updateTransform();
     }
 
-    /** Start panning operation */
+    /**
+     * Begins a panning operation by recording the initial mouse position and current pan offsets.
+     * 
+     * @param screenX The initial X coordinate in screen space
+     * @param screenY The initial Y coordinate in screen space
+     */
     public void startPan(double screenX, double screenY) {
         dragStartX = screenX;
         dragStartY = screenY;
@@ -87,24 +136,41 @@ public class ViewManager {
         dragStartPanY = panY;
     }
 
-    /** Update panning based on mouse drag */
+    /**
+     * Updates the pan offsets based on the current mouse position during a drag operation.
+     * 
+     * @param screenX The current X coordinate in screen space
+     * @param screenY The current Y coordinate in screen space
+     */
     public void updatePan(double screenX, double screenY) {
         panX = dragStartPanX + screenX - dragStartX;
         panY = dragStartPanY - (screenY - dragStartY);
         updateTransform();
     }
 
-    /** Update the coordinate transform with current view state */
+    /**
+     * Updates the coordinate transform with the current view state.
+     * Must be called after any change to scale, offset, zoom, or pan values.
+     */
     public void updateTransform() {
         transform.updateTransform(scale, offsetX, offsetY, zoom, panX, panY);
     }
 
-    /** Update transform reference (needed when canvas resizes) */
+    /**
+     * Sets a new coordinate transform reference.
+     * Needed when the canvas is resized and a new transform is created.
+     * 
+     * @param transform The new coordinate transform
+     */
     public void setTransform(CoordinateTransform transform) {
         this.transform = transform;
     }
 
-    /** Get current transform */
+    /**
+     * Returns the current coordinate transform.
+     * 
+     * @return The coordinate transform
+     */
     public CoordinateTransform getTransform() {
         return transform;
     }
