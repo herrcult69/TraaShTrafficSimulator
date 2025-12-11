@@ -77,7 +77,7 @@ netgenerate --rand \
     --rand.connectivity=0.6 \
     --tls.guess \
     --default.speed=$DEFAULT_SPEED \
-    --default.lanenumber=4 \
+    --default.lanenumber=2 \
     --junctions.join \
     --junctions.join-dist=10 \
     --output-file="$NETWORK_FILE"

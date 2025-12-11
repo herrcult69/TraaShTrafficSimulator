@@ -36,3 +36,13 @@ lib/javafx/
 resource/*.rou.xml
 resource/*.net.xml
 resource/*.sumocfg
+
+# Maven
+target/
+dependency-reduced-pom.xml
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+*.launch
