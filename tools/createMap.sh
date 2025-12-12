@@ -45,8 +45,8 @@ CONFIG_FILE="$RESOURCE_DIR/simulation.sumocfg"
 SIMULATION_TIME=3600  # 1 hour in seconds
 
 # Network parameters (RANDOM NETWORK)
-RAND_ITERATIONS=30      # Number of random network iterations
-RAND_MAX_DISTANCE=110   # Maximum edge length in meters
+RAND_ITERATIONS=30      # Number of random network iterations (set to at least 200 for stress testing)
+RAND_MAX_DISTANCE=110   # Maximum edge length in meters (set to at least 300 for stress testing)
 RAND_MIN_DISTANCE=50    # Minimum edge length in meters
 DEFAULT_SPEED=10.89      # m/s
 NUM_TRIES=150 

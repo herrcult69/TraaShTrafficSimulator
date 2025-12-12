@@ -8,8 +8,13 @@ import javafx.scene.control.Separator;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.application.Platform;
+import javafx.animation.AnimationTimer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
+import java.util.Timer;
+import java.util.TimerTask;
 
 /**
  * Panel for adding new vehicles to the simulation interactively.
@@ -42,6 +47,30 @@ public class VehicleAddPanel extends VBox {
     private Button clearRouteBtn;
     private Button confirmBtn;
     private Button cancelBtn;
+    
+    // Stress test components
+    /**Adjusting the value RAND_ITERATIONS and RAND_MAX_DISTANCE in createMap.sh
+     * to recommended values is advised for better stress test.
+     * Rerun the createMap.sh script after changing those values.
+     */
+    private Button stressTestBtn;
+    private TextField stressIntervalField;
+    private Label stressStatusLabel;
+    private Label stressStatsLabel;
+    private Label fpsLabel;
+    private Timer stressTestTimer;
+    private boolean stressTestRunning = false;
+    private int stressVehiclesAdded = 0;
+    private int stressVehiclesFailed = 0;
+    private long stressTestStartTime = 0;
+    private Random random = new Random();
+    private List<String> availableEdges = null;
+    
+    // FPS counter
+    private AnimationTimer fpsTimer;
+    private long[] frameTimes = new long[100];
+    private int frameTimeIndex = 0;
+    private boolean frameTimesArrayFull = false;
 
     // Route data
     private List<String> selectedRoute;
@@ -186,9 +215,58 @@ public class VehicleAddPanel extends VBox {
 
         cancelBtn = UIStyles.createStyledButton("✕ Cancel");
         cancelBtn.setOnAction(e -> {
+            stopStressTest();
             exitRouteSelectionMode();
             onCancel.run();
         });
+
+        // Stress Test Section
+        Separator stressSeparator = new Separator();
+        stressSeparator.setStyle("-fx-background-color: #415A77;");
+
+        Label stressTestTitle = new Label("STRESS TEST");
+        stressTestTitle.setStyle(UIStyles.TITLE_STYLE + " -fx-font-size: 14;");
+
+        Label stressDescLabel = new Label("Continuously inject vehicles with random routes");
+        stressDescLabel.setStyle(UIStyles.LABEL_SECONDARY_STYLE);
+        stressDescLabel.setWrapText(true);
+
+        Label intervalLabel = new Label("Interval (ms):");
+        intervalLabel.setStyle(UIStyles.LABEL_STYLE);
+
+        stressIntervalField = new TextField("500");
+        stressIntervalField.setPrefWidth(80);
+        stressIntervalField.setStyle(UIStyles.INPUT_FIELD_STYLE + " -fx-font-family: monospace;");
+        stressIntervalField.textProperty().addListener((obs, oldVal, newVal) -> {
+            if (!newVal.matches("\\d*")) {
+                stressIntervalField.setText(newVal.replaceAll("[^\\d]", ""));
+            }
+        });
+
+        HBox intervalBox = new HBox(10);
+        intervalBox.setAlignment(Pos.CENTER_LEFT);
+        intervalBox.getChildren().addAll(intervalLabel, stressIntervalField);
+
+        stressTestBtn = UIStyles.createStyledButton("Start Stress Test");
+        stressTestBtn.setPrefWidth(200);
+        stressTestBtn.setStyle("-fx-background-color: #E53935; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;");
+        stressTestBtn.setOnMouseEntered(e -> {
+            if (!stressTestRunning) stressTestBtn.setStyle("-fx-background-color: #FF5252; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;");
+        });
+        stressTestBtn.setOnMouseExited(e -> {
+            if (!stressTestRunning) stressTestBtn.setStyle("-fx-background-color: #E53935; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;");
+        });
+        stressTestBtn.setOnAction(e -> toggleStressTest());
+
+        stressStatusLabel = new Label("Ready to start");
+        stressStatusLabel.setStyle("-fx-text-fill: " + UIStyles.TEXT_SECONDARY + "; -fx-font-size: 11;");
+
+        stressStatsLabel = new Label("");
+        stressStatsLabel.setStyle("-fx-text-fill: " + UIStyles.TEXT_WARNING + "; -fx-font-size: 11; -fx-font-family: monospace;");
+        stressStatsLabel.setWrapText(true);
+
+        fpsLabel = new Label("");
+        fpsLabel.setStyle("-fx-text-fill: #00E676; -fx-font-size: 14; -fx-font-weight: bold; -fx-font-family: monospace;");
 
         // Info box with instructions
         VBox infoBox = createInfoBox();
@@ -202,7 +280,10 @@ public class VehicleAddPanel extends VBox {
                 startEdgeLabel, endEdgeLabel,
                 computedRouteLabel, routeListView,
                 routeButtons, statusLabel, new Separator(),
-                confirmBtn, cancelBtn, infoBox);
+                confirmBtn, cancelBtn,
+                stressSeparator, stressTestTitle, stressDescLabel,
+                intervalBox, stressTestBtn, stressStatusLabel, stressStatsLabel, fpsLabel,
+                infoBox);
     }
 
     /**
@@ -397,6 +478,298 @@ public class VehicleAddPanel extends VBox {
             showError("Route computation failed: " + e.getMessage()); // Only happen if SUMO connection issue or invalid edges
             e.printStackTrace();
         }
+    }
+
+/**
+ * An exaplaination of how the program's FPS works:
+ * 1 Frame = 1 complete redraw of the canvas (not 1 step of the simulation)
+ * Basically the FPS here is how many times per second the canvas is redrawn
+ * The JavaFX UI rendering usually runs at 60FPS on thread 1
+ * The SUMO Simulation runs at a fixed tick rate on thread 2
+ * The stress test adds vehicles continuously will applying load on both threads
+ * 1. More vehicles = more rendering required per frame 
+ * 5000 vehicle means 5000 drawings per frame
+ * Making the draw() method take longer to complete 1 total redraw
+ * Lower FPS as the draw() takes longer
+ * 2. More vehicles = more processing per simulation step
+ * Hard to notice unless extreme stress test
+ * Making each simulation step take longer to complete
+ * The simulation thread cannot complete a tick in desired time.
+ * The simulation lags behind real time.
+ * 3. Desynchronization between rendering and simulation:
+ * + Simulation faster than render
+ *   Rarely happens, require high vehicle count and low interval
+ *   The vehicles teleport of skip positions between frames
+ * + Render faster than simulation
+ *   Common when stress testing
+ *   The redraws show same vehicle positions multiple times
+ *   The FPS counter shows high FPS but simulation lags behind real time
+ */
+
+
+    /**
+     * Toggles the stress test on or off.
+     */
+    private void toggleStressTest() {
+        if (stressTestRunning) {
+            stopStressTest();
+        } else {
+            startStressTest();
+        }
+    }
+
+    /**
+     * Starts the continuous stress test with random vehicle injection.
+     */
+    private void startStressTest() {
+        TraaSAdapter adapter = runner.getAdapter();
+        if (adapter == null) {
+            updateStressStatus("SUMO not connected! Start simulation first.", UIStyles.TEXT_ERROR);
+            return;
+        }
+
+        // Get interval
+        String intervalText = stressIntervalField.getText().trim();
+        if (intervalText.isEmpty()) intervalText = "100";
+        int interval;
+        try {
+            interval = Integer.parseInt(intervalText);
+        } catch (NumberFormatException e) {
+            updateStressStatus("Invalid interval!", UIStyles.TEXT_ERROR);
+            return;
+        }
+
+        // Load available edges for random routing
+        try {
+            availableEdges = adapter.getEdgeIds();
+            // Filter out internal edges (those starting with ':')
+            availableEdges = availableEdges.stream()
+                .filter(edge -> !edge.startsWith(":"))
+                .collect(java.util.stream.Collectors.toList());
+            
+            if (availableEdges.size() < 2) {
+                updateStressStatus("Not enough edges for routing!", UIStyles.TEXT_ERROR);
+                return;
+            }
+        } catch (Exception e) {
+            updateStressStatus("Failed to get edges: " + e.getMessage(), UIStyles.TEXT_ERROR);
+            return;
+        }
+
+        // Resume simulation if paused
+        if (runner.isPaused()) {
+            runner.resume();
+        }
+
+        // Initialize stress test state
+        stressTestRunning = true;
+        stressVehiclesAdded = 0;
+        stressVehiclesFailed = 0;
+        stressTestStartTime = System.currentTimeMillis();
+
+        // Update UI
+        stressTestBtn.setText("Stop Stress Test");
+        stressTestBtn.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;");
+        stressTestBtn.setOnMouseEntered(e -> stressTestBtn.setStyle("-fx-background-color: #66BB6A; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;"));
+        stressTestBtn.setOnMouseExited(e -> stressTestBtn.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;"));
+        updateStressStatus("Stress test running...", UIStyles.TEXT_SUCCESS);
+
+        // Disable other controls during stress test
+        confirmBtn.setDisable(true);
+        addEdgeBtn.setDisable(true);
+        stressIntervalField.setDisable(true);
+
+        // Start FPS counter
+        startFpsCounter();
+
+        // Start timer for continuous injection
+        stressTestTimer = new Timer("StressTestTimer", true);
+        stressTestTimer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                if (stressTestRunning) {
+                    injectRandomVehicle();
+                }
+            }
+        }, 0, interval);
+
+        System.out.println("Stress test started with interval: " + interval + "ms");
+    }
+
+    /**
+     * Stops the stress test and displays final statistics.
+     */
+    private void stopStressTest() {
+        if (!stressTestRunning) return;
+
+        stressTestRunning = false;
+
+        // Stop timer
+        if (stressTestTimer != null) {
+            stressTestTimer.cancel();
+            stressTestTimer = null;
+        }
+
+        // Stop FPS counter
+        stopFpsCounter();
+
+        // Calculate statistics
+        long duration = System.currentTimeMillis() - stressTestStartTime;
+        double durationSec = duration / 1000.0;
+        double rate = durationSec > 0 ? stressVehiclesAdded / durationSec : 0;
+
+        // Update UI on JavaFX thread
+        Platform.runLater(() -> {
+            stressTestBtn.setText("Start Stress Test");
+            stressTestBtn.setStyle("-fx-background-color: #E53935; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;");
+            stressTestBtn.setOnMouseEntered(e -> stressTestBtn.setStyle("-fx-background-color: #FF5252; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;"));
+            stressTestBtn.setOnMouseExited(e -> stressTestBtn.setStyle("-fx-background-color: #E53935; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;"));
+
+            updateStressStatus("Stress test stopped", UIStyles.TEXT_WARNING);
+            stressStatsLabel.setText(String.format(
+                "Results: %d added, %d failed\nDuration: %.1fs | Rate: %.1f veh/s",
+                stressVehiclesAdded, stressVehiclesFailed, durationSec, rate));
+            stressStatsLabel.setStyle("-fx-text-fill: " + UIStyles.TEXT_SUCCESS + "; -fx-font-size: 11; -fx-font-family: monospace;");
+
+            // Re-enable controls
+            confirmBtn.setDisable(false);
+            addEdgeBtn.setDisable(false);
+            stressIntervalField.setDisable(false);
+        });
+
+        System.out.println(String.format("Stress test stopped. Added: %d, Failed: %d, Duration: %.1fs, Rate: %.1f veh/s",
+            stressVehiclesAdded, stressVehiclesFailed, durationSec, rate));
+    }
+
+    /**
+     * Injects a single vehicle with a random route.
+     * Called periodically by the stress test timer.
+     */
+    private void injectRandomVehicle() {
+        try {
+            TraaSAdapter adapter = runner.getAdapter();
+            if (adapter == null || availableEdges == null || availableEdges.size() < 2) {
+                Platform.runLater(() -> stopStressTest());
+                return;
+            }
+
+            // Select random start and end edges
+            String fromEdge = availableEdges.get(random.nextInt(availableEdges.size()));
+            String toEdge;
+            do {
+                toEdge = availableEdges.get(random.nextInt(availableEdges.size()));
+            } while (toEdge.equals(fromEdge));
+
+            // Find route between edges
+            List<String> route = adapter.findRoute(fromEdge, toEdge);
+            if (route == null || route.isEmpty()) {
+                stressVehiclesFailed++;
+                updateStressStats();
+                return;
+            }
+
+            // Generate unique vehicle ID
+            String vehicleType = VEHICLE_TYPES[random.nextInt(VEHICLE_TYPES.length)];
+            String vehicleClass = VEHICLE_CLASSES[java.util.Arrays.asList(VEHICLE_TYPES).indexOf(vehicleType)];
+            String vehicleId = "stress_" + vehicleType + "_" + System.currentTimeMillis() + "_" + random.nextInt(10000);
+            String routeId = "route_" + vehicleId;
+
+            // Add route and vehicle
+            adapter.addRoute(routeId, route);
+            adapter.addVehicle(vehicleId, routeId, vehicleClass);
+
+            stressVehiclesAdded++;
+            updateStressStats();
+
+        } catch (Exception e) {
+            stressVehiclesFailed++;
+            updateStressStats();
+            // Don't spam console with errors
+            if (stressVehiclesFailed <= 5) {
+                System.err.println("Stress test injection error: " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Updates the stress test statistics display.
+     */
+    private void updateStressStats() {
+        if (!stressTestRunning) return;
+
+        long elapsed = System.currentTimeMillis() - stressTestStartTime;
+        double elapsedSec = elapsed / 1000.0;
+        double rate = elapsedSec > 0 ? stressVehiclesAdded / elapsedSec : 0;
+
+        Platform.runLater(() -> {
+            stressStatsLabel.setText(String.format(
+                "Added: %d | Failed: %d | Rate: %.1f veh/s",
+                stressVehiclesAdded, stressVehiclesFailed, rate));
+        });
+    }
+
+    /**
+     * Updates the stress test status label.
+     */
+    private void updateStressStatus(String text, String color) {
+        Platform.runLater(() -> {
+            stressStatusLabel.setText(text);
+            stressStatusLabel.setStyle("-fx-text-fill: " + color + "; -fx-font-size: 11;");
+        });
+    }
+
+    /**
+     * Starts the FPS counter using AnimationTimer.
+     * Tracks frame render times to calculate real-time FPS.
+     */
+    private void startFpsCounter() {
+        frameTimeIndex = 0;
+        frameTimesArrayFull = false;
+        
+        fpsTimer = new AnimationTimer() {
+            @Override
+            public void handle(long now) {
+                long oldFrameTime = frameTimes[frameTimeIndex];
+                frameTimes[frameTimeIndex] = now;
+                frameTimeIndex = (frameTimeIndex + 1) % frameTimes.length;
+                
+                if (frameTimeIndex == 0) {
+                    frameTimesArrayFull = true;
+                }
+                
+                if (frameTimesArrayFull) {
+                    long elapsedNanos = now - oldFrameTime;
+                    long elapsedNanosPerFrame = elapsedNanos / frameTimes.length;
+                    double fps = 1_000_000_000.0 / elapsedNanosPerFrame;
+                    
+                    // Color code FPS: green > 30, yellow 15-30, red < 15
+                    String color;
+                    if (fps >= 30) {
+                        color = "#00E676"; // Green
+                    } else if (fps >= 15) {
+                        color = "#FFA726"; // Orange
+                    } else {
+                        color = "#EF5350"; // Red
+                    }
+                    
+                    fpsLabel.setText(String.format("FPS: %.1f", fps));
+                    fpsLabel.setStyle("-fx-text-fill: " + color + "; -fx-font-size: 14; -fx-font-weight: bold; -fx-font-family: monospace;");
+                }
+            }
+        };
+        fpsTimer.start();
+        fpsLabel.setText("FPS: measuring...");
+    }
+
+    /**
+     * Stops the FPS counter.
+     */
+    private void stopFpsCounter() {
+        if (fpsTimer != null) {
+            fpsTimer.stop();
+            fpsTimer = null;
+        }
+        // Keep the last FPS value visible
     }
 
     /**
