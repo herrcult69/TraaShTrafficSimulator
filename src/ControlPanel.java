@@ -81,6 +81,9 @@ public class ControlPanel {
         // Add view controls
         addViewControls();
 
+        // Add separator
+        controlPanel.getChildren().add(new Separator());
+
         // Add dashboard
         controlPanel.getChildren().add(dashboard);
 
