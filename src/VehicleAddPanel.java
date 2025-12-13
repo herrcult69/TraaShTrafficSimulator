@@ -530,7 +530,7 @@ public class VehicleAddPanel extends VBox {
 
         // Get interval
         String intervalText = stressIntervalField.getText().trim();
-        if (intervalText.isEmpty()) intervalText = "100";
+        if (intervalText.isEmpty()) intervalText = "500";
         int interval;
         try {
             interval = Integer.parseInt(intervalText);
@@ -839,7 +839,7 @@ public class VehicleAddPanel extends VBox {
             // Notify that vehicle was added
             if (onVehicleAdded != null) onVehicleAdded.run();
 
-            System.out.println("Added vehicle: " + vehicleId + " with route: " + selectedRoute);
+            // System.out.println("Added vehicle: " + vehicleId + " with route: " + selectedRoute);
 
         } catch (Exception e) {
             showError("Failed to add vehicle: " + e.getMessage()); // This might happne if having conflicting vehicle IDs or route selection issues
