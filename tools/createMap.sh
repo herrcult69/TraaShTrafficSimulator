@@ -39,13 +39,13 @@ fi
 # Make sure SUMO tools are on PYTHONPATH so randomTrips can import sumolib/traci
 export PYTHONPATH="$SUMO_HOME/tools:${PYTHONPATH:-}"
 
-RESOURCE_DIR="resource"
+RESOURCE_DIR="SumoConfig"
 NETWORK_FILE="$RESOURCE_DIR/network.net.xml"
 CONFIG_FILE="$RESOURCE_DIR/simulation.sumocfg"
 SIMULATION_TIME=3600  # 1 hour in seconds
 
 # Network parameters (RANDOM NETWORK)
-RAND_ITERATIONS=30      # Number of random network iterations (set to at least 200 for stress testing)
+RAND_ITERATIONS=50     # Number of random network iterations (set to at least 200 for stress testing)
 RAND_MAX_DISTANCE=110   # Maximum edge length in meters (set to at least 300 for stress testing)
 RAND_MIN_DISTANCE=50    # Minimum edge length in meters
 DEFAULT_SPEED=10.89      # m/s
@@ -77,7 +77,7 @@ netgenerate --rand \
     --rand.connectivity=0.6 \
     --tls.guess \
     --default.speed=$DEFAULT_SPEED \
-    --default.lanenumber=2 \
+    --default.lanenumber=3 \
     --junctions.join \
     --junctions.join-dist=10 \
     --output-file="$NETWORK_FILE"
