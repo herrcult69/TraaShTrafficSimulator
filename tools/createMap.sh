@@ -39,23 +39,24 @@ fi
 # Make sure SUMO tools are on PYTHONPATH so randomTrips can import sumolib/traci
 export PYTHONPATH="$SUMO_HOME/tools:${PYTHONPATH:-}"
 
-RESOURCE_DIR="resource"
+RESOURCE_DIR="SumoConfig"
 NETWORK_FILE="$RESOURCE_DIR/network.net.xml"
 CONFIG_FILE="$RESOURCE_DIR/simulation.sumocfg"
 SIMULATION_TIME=3600  # 1 hour in seconds
 
 # Network parameters (RANDOM NETWORK)
-RAND_ITERATIONS=15      # Number of random network iterations
-RAND_MAX_DISTANCE=120   # Maximum edge length in meters
-RAND_MIN_DISTANCE=70    # Minimum edge length in meters
+RAND_ITERATIONS=50     # Number of random network iterations (set to at least 200 for stress testing)
+RAND_MAX_DISTANCE=110   # Maximum edge length in meters (set to at least 300 for stress testing)
+RAND_MIN_DISTANCE=50    # Minimum edge length in meters
 DEFAULT_SPEED=10.89      # m/s
-NUM_TRIES=200 
+NUM_TRIES=150 
 # Traffic density (seconds between vehicles)
-CAR_PERIOD=100    
-TRUCK_PERIOD=6000    
-MOTORCYCLE_PERIOD=1000 
-BUS_PERIOD=650       
-EMERGENCY_PERIOD=900 
+# Lower values = more vehicles spawned
+CAR_PERIOD=5          # Cars every 5 seconds (was 100)
+TRUCK_PERIOD=40       # Trucks every 40 seconds (was 6000)
+MOTORCYCLE_PERIOD=15  # Motorcycles every 15 seconds (was 1000)
+BUS_PERIOD=30         # Buses every 30 seconds (was 650)
+EMERGENCY_PERIOD=60   # Emergency vehicles every 60 seconds (was 900) 
 
 # Create resource directory
 
@@ -73,10 +74,10 @@ netgenerate --rand \
     --rand.num-tries=$NUM_TRIES \
     --rand.max-distance=$RAND_MAX_DISTANCE \
     --rand.min-distance=$RAND_MIN_DISTANCE \
-    --rand.connectivity=0.8 \
+    --rand.connectivity=0.6 \
     --tls.guess \
     --default.speed=$DEFAULT_SPEED \
-    --default.lanenumber=2 \
+    --default.lanenumber=3 \
     --junctions.join \
     --junctions.join-dist=10 \
     --output-file="$NETWORK_FILE"

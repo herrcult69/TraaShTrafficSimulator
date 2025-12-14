@@ -1,19 +1,53 @@
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
-import javafx.geometry.Rectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Represents a directed road edge (segment) between two junctions.
+ * 
+ * <p>An edge is a one-way road segment containing multiple lanes. Key features:
+ * <ul>
+ *   <li>Directional: Each physical road typically has two edges (one per direction)</li>
+ *   <li>Contains 1+ lanes positioned perpendicular to the edge centerline</li>
+ *   <li>Clipped at junction boundaries to avoid visual overlaps</li>
+ *   <li>Rendered with proper lane markings (center line and dividers)</li>
+ * </ul>
+ * 
+ * <p>Rendering includes:
+ * <ul>
+ *   <li>Road surface as a thick line</li>
+ *   <li>Yellow center line (drawn only for positive edge IDs to avoid duplication)</li>
+ *   <li>White dashed lane dividers between lanes</li>
+ *   <li>Proper clipping at source and destination junctions</li>
+ * </ul>
+ *
+ * @author M A T^2 H Team
+ * @version 2.0 
+ * @see Lane
+ * @see Junction
+ * @see NetworkParser.Edge
+ * @see TrafficManager
+ */
 public class Edge {
     private NetworkParser.Edge networkEdge;
-    private double fromX, fromY, toX, toY;  // World coordinates
+    private double fromX, fromY, toX, toY; // World coordinates
     private Junction fromJunction;
     private Junction toJunction;
     private List<Lane> lanes;
-    private Rectangle2D bounds;
-    private static final double JUNCTION_MARGIN = 0.0; // meters
-    
-    public Edge(NetworkParser.Edge networkEdge, NetworkParser.Junction from, NetworkParser.Junction to, Junction fromJunc, Junction toJunc) {
+
+    /**
+     * Constructs a new visual Edge from parsed network data.
+     * Automatically creates visual Lane objects for each lane in the network edge.
+     * 
+     * @param networkEdge The parsed edge data from SUMO network file
+     * @param from The source junction network data
+     * @param to The destination junction network data
+     * @param fromJunc The visual source junction object
+     * @param toJunc The visual destination junction object
+     */
+    public Edge(NetworkParser.Edge networkEdge, NetworkParser.Junction from, NetworkParser.Junction to,
+            Junction fromJunc, Junction toJunc) {
         this.networkEdge = networkEdge;
         this.fromX = from.x;
         this.fromY = from.y;
@@ -22,49 +56,45 @@ public class Edge {
         this.fromJunction = fromJunc;
         this.toJunction = toJunc;
         this.lanes = new ArrayList<>();
-        
+
         createLanes();
-        calculateBounds();
     }
-    
+
+    /**
+     * Creates visual Lane objects for all lanes in this edge.
+     * Calculates each lane's offset from the edge centerline based on cumulative lane widths.
+     */
     private void createLanes() {
-        int numLanes = networkEdge.lanes.size();
-        double laneWidth = 3.2; // Standard SUMO lane width
+        // Create lanes directly from SUMO network data
+        // SUMO already handles directionality with positive/negative edge IDs
+        // Each edge contains only the lanes for that specific direction
         
-        // Create lanes for both directions (bidirectional road)
-        // Direction 1 (negative offsets)
-        for (int i = 0; i < numLanes; i++) {
-            double offset = -laneWidth * (i + 0.5);
-            String laneId = networkEdge.id + "_dir1_lane" + i;
+        double cumulativeOffset = 0;
+        for (int i = 0; i < networkEdge.lanes.size(); i++) {
+            NetworkParser.Lane sumoLane = networkEdge.lanes.get(i);
+            double laneWidth = sumoLane.width;
+            
+            // Calculate offset from edge centerline
+            // Lanes are ordered from right to left in SUMO
+            double offset = cumulativeOffset + laneWidth / 2.0;
+            
+            // Use SUMO's actual lane ID
+            String laneId = sumoLane.id;
             Lane lane = new Lane(laneId, this, laneWidth, i, offset);
             lanes.add(lane);
-        }
-        
-        // Direction 2 (positive offsets)
-        for (int i = 0; i < numLanes; i++) {
-            double offset = laneWidth * (i + 0.5);
-            String laneId = networkEdge.id + "_dir2_lane" + i;
-            Lane lane = new Lane(laneId, this, laneWidth, i + numLanes, offset);
-            lanes.add(lane);
+            cumulativeOffset += laneWidth;
         }
     }
-    
-    private void calculateBounds() {
-        double totalWidth = networkEdge.getTotalWidth() * 2; // Bidirectional
-        double minX = Math.min(fromX, toX) - totalWidth/2;
-        double maxX = Math.max(fromX, toX) + totalWidth/2;
-        double minY = Math.min(fromY, toY) - totalWidth/2;
-        double maxY = Math.max(fromY, toY) + totalWidth/2;
-        
-        bounds = new Rectangle2D(minX, minY, maxX - minX, maxY - minY);
-    }
-    
-    public boolean contains(double screenX, double screenY, CoordinateTransform transform) {
-        double worldX = transform.screenToWorldX(screenX);
-        double worldY = transform.screenToWorldY(screenY);
-        return bounds.contains(worldX, worldY);
-    }
-    
+
+    /**
+     * Returns the lane at the specified screen coordinates, or null if none.
+     * Used for hit detection when clicking on the edge.
+     * 
+     * @param screenX The X coordinate in screen space
+     * @param screenY The Y coordinate in screen space
+     * @param transform The coordinate transformation
+     * @return The lane at that position, or null
+     */
     public Lane getLaneAt(double screenX, double screenY, CoordinateTransform transform) {
         for (Lane lane : lanes) {
             if (lane.contains(screenX, screenY, transform)) {
@@ -73,127 +103,265 @@ public class Edge {
         }
         return null;
     }
-    
+
+    /**
+     * Renders the edge including road surface and lane markings.
+     * <p>
+     * The rendering process:
+     * <ol>
+     *   <li>Calculates junction-clipped endpoints</li>
+     *   <li>Draws road surface as a thick line</li>
+     *   <li>Draws yellow center line (one direction only)</li>
+     *   <li>Draws white dashed lane dividers</li>
+     * </ol>
+     * 
+     * @param g The graphics context to draw on
+     * @param transform The coordinate transformation
+     */
     public void render(GraphicsContext g, CoordinateTransform transform) {
         // Calculate edge direction
         double dx = toX - fromX;
         double dy = toY - fromY;
         double length = Math.sqrt(dx * dx + dy * dy);
-        
-        if (length < 0.001) return;
-        
+
+        if (length < 0.001)
+            return;
+
         // Normalize direction
         double dirX = dx / length;
         double dirY = dy / length;
-    
+
         // Get junction radii with smaller margin for smooth connection
-        double fromRadius = fromJunction != null ? 
-            fromJunction.getRadiusInDirection(dirX, dirY) + JUNCTION_MARGIN : 0.0;
-        double toRadius = toJunction != null ? 
-            toJunction.getRadiusInDirection(-dirX, -dirY) + JUNCTION_MARGIN : 0.0;
-        
+        double fromRadius = fromJunction != null ? fromJunction.getRadiusInDirection(dirX, dirY) : 0;
+        double toRadius = toJunction != null ? toJunction.getRadiusInDirection(-dirX, -dirY) : 0;
+
         // Clip edge at junction boundaries
         double startX = fromX + fromRadius * dirX;
         double startY = fromY + fromRadius * dirY;
         double endX = toX - toRadius * dirX;
         double endY = toY - toRadius * dirY;
-        
+
         // Check if edge is too short after clipping
         double clippedLength = length - fromRadius - toRadius;
-        if (clippedLength < 1.0) return;
-        
+        if (clippedLength < 1.0)
+            return;
+
         double x1 = transform.worldToScreenX(startX);
         double y1 = transform.worldToScreenY(startY);
         double x2 = transform.worldToScreenX(endX);
         double y2 = transform.worldToScreenY(endY);
-        
+
         // Skip tiny edges
-        if (Math.sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1)) < 1) return;
-        
-        double totalWidth = networkEdge.getTotalWidth() * 2; // Bidirectional
+        if (Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1)) < 1)
+            return;
+
+        // Calculate perpendicular vector (reuse clippedLength and direction)
+        double perpX = dy / length;
+        double perpY = -dx / length;
+
+        // Calculate actual width from lanes (one direction only)
+        double totalWidth = networkEdge.getTotalWidth();
         double screenWidth = transform.worldToScreenSize(totalWidth);
         
-        // Draw road surface (similar as junctions)
+        // Offset the edge centerline by half its width to position it correctly
+        double halfWidth = totalWidth / 2.0;
+        double offsetStartX = startX + halfWidth * perpX;
+        double offsetStartY = startY + halfWidth * perpY;
+        double offsetEndX = endX + halfWidth * perpX;
+        double offsetEndY = endY + halfWidth * perpY;
+
+        // Draw road surface at the offset position
         g.setStroke(Color.rgb(55, 60, 65));
         g.setLineWidth(screenWidth);
-        g.strokeLine(x1, y1, x2, y2);
-        
+        g.strokeLine(
+            transform.worldToScreenX(offsetStartX), 
+            transform.worldToScreenY(offsetStartY),
+            transform.worldToScreenX(offsetEndX), 
+            transform.worldToScreenY(offsetEndY)
+        );
+
         // Draw lane markings using clipped coordinates
         renderLaneMarkings(g, transform, startX, startY, endX, endY);
     }
-    
+
     private void renderLaneMarkings(GraphicsContext g, CoordinateTransform transform,
-                                    double startX, double startY, double endX, double endY) {
+            double startX, double startY, double endX, double endY) {
         double dx = endX - startX;
         double dy = endY - startY;
         double length = Math.sqrt(dx * dx + dy * dy);
-        if (length < 0.001) return;
-        
+        if (length < 0.001)
+            return;
+
         double perpX = dy / length;
         double perpY = -dx / length;
-        
+
         int numLanes = networkEdge.lanes.size();
-        double laneWidth = 3.2;
-        double halfWidth = numLanes * laneWidth;
-        
-        // Road edges (gray)
-        g.setStroke(Color.rgb(180, 180, 180));
-        g.setLineWidth(Math.max(2, transform.worldToScreenSize(0.15)));
-        
-        double edgeX1 = startX - halfWidth * perpX;
-        double edgeY1 = startY - halfWidth * perpY;
-        double edgeX2 = endX - halfWidth * perpX;
-        double edgeY2 = endY - halfWidth * perpY;
-        g.strokeLine(transform.worldToScreenX(edgeX1), transform.worldToScreenY(edgeY1),
-                     transform.worldToScreenX(edgeX2), transform.worldToScreenY(edgeY2));
-        
-        edgeX1 = startX + halfWidth * perpX;
-        edgeY1 = startY + halfWidth * perpY;
-        edgeX2 = endX + halfWidth * perpX;
-        edgeY2 = endY + halfWidth * perpY;
-        g.strokeLine(transform.worldToScreenX(edgeX1), transform.worldToScreenY(edgeY1),
-                     transform.worldToScreenX(edgeX2), transform.worldToScreenY(edgeY2));
-        
-        // Center line (yellow)
-        g.setStroke(Color.rgb(255, 220, 50));
-        g.setLineWidth(Math.max(2, transform.worldToScreenSize(0.15)));
-        g.strokeLine(transform.worldToScreenX(startX), transform.worldToScreenY(startY),
-                     transform.worldToScreenX(endX), transform.worldToScreenY(endY));
-        
-        // Lane dividers (white dashed)
-        g.setStroke(Color.WHITE);
-        g.setLineWidth(Math.max(1.5, transform.worldToScreenSize(0.12)));
-        double dashSize = Math.max(8, transform.worldToScreenSize(3));
-        double gapSize = Math.max(6, transform.worldToScreenSize(2));
-        g.setLineDashes(dashSize, gapSize);
-        
-        for (int i = 1; i < numLanes; i++) {
-            double offset = laneWidth * i;
-            // Left side
-            double divX1 = startX - offset * perpX;
-            double divY1 = startY - offset * perpY;
-            double divX2 = endX - offset * perpX;
-            double divY2 = endY - offset * perpY;
-            g.strokeLine(transform.worldToScreenX(divX1), transform.worldToScreenY(divY1),
-                         transform.worldToScreenX(divX2), transform.worldToScreenY(divY2));
-            
-            // Right side
-            divX1 = startX + offset * perpX;
-            divY1 = startY + offset * perpY;
-            divX2 = endX + offset * perpX;
-            divY2 = endY + offset * perpY;
-            g.strokeLine(transform.worldToScreenX(divX1), transform.worldToScreenY(divY1),
-                         transform.worldToScreenX(divX2), transform.worldToScreenY(divY2));
+
+        // Draw center line (yellow) - only for positive edge IDs to avoid double drawing
+        if (!networkEdge.id.startsWith("-")) {
+            g.setStroke(Color.rgb(255, 220, 50));
+            g.setLineWidth(Math.max(1, transform.worldToScreenSize(0.5)));
+            g.strokeLine(transform.worldToScreenX(startX), transform.worldToScreenY(startY),
+                    transform.worldToScreenX(endX), transform.worldToScreenY(endY));
         }
-        g.setLineDashes();
+
+        // Only draw lane dividers if there are multiple lanes
+        if (numLanes > 1) {
+            g.setStroke(Color.WHITE);
+            g.setLineWidth(Math.max(.5, transform.worldToScreenSize(0.12)));
+            double dashSize = Math.max(2, transform.worldToScreenSize(3));
+            double gapSize = Math.max(1, transform.worldToScreenSize(2));
+            g.setLineDashes(dashSize, gapSize);
+
+            // Draw dividers between lanes
+            double cumulativeOffset = 0;
+            for (int i = 0; i < numLanes - 1; i++) {
+                cumulativeOffset += networkEdge.lanes.get(i).width;
+
+                double divX1 = startX + cumulativeOffset * perpX;
+                double divY1 = startY + cumulativeOffset * perpY;
+                double divX2 = endX + cumulativeOffset * perpX;
+                double divY2 = endY + cumulativeOffset * perpY;
+                g.strokeLine(transform.worldToScreenX(divX1), transform.worldToScreenY(divY1),
+                        transform.worldToScreenX(divX2), transform.worldToScreenY(divY2));
+            }
+            g.setLineDashes();
+        }
     }
-    
+
     // Getters
-    public NetworkParser.Edge getNetworkEdge() { return networkEdge; }
-    public List<Lane> getLanes() { return lanes; }
-    public double getFromX() { return fromX; }
-    public double getFromY() { return fromY; }
-    public double getToX() { return toX; }
-    public double getToY() { return toY; }
-    public Rectangle2D getBounds() { return bounds; }
+    /**
+     * Returns the original parsed network edge data.
+     * 
+     * @return The NetworkParser.Edge data
+     */
+    public NetworkParser.Edge getNetworkEdge() {
+        return networkEdge;
+    }
+
+    /**
+     * Returns the list of visual lanes in this edge.
+     * 
+     * @return List of Lane objects
+     */
+    public List<Lane> getLanes() {
+        return lanes;
+    }
+
+    /**
+     * Returns the source junction X coordinate in world space.
+     * 
+     * @return The X coordinate in meters
+     */
+    public double getFromX() {
+        return fromX;
+    }
+
+    /**
+     * Returns the source junction Y coordinate in world space.
+     * 
+     * @return The Y coordinate in meters
+     */
+    public double getFromY() {
+        return fromY;
+    }
+
+    /**
+     * Returns the destination junction X coordinate in world space.
+     * 
+     * @return The X coordinate in meters
+     */
+    public double getToX() {
+        return toX;
+    }
+
+    /**
+     * Returns the destination junction Y coordinate in world space.
+     * 
+     * @return The Y coordinate in meters
+     */
+    public double getToY() {
+        return toY;
+    }
+
+    /**
+     * Returns the source junction visual object.
+     * 
+     * @return The source Junction
+     */
+    public Junction getFromJunction() {
+        return fromJunction;
+    }
+
+    /**
+     * Returns the destination junction visual object.
+     * 
+     * @return The destination Junction
+     */
+    public Junction getToJunction() {
+        return toJunction;
+    }
+
+    /**
+     * Highlights this edge with a colored overlay.
+     * Used during route selection to show selected edges.
+     * 
+     * @param g The graphics context to draw on
+     * @param transform The coordinate transformation
+     * @param color The highlight color
+     */
+    public void highlight(GraphicsContext g, CoordinateTransform transform, Color color) {
+        // Calculate edge direction
+        double dx = toX - fromX;
+        double dy = toY - fromY;
+        double length = Math.sqrt(dx * dx + dy * dy);
+
+        if (length < 0.001)
+            return;
+
+        // Normalize direction
+        double dirX = dx / length;
+        double dirY = dy / length;
+
+        // Get junction radii
+        double fromRadius = fromJunction != null ? fromJunction.getRadiusInDirection(dirX, dirY) : 0;
+        double toRadius = toJunction != null ? toJunction.getRadiusInDirection(-dirX, -dirY) : 0;
+
+        // Clip edge at junction boundaries (avoid highlighting over junctions)
+        double startX = fromX + fromRadius * dirX;
+        double startY = fromY + fromRadius * dirY;
+        double endX = toX - toRadius * dirX;
+        double endY = toY - toRadius * dirY;
+
+        // Calculate perpendicular vector for offset
+        double perpX = dy / length;
+        double perpY = -dx / length;
+
+        // Apply same offset as render() - position edge on its side of the road
+        double totalWidth = networkEdge.getTotalWidth();
+        double halfWidth = totalWidth / 2.0;
+        double offsetStartX = startX + halfWidth * perpX;
+        double offsetStartY = startY + halfWidth * perpY;
+        double offsetEndX = endX + halfWidth * perpX;
+        double offsetEndY = endY + halfWidth * perpY;
+
+        double x1 = transform.worldToScreenX(offsetStartX);
+        double y1 = transform.worldToScreenY(offsetStartY);
+        double x2 = transform.worldToScreenX(offsetEndX);
+        double y2 = transform.worldToScreenY(offsetEndY);
+
+        double screenWidth = transform.worldToScreenSize(totalWidth);
+
+        // Draw highlighted overlay
+        g.setStroke(Color.color(color.getRed(), color.getGreen(), color.getBlue(), 0.7));
+        g.setLineWidth(screenWidth + 4);
+        g.setLineDashes(10, 5);
+        g.strokeLine(x1, y1, x2, y2);
+        g.setLineDashes();
+
+        // Draw solid inner highlight
+        g.setStroke(Color.color(color.getRed(), color.getGreen(), color.getBlue(), 0.4));
+        g.setLineWidth(screenWidth);
+        g.strokeLine(x1, y1, x2, y2);
+    }
 }
