@@ -32,6 +32,10 @@ public class TrafficLightControlPanel {
     private TrafficManager trafficManager;
     private Runnable onBackPressed;
 
+    // Track manual phase duration set by users
+    private Double customPhaseDuration = null;
+    private int customPhaseIndex = -1;
+
     // UI elements
     private Label statusLabel;
     private Button forceGreenBtn;
@@ -534,7 +538,182 @@ public class TrafficLightControlPanel {
                 if (wasRunning)runner.resume();
                 return;
             }
+
+            String junctionId = selectedLight.getJunctionId();
+
+            // Get current phase information
+            int currentPhase = adapter.getCurrentPhase(junctionId);
+            double currentDuration = adapter.getCurrentPhaseDuration(junctionId);
+
+            // Create dialog
+            javafx.stage.Stage dialog = new javafx.stage.Stage();
+            dialog.setTitle("Phase Timing Editor - " + junctionId);
+            dialog.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+
+            VBox dialogContent = new VBox(15);
+            dialogContent.setPadding(new Insets(20));
+            dialogContent.setStyle("-fx-background-color: " + UIStyles.BG_PRIMARY + ";");
+
+            // Title
+            Label titleLabel = new Label("EDIT PHASE TIMING");
+            titleLabel.setStyle(UIStyles.TITLE_STYLE);
+
+            // Info
+            Label infoLabel = new Label("Simulation is paused. Adjust the current phase duration.");
+            infoLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-size: 11;");
+            infoLabel.setWrapText(true);
+
+            Label noteLabel = new Label("Note: This adjusts the duration of the current active phase.");
+            noteLabel.setStyle("-fx-text-fill: #778DA9; -fx-font-size: 10;");
+            noteLabel.setWrapText(true);
+
+            // Current phase info box
+            VBox phaseBox = new VBox(10);
+            phaseBox.setStyle("-fx-background-color: #1e1e1e; -fx-padding: 20; -fx-background-radius: 5;");
+            phaseBox.setAlignment(Pos.CENTER);
+
+            Label currentPhaseTitle = new Label ("Current Phase: " + currentPhase);
+            currentPhaseTitle.setStyle("-fx-text-fill: #4CAF50; -fx-font-size: 14; -fx-font-weight: bold;");
+
+            Label currentDurationLabel = new Label ("Current Duration: " + String.format("%.0f", currentDuration) + " seconds");
+            currentDurationLabel.setStyle("-fx-text-fill: #ffffff; -fx-font-size: 12;");
+
+            Label newDurationLabel = new Label ("New Duration (seconds)");
+            newDurationLabel.setStyle("-fx-text-fill: #ffffff; -fx-font-size: 12; -fx-font-weight: bold;");
+
+            TextField durationField = new TextField(String.format("%.0f", currentDuration));
+            durationField.setPrefWidth(200);
+            durationField.setMaxWidth(200);
+            durationField.setStyle("-fx-background-color: #2a2a2a; -fx-text-fill: #FFA726; " + "-fx-font-size: 14; -fx-font-weight: bold; -fx-alignment: center;");
+
+            // Only allow numeric input
+            durationField.setTextFormatter(new TextFormatter<> (new DoubleStringConverter(),
+                currentDuration,
+                change -> {
+                    String newText = change.getControlNewText();
+                    if (newText.matches("\\d*\\.?\\d*")) {
+                        return change;
+                    }
+                    return null;
+                }
+            ));
+
+            phaseDurationField = durationField;
+
+            phaseBox.getChildren().addAll(currentPhaseTitle, currentDurationLabel, new javafx.scene.control.Separator(), newDurationLabel, durationField);
+
+            // Buttons
+            HBox buttonBox = new HBox(10);
+            buttonBox.setAlignment(Pos.CENTER);
+            
+            Button applyBtn = new Button("✓ Apply & Resume");
+            applyBtn.setPrefWidth(150);
+            applyBtn.setStyle(AUTO_STYLE);
+            applyBtn.setOnMouseEntered(e -> applyBtn.setStyle(AUTO_HOVER));
+            applyBtn.setOnMouseExited(e -> applyBtn.setStyle(AUTO_STYLE));
+            applyBtn.setOnAction(e -> {
+                if (applyCurrentPhaseTiming(adapter, junctionId)){
+                    dialog.close();
+                    if(wasRunning) runner.resume();
+                }
+            });
+
+            Button cancelBtn = new Button("x Cancel");
+            cancelBtn.setPrefWidth(150);
+            cancelBtn.setStyle(RED_STYLE);
+            cancelBtn.setOnMouseEntered(e -> cancelBtn.setStyle(RED_HOVER));
+            cancelBtn.setOnMouseExited(e -> cancelBtn.setStyle(RED_STYLE));
+            cancelBtn.setOnAction(e -> {
+                    dialog.close();
+                    if(wasRunning) runner.resume();
+            });
+
+            buttonBox.getChildren().addAll(applyBtn, cancelBtn);
+
+            dialogContent.getChildren().addAll(titleLabel, infoLabel, noteLabel, phaseBox, buttonBox);
+
+            javafx.scene.Scene dialogScene = new javafx.scene.Scene(dialogContent, 500, 400);
+            dialog.setScene(dialogScene);
+            dialog.setOnCloseRequest(e -> {if (wasRunning) runner.resume();});
+            dialog.show();
+        } catch (Exception e){
+            showError("Failed to open editor: " + e.getMessage());
+            e.printStackTrace();
+            if (wasRunning) runner.resume();
         }
+    }
+
+    /**
+     * Applies the new duration to the current active phase
+     * 
+     * @param adapter The TraCi adapter
+     * @param junctionId The junction ID
+     * @return true if successful, false otherwise
+     */
+    private boolean applyCurrentPhaseTiming(TraaSAdapter adapter, String junctionId) {
+        try{
+            // Validate input
+            if (phaseDurationField == null) {
+                showError("No duration field found");
+                return false;
+            }
+            
+            String text = phaseDurationField.getText().trim();
+            if (text.isEmpty()){
+                showError("Duration cannot be empty");
+                return false;
+            }
+
+            double duration = Double.parseDouble(text);
+            if (duration < 1){
+                showError("Duration must be at least 1 second");
+                return false;
+            }
+
+            if (duration > 300){
+                showError("Duration cannot exceed 300 seconds");
+                return false;
+            }
+
+            // Store custom duration for display
+            customPhaseDuration = duration;
+            customPhaseIndex = adapter.getCurrentPhase(junctionId);
+
+            // Apply to SUMO - sets duration for current phase
+            adapter.setPhaseDuration(junctionId, duration);
+
+            // Show success
+            showSuccess("Phase timing updated successfully!\nCurrent phase now has " + String.format("%.0f", duration) + " second duration.");
+
+            System.out.println("===PHASE TIMING UPDATED===");
+            System.out.println("Juntion: " + junctionId);
+            System.out.println("Current phase duration set to : " + String.format("%.0f", duration) + "s");
+
+            // Update phase display
+            updatePhaseDisplay();
+
+            return true;
+        } catch (NumberFormatException e){
+            showError("Invalid duration value. Please enter numbers only!");
+            return false;
+        } catch (Exception e){
+            showError("Failed to apply timing: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Displays a success dialog with the specified message
+     * 
+     * @param message The success message to display
+     */
+    private void showSuccess(String message){
+        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
+        alert.setTitle("Success");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 
     /**
@@ -565,8 +744,19 @@ public class TrafficLightControlPanel {
             // Get current phase index
             int currentPhase = adapter.getCurrentPhase(junctionId);
 
-            // Get total duration of selected phase
-            double phaseDuration = adapter.getCurrentPhaseDuration(junctionId);
+            // Check if phase changed - reset custom duration
+            if (customPhaseIndex != -1 && currentPhase != customPhaseIndex) {
+                customPhaseDuration = null;
+                customPhaseIndex = -1;
+            }
+
+            // Use custom duration if set, otherwise get from SUMO
+            double phaseDuration;
+            if (customPhaseDuration != null && currentPhase == customPhaseIndex){
+                phaseDuration = customPhaseDuration;
+            } else {
+                phaseDuration = adapter.getCurrentPhaseDuration(junctionId);
+            }
 
             // Get next phase switching time and computer remaining time before next switching
             double nextSwitch = adapter.getNextSwitch(junctionId);
