@@ -259,4 +259,38 @@ public class TraaSAdapter {
         return null;
     }
 
+    // Traffic Light Phase Information
+
+    /**
+     * Returns the current phase index for a traffic light.
+     * 
+     * @param tlId The traffic light identifier
+     * @return Current phase index (0-last phase)
+     * @throws Exception if TraCI communication fails
+     */
+    public int getCurrentPhase(String tlId) throws Exception {
+        return (int) conn.do_job_get(Trafficlight.getPhase(tlId));
+    }
+
+    /**
+     * Returns the default total duration of the currently active phase in seconds.
+     * 
+     * @param tlId The traffic light identifier
+     * @return Phase duration in seconds
+     * @throws Exception if TraCI communication fails
+     */
+    public double getCurrentPhaseDuration(String tlId) throws Exception {
+        return (double) conn.do_job_get(Trafficlight.getPhaseDuration(tlId));
+    }
+
+    /**
+     * Returns the time until the next phase switching
+     * 
+     * @param tlId The traffic light identifier
+     * @return Time in seconds until next switch
+     * @throws Exception if TraCI communication fails
+     */
+    public double getNextSwitch(String tlId) throws Exception {
+        return (double) conn.do_job_get(Trafficlight.getNextSwitch(tlId));
+    }
 }

@@ -32,6 +32,11 @@ public class TrafficLightControlPanel {
     private Button forceRedBtn;
     private Button autoBtn;
     private TextField currentStateField;
+    
+    // Phase display elements
+    private Label currentPhaseLabel;
+    private Label phaseDurationLabel;
+    private Label remainingTimeLabel;
 
     // Button styles - static final for efficiency and consistency
     private static final String GREEN_STYLE = "-fx-background-color: #2E7D32; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;";
@@ -115,9 +120,33 @@ public class TrafficLightControlPanel {
 
         // Update current state periodically
         new javafx.animation.AnimationTimer() {
+            private int lastPhase = -1;
+            private long lastUpdate = 0;
+            private static final long UPDATE_INTERVAL = 500_000_000;    // 0.5 real-life seconds in nanoseconds
+
             @Override
             public void handle(long now) {
                 updateStateDisplay();
+
+                // update remaining time every 0.5 seconds
+                if (now - lastUpdate >= UPDATE_INTERVAL) {
+                    lastUpdate = now;
+                    updateRemainingTime();
+                }
+
+                // check if phase has changed
+                try{
+                    TraaSAdapter adapter = runner.getAdapter();
+                    if (adapter != null ) {
+                        int currentPhase = adapter.getCurrentPhase(selectedLight.getJunctionId());
+                        if (currentPhase != lastPhase) {
+                            lastPhase = currentPhase;
+                            updatePhaseDisplay();
+                        }
+                    }
+                } catch (Exception e){
+                    // ignore
+                }
             }
         }.start();
 
@@ -163,6 +192,22 @@ public class TrafficLightControlPanel {
         autoBtn.setOnAction(e -> returnToAuto());
         autoBtn.setDisable(true);
 
+        // Phase information section 
+        Label phaseInfoTitle = new Label ("Phase Information:");
+        phaseInfoTitle.setStyle(UIStyles.LABEL_STYLE + " -fx-font-weight: bold;");
+
+        currentPhaseLabel = new Label ("Current Phase: -");
+        currentPhaseLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-size: 12;");
+
+        phaseDurationLabel = new Label ("Phase Duration: -");
+        phaseDurationLabel.setStyle("-fx-text-fill: #778DA9; -fx-font-size: 12;");
+
+        remainingTimeLabel = new Label ("Remaining Time: -");
+        remainingTimeLabel.setStyle("-fx-text-fill: #FFA726; -fx-font-size: 12;");
+
+        // Update phase display when panel opens
+        updatePhaseDisplay();
+
         // Add all elements
         panel.getChildren().addAll(
                 backBtn,
@@ -172,11 +217,17 @@ public class TrafficLightControlPanel {
                 currentStateLabel,
                 currentStateField,
                 new javafx.scene.control.Separator(),
+                phaseInfoTitle,
+                currentPhaseLabel,
+                phaseDurationLabel,
+                remainingTimeLabel,
+                new javafx.scene.control.Separator(),
                 quickControlLabel,
                 infoText,
                 forceGreenBtn,
                 forceRedBtn,
-                autoBtn);
+                autoBtn
+                );
     }
 
     /**
@@ -453,6 +504,63 @@ public class TrafficLightControlPanel {
     }
 
     /**
+     * Update phase display with current phase index and phase duration
+     * Shows total phase's duration and remaining time before next phase switching
+     */
+    private void updatePhaseDisplay() {
+        try {
+            TraaSAdapter adapter = runner.getAdapter();
+            if (adapter == null) return;
+
+            String junctionId = selectedLight.getJunctionId();
+
+            // Get current phase index
+            int currentPhase = adapter.getCurrentPhase(junctionId);
+
+            // Get total duration of selected phase
+            double phaseDuration = adapter.getCurrentPhaseDuration(junctionId);
+
+            // Get next phase switching time and computer remaining time before next switching
+            double nextSwitch = adapter.getNextSwitch(junctionId);
+            double currentTime = adapter.getSimulationTime();
+            double remainingTime = nextSwitch - currentTime;
+
+            // Update labels
+            currentPhaseLabel.setText("Current Phase: " + currentPhase);
+            phaseDurationLabel.setText(String.format("Phase Duration: %.1f seconds", phaseDuration));
+            remainingTimeLabel.setText(String.format("Remaining Time: %.1f seconds", remainingTime));
+
+        } catch (Exception e) {
+            currentPhaseLabel.setText("Current Phase: -");
+            phaseDurationLabel.setText("Phase Duration: -");
+            remainingTimeLabel.setText("Remaining Time: -");
+        }
+    }
+
+    /**
+     * Update remaining time display for smooth countdown
+     * Called frequently (every 0.5 second) for real-time countdown
+     */
+    private void updateRemainingTime() {
+        try{
+            TraaSAdapter adapter = runner.getAdapter();
+            if (adapter == null) return;
+
+            String junctionId = selectedLight.getJunctionId();
+
+            // Compute remaining time
+            double nextSwitch = adapter.getNextSwitch(junctionId);
+            double currentTime = adapter.getSimulationTime();
+            double remainingTime = nextSwitch - currentTime;
+
+            // Update only the remaining time label
+            remainingTimeLabel.setText(String.format("Remaining Time: %.1f seconds", remainingTime));
+        } catch (Exception e){
+            // Ignore
+        }
+    }
+
+    /**
      * Returns the panel's VBox container.
      * 
      * @return The panel VBox
@@ -460,4 +568,5 @@ public class TrafficLightControlPanel {
     public VBox getPanel() {
         return panel;
     }
+
 }
