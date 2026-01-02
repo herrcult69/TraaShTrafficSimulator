@@ -32,7 +32,7 @@ public class Junction {
     private static final double DEFAULT_RADIUS = 8.0;
     private static final double SMALL_JUNCTION_RADIUS = 5.0;
     private static final double MIN_RADIUS = 3.0;
-    private static final double DIRECTION_THRESHOLD = 0.5;
+    private static final double DIRECTION_THRESHOLD = 0.8;
     private static final double DISTANCE_THRESHOLD = 0.1;
     private static final double RADIUS_ADJUSTMENT = 0.5;
 

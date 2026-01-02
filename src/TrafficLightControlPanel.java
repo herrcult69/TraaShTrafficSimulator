@@ -3,14 +3,11 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextFormatter;
 import javafx.scene.layout.VBox;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.GridPane;
 import javafx.util.converter.DoubleStringConverter;
 import java.util.List;
-import java.util.ArrayList;
 
 /**
  * Control panel for managing a selected traffic light manually.
