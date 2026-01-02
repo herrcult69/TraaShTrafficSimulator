@@ -293,4 +293,36 @@ public class TraaSAdapter {
     public double getNextSwitch(String tlId) throws Exception {
         return (double) conn.do_job_get(Trafficlight.getNextSwitch(tlId));
     }
+
+    /**
+     * Sets the duration of the currently active phase
+     * This modifies timing for this cycle only
+     * 
+     * @param tlId The traffic light identifier
+     * @param duration New duration in seconds
+     * @throws Exception if TraCi communication fails
+     */
+    public void setPhaseDuration(String tlId, double duration) throws Exception{
+        conn.do_job_set(Trafficlight.setPhaseDuration(tlId, duration));
+    }
+
+    /**
+     * Sets a specific phase as the current active phase
+     * 
+     * @param tlId The traffic light identifier
+     * @param phaseIndex The phase index to switch to
+     * @throws Exception if TraCi communication fails
+     */
+    public void setPhase(String tlId, int phaseIndex) throws Exception {
+        conn.do_job_set(Trafficlight.setPhase(tlId, phaseIndex));
+    }
+
+    /**
+     * Returns the TraCI connection for advanced operations.
+     * 
+     * @return The SUMO TraCI connection
+     */
+    public SumoTraciConnection getConnection() {
+        return conn;
+    }
 }

@@ -3,8 +3,14 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextFormatter;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.GridPane;
+import javafx.util.converter.DoubleStringConverter;
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Control panel for managing a selected traffic light manually.
@@ -37,6 +43,10 @@ public class TrafficLightControlPanel {
     private Label currentPhaseLabel;
     private Label phaseDurationLabel;
     private Label remainingTimeLabel;
+
+    // Phase timing editor
+    private TextField phaseDurationField;
+    private Button editTimingBtn;
 
     // Button styles - static final for efficiency and consistency
     private static final String GREEN_STYLE = "-fx-background-color: #2E7D32; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;";
@@ -221,6 +231,8 @@ public class TrafficLightControlPanel {
                 currentPhaseLabel,
                 phaseDurationLabel,
                 remainingTimeLabel,
+                new javafx.scene.control.Separator(),
+                createPhaseTimingButton(),
                 new javafx.scene.control.Separator(),
                 quickControlLabel,
                 infoText,
@@ -487,6 +499,42 @@ public class TrafficLightControlPanel {
         }
         System.out.println("Synchronized " + (manualMode ? "MANUAL" : "AUTO") + 
                          " mode across " + count + " traffic lights at junction " + junctionId);
+    }
+
+    /**
+     * Creates a button to open the phase timming editor
+     * 
+     * @return Button to edit phase timing
+     */
+    private Button createPhaseTimingButton(){
+        editTimingBtn = new Button("Edit Phase Timing");
+        editTimingBtn.setPrefWidth(250);
+        editTimingBtn.setStyle("-fx-background-color: #7B1FA2; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;");
+        editTimingBtn.setOnMouseEntered(e -> editTimingBtn.setStyle("-fx-background-color: #8E24AA; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;"));
+        editTimingBtn.setOnMouseExited(e -> editTimingBtn.setStyle("-fx-background-color: #7B1FA2; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;"));
+        editTimingBtn.setOnAction(e -> openPhaseTimingEditor());
+        return editTimingBtn;
+    }
+
+    /**
+     * Opens the phase timing editor 
+     * Pauses simulation, allows adjusting current phase duration
+     */
+    private void openPhaseTimingEditor(){
+        // Pause simulation
+        boolean wasRunning = !runner.isPaused();
+        if (wasRunning){
+            runner.pause();
+        }
+
+        try{
+            TraaSAdapter adapter = runner.getAdapter();
+            if (adapter == null) {
+                showError("Sumo not connected");
+                if (wasRunning)runner.resume();
+                return;
+            }
+        }
     }
 
     /**
