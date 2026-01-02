@@ -389,6 +389,8 @@ public class TrafficLightControlPanel {
             autoBtn.setDisable(true);
 
             updateButtonStates();
+            // Refresh phase display to show AUTO mode values
+            updatePhaseDisplay();
 
             System.out.println("Returned to AUTO mode for junction " + selectedLight.getJunctionId() + " (auto mode synced across junction)");
 
@@ -467,6 +469,11 @@ public class TrafficLightControlPanel {
         statusLabel.setText("Mode: MANUAL");
         statusLabel.setStyle("-fx-text-fill: #FF9800; -fx-font-weight: bold; -fx-font-size: 14;");
         autoBtn.setDisable(false);
+        
+        // Set phase information to N/A in manual mode
+        currentPhaseLabel.setText("Current Phase: N/A (manual mode)");
+        phaseDurationLabel.setText("Phase Duration: N/A (manual mode)");
+        remainingTimeLabel.setText("Remaining Time: N/A (manual mode)");
     }
     
     /**
@@ -735,6 +742,13 @@ public class TrafficLightControlPanel {
      * Shows total phase's duration and remaining time before next phase switching
      */
     private void updatePhaseDisplay() {
+        // Check if in manual mode
+        if (selectedLight.isManualMode()){
+            currentPhaseLabel.setText("Current Phase: N/A (manual mode)");
+            phaseDurationLabel.setText("Phase Duration: N/A (manual mode)");
+            remainingTimeLabel.setText("Remaining Time: N/A (manual mode)");
+            return;
+        }
         try {
             TraaSAdapter adapter = runner.getAdapter();
             if (adapter == null) return;
@@ -780,6 +794,10 @@ public class TrafficLightControlPanel {
      * Called frequently (every 0.5 second) for real-time countdown
      */
     private void updateRemainingTime() {
+        // Skip updates in manual mode
+        if (selectedLight.isManualMode()){
+            return;
+        }
         try{
             TraaSAdapter adapter = runner.getAdapter();
             if (adapter == null) return;
