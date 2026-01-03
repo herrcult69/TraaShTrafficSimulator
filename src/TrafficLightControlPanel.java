@@ -4,8 +4,8 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextFormatter;
-import javafx.scene.layout.VBox;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.util.converter.DoubleStringConverter;
 import java.util.List;
 import java.util.ArrayList;
@@ -51,13 +51,13 @@ public class TrafficLightControlPanel {
     private TextField phaseDurationField;
     private Button editTimingBtn;
 
-    // Performance metrics tracking
+    // ========== Performance Metrics Tracking ==========
     private MetricsSnapshot beforeSnapshot;
     private MetricsSnapshot afterSnapshot;
     private long afterMeasurementStart = -1;
     private Button metricsBtn;
-    private static final int MEASUREMENT_DURATION_MS = 15000; // 60 seconds
-    private static final double MEASUREMENT_RADIUS = 50.0; // meters around junction
+    private static final int MEASUREMENT_DURATION_MS = 15000; // 15 seconds observation period
+    private static final double MEASUREMENT_RADIUS = 100.0; // meters around junction
     private static final double STOPPED_SPEED_THRESHOLD = 2.0; // m/s
 
     // Button styles - static final for efficiency and consistency
@@ -71,6 +71,14 @@ public class TrafficLightControlPanel {
 
     private static final String AUTO_STYLE = "-fx-background-color: #1565C0; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;";
     private static final String AUTO_HOVER = "-fx-background-color: #1976D2; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;";
+
+    private static final String PURPLE_STYLE = "-fx-background-color: #7B1FA2; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;";
+    private static final String PURPLE_HOVER = "-fx-background-color: #8E24AA; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;";
+
+    private static final String TEAL_STYLE = "-fx-background-color: #00897B; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;";
+    private static final String TEAL_HOVER = "-fx-background-color: #00ACC1; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;";
+
+    private static final double BUTTON_WIDTH = 250.0;
 
     /**
      * Constructs a traffic light control panel for the specified light.
@@ -114,18 +122,17 @@ public class TrafficLightControlPanel {
         VBox infoBox = new VBox(8);
         infoBox.setStyle(UIStyles.INFO_BOX_STYLE);
 
+        String infoStyle = "-fx-text-fill: #aaaaaa; -fx-font-size: 12;";
+        
         Label junctionLabel = new Label("Junction: " + selectedLight.getJunctionId());
-        junctionLabel.setStyle("-fx-text-fill: #aaaaaa; -fx-font-size: 12;");
+        junctionLabel.setStyle(infoStyle);
 
-        // Get signal count and link indices (sorted)
-        int signalCount = selectedLight.getSignals().size();
         List<Integer> linkIndices = selectedLight.getLinkIndices();
+        Label signalLabel = new Label("Signals: " + selectedLight.getSignals().size() + " connections");
+        signalLabel.setStyle(infoStyle);
 
-        Label signalLabel = new Label("Signals: " + signalCount + " connections");
-        signalLabel.setStyle("-fx-text-fill: #aaaaaa; -fx-font-size: 12;");
-
-        Label linksLabel = new Label("Controls Links: " + linkIndices.toString());
-        linksLabel.setStyle("-fx-text-fill: #aaaaaa; -fx-font-size: 12;");
+        Label linksLabel = new Label("Controls Links: " + linkIndices);
+        linksLabel.setStyle(infoStyle);
         linksLabel.setWrapText(true);
         statusLabel = new Label("Mode: AUTO");
         statusLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-weight: bold; -fx-font-size: 14;");
@@ -170,21 +177,29 @@ public class TrafficLightControlPanel {
                     // ignore
                 }
 
-                // Check if after measurement period is complete
+                // Check if AFTER measurement period is complete
                 if (afterMeasurementStart > 0) {
                     long elapsed = System.currentTimeMillis() - afterMeasurementStart;
                     if (elapsed >= MEASUREMENT_DURATION_MS) {
                         afterSnapshot = captureCurrentMetrics();
                         afterMeasurementStart = -1; // Stop checking
-                        
+                        logMetrics("AFTER METRICS CAPTURED", afterSnapshot);
+
+                        // Show dialog on JavaFx thread
                         if (afterSnapshot != null) {
-                            System.out.println("=== AFTER METRICS CAPTURED ===");
-                            System.out.println("Avg Speed: " + afterSnapshot.avgSpeed + " m/s");
-                            System.out.println("Queue Length: " + afterSnapshot.queueLength);
-                            System.out.println("Wait Time: " + afterSnapshot.waitTime + "s");
-                            showSuccess("Observation complete! Click 'View Performance Metrics' to see comparison.");
+                            javafx.application.Platform.runLater(() -> {
+                                try{
+                                    System.out.println("Showing completion dialog...");
+                                    showSuccess("Observation complete! Click 'View Performance Metrics' to see comparison.");
+                                    System.out.println("✓ Dialog shown successfully");
+                                } catch (Exception ex) {
+                                    System.err.println("Failed to show dialog: " + ex.getMessage());
+                                    ex.printStackTrace();
+                                }
+                            });
+                            
                         } else {
-                            System.out.println("⚠ Failed to capture AFTER metrics");
+                            System.err.println("afterSnapshot is null - dialog not shown");
                         }
                     }
                 }
@@ -206,7 +221,7 @@ public class TrafficLightControlPanel {
         infoText.setWrapText(true);
 
         forceGreenBtn = new Button("Force GREEN (This Light Only)");
-        forceGreenBtn.setPrefWidth(250);
+        forceGreenBtn.setPrefWidth(BUTTON_WIDTH);
         forceGreenBtn.setStyle(GREEN_STYLE);
         forceGreenBtn.setOnMouseEntered(e -> {
             if (!isCurrentlyGreen())
@@ -216,7 +231,7 @@ public class TrafficLightControlPanel {
         forceGreenBtn.setOnAction(e -> forceGreen());
 
         forceRedBtn = new Button("Force RED (This Light Only)");
-        forceRedBtn.setPrefWidth(250);
+        forceRedBtn.setPrefWidth(BUTTON_WIDTH);
         forceRedBtn.setStyle(RED_STYLE);
         forceRedBtn.setOnMouseEntered(e -> {
             if (!isCurrentlyRed())
@@ -226,7 +241,7 @@ public class TrafficLightControlPanel {
         forceRedBtn.setOnAction(e -> forceRed());
 
         autoBtn = new Button("⟲ Return Junction to AUTO");
-        autoBtn.setPrefWidth(250);
+        autoBtn.setPrefWidth(BUTTON_WIDTH);
         autoBtn.setStyle(AUTO_STYLE);
         autoBtn.setOnMouseEntered(e -> autoBtn.setStyle(AUTO_HOVER));
         autoBtn.setOnMouseExited(e -> autoBtn.setStyle(AUTO_STYLE));
@@ -473,19 +488,17 @@ public class TrafficLightControlPanel {
         String state = selectedLight.getCurrentState();
         if (state == null || state.isEmpty()) return false;
 
-        List<Integer> linkIndices = selectedLight.getLinkIndices();
-        for (int linkIndex : linkIndices) {
-            if (linkIndex < state.length()) {
-                char c = state.charAt(linkIndex);
-                boolean matches = false;
-                for (char validState : validStates) {
-                    if (c == validState) {
-                        matches = true;
-                        break;
-                    }
+        for (int linkIndex : selectedLight.getLinkIndices()) {
+            if (linkIndex >= state.length()) continue;
+            char c = state.charAt(linkIndex);
+            boolean matches = false;
+            for (char validState : validStates) {
+                if (c == validState) {
+                    matches = true;
+                    break;
                 }
-                if (!matches) return false;
             }
+            if (!matches) return false;
         }
         return true;
     }
@@ -541,16 +554,16 @@ public class TrafficLightControlPanel {
     }
 
     /**
-     * Creates a button to open the phase timming editor
+     * Creates a button to open the phase timing editor
      * 
      * @return Button to edit phase timing
      */
     private Button createPhaseTimingButton(){
         editTimingBtn = new Button("Edit Phase Timing");
-        editTimingBtn.setPrefWidth(250);
-        editTimingBtn.setStyle("-fx-background-color: #7B1FA2; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;");
-        editTimingBtn.setOnMouseEntered(e -> editTimingBtn.setStyle("-fx-background-color: #8E24AA; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;"));
-        editTimingBtn.setOnMouseExited(e -> editTimingBtn.setStyle("-fx-background-color: #7B1FA2; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;"));
+        editTimingBtn.setPrefWidth(BUTTON_WIDTH);
+        editTimingBtn.setStyle(PURPLE_STYLE);
+        editTimingBtn.setOnMouseEntered(e -> editTimingBtn.setStyle(PURPLE_HOVER));
+        editTimingBtn.setOnMouseExited(e -> editTimingBtn.setStyle(PURPLE_STYLE));
         editTimingBtn.setOnAction(e -> openPhaseTimingEditor());
         return editTimingBtn;
     }
@@ -568,14 +581,7 @@ public class TrafficLightControlPanel {
 
         // Capture BEFORE metrics when pausing
         beforeSnapshot = captureCurrentMetrics();
-        if (beforeSnapshot != null) {
-            System.out.println("=== BEFORE METRICS CAPTURED ===");
-            System.out.println("Avg Speed: " + beforeSnapshot.avgSpeed + " m/s");
-            System.out.println("Queue Length: " + beforeSnapshot.queueLength);
-            System.out.println("Wait Time: " + beforeSnapshot.waitTime + "s");
-        } else {
-            System.out.println("⚠ Failed to capture BEFORE metrics");
-        }
+        logMetrics("BEFORE METRICS CAPTURED", beforeSnapshot);
 
         try{
             TraaSAdapter adapter = runner.getAdapter();
@@ -730,7 +736,7 @@ public class TrafficLightControlPanel {
 
             // Start AFTER measurement period
             afterMeasurementStart = System.currentTimeMillis();
-            showInfo("Phase timing updated!\nObserving for 60 seconds to capture performance metrics...");
+            showInfo("Phase timing updated!\nObserving for 15 seconds to capture performance metrics...");
 
             System.out.println("===PHASE TIMING UPDATED===");
             System.out.println("Juntion: " + junctionId);
@@ -755,39 +761,50 @@ public class TrafficLightControlPanel {
      * 
      * @param message The success message to display
      */
-    private void showSuccess(String message){
-        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
-        alert.setTitle("Success");
+    /**
+     * Displays an alert dialog
+     * 
+     * @param type Alert type (ERROR or INFORMATION)
+     * @param title Dialog title
+     * @param message Message to display
+     * @param blocking If true, waits for user to close; if false, shows non-blocking
+     */
+    private void showAlert(javafx.scene.control.Alert.AlertType type, String title, String message, boolean blocking) {
+        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(type);
+        alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(message);
-        alert.showAndWait();
+        if (blocking) {
+            alert.showAndWait();
+        } else {
+            alert.show();
+        }
     }
 
     /**
-     * Displays an info dialog with the specified message
-     * 
-     * @param message The info message to display
+     * Logs metrics snapshot to console for debugging
      */
-    private void showInfo(String message){
-        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
-        alert.setTitle("Information");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.show(); // Non-blocking
+    private void logMetrics(String label, MetricsSnapshot snapshot) {
+        if (snapshot != null) {
+            System.out.println("=== " + label + " ===");
+            System.out.println("Avg Speed: " + snapshot.avgSpeed + " m/s");
+            System.out.println("Queue Length: " + snapshot.queueLength);
+            System.out.println("Wait Time: " + snapshot.waitTime + "s");
+        } else {
+            System.out.println("⚠ Failed to capture " + label);
+        }
     }
 
-    /**
-     * Displays an error dialog with the specified message.
-     * 
-     * @param message The error message to display
-     */
+    private void showSuccess(String message) {
+        showAlert(javafx.scene.control.Alert.AlertType.INFORMATION, "Success", message, true);
+    }
+
+    private void showInfo(String message) {
+        showAlert(javafx.scene.control.Alert.AlertType.INFORMATION, "Information", message, false);
+    }
+
     private void showError(String message) {
-        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
-                javafx.scene.control.Alert.AlertType.ERROR);
-        alert.setTitle("Error");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+        showAlert(javafx.scene.control.Alert.AlertType.ERROR, "Error", message, true);
     }
 
     /**
@@ -882,17 +899,17 @@ public class TrafficLightControlPanel {
      * Creates button to view performance metrics
      */
     private Button createMetricsButton() {
-        metricsBtn = new Button("📊 View Performance Metrics");
-        metricsBtn.setPrefWidth(250);
-        metricsBtn.setStyle("-fx-background-color: #00897B; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;");
-        metricsBtn.setOnMouseEntered(e -> metricsBtn.setStyle("-fx-background-color: #00ACC1; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;"));
-        metricsBtn.setOnMouseExited(e -> metricsBtn.setStyle("-fx-background-color: #00897B; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;"));
+        metricsBtn = new Button("View Performance Metrics");
+        metricsBtn.setPrefWidth(BUTTON_WIDTH);
+        metricsBtn.setStyle(TEAL_STYLE);
+        metricsBtn.setOnMouseEntered(e -> metricsBtn.setStyle(TEAL_HOVER));
+        metricsBtn.setOnMouseExited(e -> metricsBtn.setStyle(TEAL_STYLE));
         metricsBtn.setOnAction(e -> showMetricsDialog());
         return metricsBtn;
     }
 
     /**
-     * Captures current metrics snapshot for the junction
+     * ========== Captures current metrics snapshot for the junction ==========
      */
     private MetricsSnapshot captureCurrentMetrics() {
         try {
@@ -931,6 +948,14 @@ public class TrafficLightControlPanel {
                             queueCount++;
                         }
                     }
+
+                    // Get actual accumulated waiting time from SUMO
+                    try {
+                        double waitTime = adapter.getVehicleWaitingTime(v.getId());
+                        waitTimes.add(waitTime);
+                    } catch (Exception e) {
+                        // Skip if waiting time unavailable for this vehicle
+                    }
                 }
             }
 
@@ -938,14 +963,15 @@ public class TrafficLightControlPanel {
             double avgSpeed = speeds.isEmpty() ? 0.0 : 
                 speeds.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
             
-            // Wait time estimation (simplified: queue count * 5 seconds as rough estimate)
-            double estimatedWaitTime = queueCount * 5.0;
+            // Use average actual waiting time from SUMO instead of simplified estimation
+            double avgWaitTime = waitTimes.isEmpty() ? 0.0 : 
+                waitTimes.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
 
             return new MetricsSnapshot(
                 selectedLight.getJunctionId(),
                 avgSpeed,
                 queueCount,
-                estimatedWaitTime,
+                avgWaitTime,
                 adapter.getSimulationTime()
             );
 
@@ -968,7 +994,7 @@ public class TrafficLightControlPanel {
     }
 
     /**
-     * Shows performance metrics comparison dialog
+     * ========== Shows performance metrics comparison dialog ==========
      */
     private void showMetricsDialog() {
         javafx.stage.Stage dialog = new javafx.stage.Stage();
@@ -1043,25 +1069,7 @@ public class TrafficLightControlPanel {
     }
 
     /**
-     * Formats metrics snapshot for display
-     */
-    private String formatMetrics(MetricsSnapshot snapshot) {
-        return String.format(
-            "Junction:         %s\n" +
-            "Measurement Time: %.1f seconds\n" +
-            "Avg Speed:        %.2f m/s (%.1f km/h)\n" +
-            "Queue Length:     %d vehicles\n" +
-            "Est. Wait Time:   %.1f seconds",
-            snapshot.junctionId,
-            snapshot.timestamp,
-            snapshot.avgSpeed, snapshot.avgSpeed * 3.6,
-            snapshot.queueLength,
-            snapshot.waitTime
-        );
-    }
-
-    /**
-     * Formats before/after comparison
+     * ========== Formats before/after comparison for display ==========
      */
     private String formatComparison(MetricsSnapshot before, MetricsSnapshot after) {
         double speedDiff = after.avgSpeed - before.avgSpeed;
@@ -1075,18 +1083,19 @@ public class TrafficLightControlPanel {
             "Queue Length:       %d       %d        %s%d veh\n" +
             "Est. Wait Time:     %.1f     %.1f      %s%.1f s\n\n" +
             "%s",
-            before.avgSpeed, after.avgSpeed, formatDiff(-speedDiff), Math.abs(speedDiff),
-            before.queueLength, after.queueLength, formatDiff(queueDiff), Math.abs(queueDiff),
-            before.waitTime, after.waitTime, formatDiff(waitDiff), Math.abs(waitDiff),
+            before.avgSpeed, after.avgSpeed, 
+            (Math.abs(speedDiff) < 0.01 ? "±" : (speedDiff < 0 ? "-" : "+")), Math.abs(speedDiff),
+            before.queueLength, after.queueLength, 
+            (queueDiff == 0 ? "±" : (queueDiff > 0 ? "+" : "-")), Math.abs(queueDiff),
+            before.waitTime, after.waitTime, 
+            (Math.abs(waitDiff) < 0.01 ? "±" : (waitDiff > 0 ? "+" : "-")), Math.abs(waitDiff),
             getRecommendation(speedDiff, queueDiff, waitDiff)
         );
     }
 
-    private String formatDiff(double diff) {
-        if (Math.abs(diff) < 0.01) return "±";
-        return diff > 0 ? "+" : "-";
-    }
-
+    /**
+     * ========== Generates recommendation based on metrics changes ==========
+     */
     private String getRecommendation(double speedDiff, int queueDiff, double waitDiff) {
         if (speedDiff > 0.5 && queueDiff < -1 && waitDiff < -2) {
             return "✓ IMPROVED: Timing changes reduced congestion significantly!";
@@ -1100,7 +1109,7 @@ public class TrafficLightControlPanel {
     }
 
     /**
-     * Inner class to store metrics snapshot
+     * ========== Inner class to store metrics snapshot data ==========
      */
     private static class MetricsSnapshot {
         final String junctionId;

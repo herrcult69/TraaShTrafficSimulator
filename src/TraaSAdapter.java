@@ -99,6 +99,18 @@ public class TraaSAdapter {
     }
 
     /**
+     * Returns the waiting time of a vehicle.
+     * Waiting time is the total time (in seconds) the vehicle has been below a certain speed threshold.
+     * 
+     * @param id The vehicle identifier
+     * @return Waiting time in seconds
+     * @throws Exception if TraCI communication fails or vehicle doesn't exist
+     */
+    public double getVehicleWaitingTime(String id) throws Exception {
+        return ((Number) conn.do_job_get(Vehicle.getWaitingTime(id))).doubleValue();
+    }
+
+    /**
      * Returns the signal state of a vehicle (turn signals, brake lights).
      * The result is a bit field where:
      * <ul>
