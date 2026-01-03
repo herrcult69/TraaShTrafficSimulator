@@ -8,6 +8,8 @@ import javafx.scene.layout.VBox;
 import javafx.scene.layout.HBox;
 import javafx.util.converter.DoubleStringConverter;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
 
 /**
  * Control panel for managing a selected traffic light manually.
@@ -48,6 +50,15 @@ public class TrafficLightControlPanel {
     // Phase timing editor
     private TextField phaseDurationField;
     private Button editTimingBtn;
+
+    // Performance metrics tracking
+    private MetricsSnapshot beforeSnapshot;
+    private MetricsSnapshot afterSnapshot;
+    private long afterMeasurementStart = -1;
+    private Button metricsBtn;
+    private static final int MEASUREMENT_DURATION_MS = 15000; // 60 seconds
+    private static final double MEASUREMENT_RADIUS = 50.0; // meters around junction
+    private static final double STOPPED_SPEED_THRESHOLD = 2.0; // m/s
 
     // Button styles - static final for efficiency and consistency
     private static final String GREEN_STYLE = "-fx-background-color: #2E7D32; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;";
@@ -158,6 +169,25 @@ public class TrafficLightControlPanel {
                 } catch (Exception e){
                     // ignore
                 }
+
+                // Check if after measurement period is complete
+                if (afterMeasurementStart > 0) {
+                    long elapsed = System.currentTimeMillis() - afterMeasurementStart;
+                    if (elapsed >= MEASUREMENT_DURATION_MS) {
+                        afterSnapshot = captureCurrentMetrics();
+                        afterMeasurementStart = -1; // Stop checking
+                        
+                        if (afterSnapshot != null) {
+                            System.out.println("=== AFTER METRICS CAPTURED ===");
+                            System.out.println("Avg Speed: " + afterSnapshot.avgSpeed + " m/s");
+                            System.out.println("Queue Length: " + afterSnapshot.queueLength);
+                            System.out.println("Wait Time: " + afterSnapshot.waitTime + "s");
+                            showSuccess("Observation complete! Click 'View Performance Metrics' to see comparison.");
+                        } else {
+                            System.out.println("⚠ Failed to capture AFTER metrics");
+                        }
+                    }
+                }
             }
         }.start();
 
@@ -234,6 +264,7 @@ public class TrafficLightControlPanel {
                 remainingTimeLabel,
                 new javafx.scene.control.Separator(),
                 createPhaseTimingButton(),
+                createMetricsButton(),
                 new javafx.scene.control.Separator(),
                 quickControlLabel,
                 infoText,
@@ -535,6 +566,17 @@ public class TrafficLightControlPanel {
             runner.pause();
         }
 
+        // Capture BEFORE metrics when pausing
+        beforeSnapshot = captureCurrentMetrics();
+        if (beforeSnapshot != null) {
+            System.out.println("=== BEFORE METRICS CAPTURED ===");
+            System.out.println("Avg Speed: " + beforeSnapshot.avgSpeed + " m/s");
+            System.out.println("Queue Length: " + beforeSnapshot.queueLength);
+            System.out.println("Wait Time: " + beforeSnapshot.waitTime + "s");
+        } else {
+            System.out.println("⚠ Failed to capture BEFORE metrics");
+        }
+
         try{
             TraaSAdapter adapter = runner.getAdapter();
             if (adapter == null) {
@@ -686,8 +728,9 @@ public class TrafficLightControlPanel {
             // Apply to SUMO - sets duration for current phase
             adapter.setPhaseDuration(junctionId, duration);
 
-            // Show success
-            showSuccess("Phase timing updated successfully!\nCurrent phase now has " + String.format("%.0f", duration) + " second duration.");
+            // Start AFTER measurement period
+            afterMeasurementStart = System.currentTimeMillis();
+            showInfo("Phase timing updated!\nObserving for 60 seconds to capture performance metrics...");
 
             System.out.println("===PHASE TIMING UPDATED===");
             System.out.println("Juntion: " + junctionId);
@@ -718,6 +761,19 @@ public class TrafficLightControlPanel {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    /**
+     * Displays an info dialog with the specified message
+     * 
+     * @param message The info message to display
+     */
+    private void showInfo(String message){
+        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
+        alert.setTitle("Information");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.show(); // Non-blocking
     }
 
     /**
@@ -822,4 +878,252 @@ public class TrafficLightControlPanel {
         return panel;
     }
 
+    /**
+     * Creates button to view performance metrics
+     */
+    private Button createMetricsButton() {
+        metricsBtn = new Button("📊 View Performance Metrics");
+        metricsBtn.setPrefWidth(250);
+        metricsBtn.setStyle("-fx-background-color: #00897B; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;");
+        metricsBtn.setOnMouseEntered(e -> metricsBtn.setStyle("-fx-background-color: #00ACC1; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;"));
+        metricsBtn.setOnMouseExited(e -> metricsBtn.setStyle("-fx-background-color: #00897B; -fx-text-fill: white; -fx-font-size: 12; -fx-padding: 10;"));
+        metricsBtn.setOnAction(e -> showMetricsDialog());
+        return metricsBtn;
+    }
+
+    /**
+     * Captures current metrics snapshot for the junction
+     */
+    private MetricsSnapshot captureCurrentMetrics() {
+        try {
+            TraaSAdapter adapter = runner.getAdapter();
+            if (adapter == null) return null;
+
+            Junction junction = findJunctionByIdInternal(selectedLight.getJunctionId());
+            if (junction == null) return null;
+
+            double junctionX = junction.getX();
+            double junctionY = junction.getY();
+
+            // Get all vehicles from traffic manager
+            Map<String, Vehicle> allVehicles = trafficManager.getVehicles();
+            Map<String, Double> vehicleSpeeds = runner.getVehicleSpeeds();
+
+            // Calculate metrics
+            List<Double> speeds = new ArrayList<>();
+            int queueCount = 0;
+            List<Double> waitTimes = new ArrayList<>();
+
+            for (Vehicle v : allVehicles.values()) {
+                double dist = Math.sqrt(
+                    Math.pow(v.getWorldX() - junctionX, 2) + 
+                    Math.pow(v.getWorldY() - junctionY, 2)
+                );
+
+                if (dist <= MEASUREMENT_RADIUS) {
+                    // Get speed
+                    Double speed = vehicleSpeeds.get(v.getId());
+                    if (speed != null) {
+                        speeds.add(speed);
+                        
+                        // Count as queue if stopped/slow
+                        if (speed < STOPPED_SPEED_THRESHOLD) {
+                            queueCount++;
+                        }
+                    }
+                }
+            }
+
+            // Calculate averages
+            double avgSpeed = speeds.isEmpty() ? 0.0 : 
+                speeds.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+            
+            // Wait time estimation (simplified: queue count * 5 seconds as rough estimate)
+            double estimatedWaitTime = queueCount * 5.0;
+
+            return new MetricsSnapshot(
+                selectedLight.getJunctionId(),
+                avgSpeed,
+                queueCount,
+                estimatedWaitTime,
+                adapter.getSimulationTime()
+            );
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    /**
+     * Finds junction object by ID
+     */
+    private Junction findJunctionByIdInternal(String junctionId) {
+        for (Junction j : trafficManager.getJunctions()) {
+            if (j.getId().equals(junctionId)) {
+                return j;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Shows performance metrics comparison dialog
+     */
+    private void showMetricsDialog() {
+        javafx.stage.Stage dialog = new javafx.stage.Stage();
+        dialog.setTitle("Performance Metrics - " + selectedLight.getJunctionId());
+        dialog.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+        
+        VBox content = new VBox(15);
+        content.setPadding(new Insets(20));
+        content.setStyle("-fx-background-color: " + UIStyles.BG_PRIMARY + ";");
+        
+        Label title = new Label("📊 TRAFFIC PERFORMANCE METRICS");
+        title.setStyle(UIStyles.TITLE_STYLE);
+        content.getChildren().add(title);
+        
+        // Current metrics
+        MetricsSnapshot current = captureCurrentMetrics();
+        if (current != null) {
+            Label currentTitle = new Label("Current Metrics:");
+            currentTitle.setStyle("-fx-text-fill: #4CAF50; -fx-font-size: 14; -fx-font-weight: bold;");
+            
+            Label currentData = new Label(formatMetrics(current));
+            currentData.setStyle("-fx-text-fill: #ffffff; -fx-font-size: 12; -fx-font-family: monospace;");
+            
+            content.getChildren().addAll(currentTitle, currentData);
+        }
+        
+        // Before/After comparison
+        if (beforeSnapshot != null && afterSnapshot != null) {
+            content.getChildren().add(new javafx.scene.control.Separator());
+            
+            Label compareTitle = new Label("Before vs After Timing Change:");
+            compareTitle.setStyle("-fx-text-fill: #FFA726; -fx-font-size: 14; -fx-font-weight: bold;");
+            
+            Label comparison = new Label(formatComparison(beforeSnapshot, afterSnapshot));
+            comparison.setStyle("-fx-text-fill: #ffffff; -fx-font-size: 12; -fx-font-family: monospace;");
+            
+            content.getChildren().addAll(compareTitle, comparison);
+        } else {
+            // Show status of measurement
+            content.getChildren().add(new javafx.scene.control.Separator());
+            Label statusLabel = new Label();
+            
+            if (beforeSnapshot == null && afterSnapshot == null) {
+                statusLabel.setText("💡 To see before/after comparison:\n" +
+                    "1. Click 'Edit Phase Timing'\n" +
+                    "2. Change the duration and click Apply\n" +
+                    "3. Wait 60 seconds for observation\n" +
+                    "4. Return here to see results");
+                statusLabel.setStyle("-fx-text-fill: #FFA726; -fx-font-size: 11;");
+            } else if (beforeSnapshot != null && afterSnapshot == null) {
+                if (afterMeasurementStart > 0) {
+                    long elapsed = System.currentTimeMillis() - afterMeasurementStart;
+                    long remaining = (MEASUREMENT_DURATION_MS - elapsed) / 1000;
+                    statusLabel.setText("⏱ Observation in progress...\n" +
+                        "Time remaining: " + Math.max(0, remaining) + " seconds\n\n" +
+                        "Come back after observation completes to see comparison.");
+                    statusLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-size: 11;");
+                } else {
+                    statusLabel.setText("⚠ Before metrics captured, but no timing change applied yet.\n" +
+                        "Apply a timing change to start the after observation.");
+                    statusLabel.setStyle("-fx-text-fill: #FFA726; -fx-font-size: 11;");
+                }
+            } else if (beforeSnapshot == null && afterSnapshot != null) {
+                statusLabel.setText("⚠ After metrics available but before metrics missing.\n" +
+                    "This shouldn't happen - please restart measurement.");
+                statusLabel.setStyle("-fx-text-fill: #FF5252; -fx-font-size: 11;");
+            }
+            
+            statusLabel.setWrapText(true);
+            content.getChildren().add(statusLabel);
+        }
+        
+        Button closeBtn = UIStyles.createStyledButton("Close");
+        closeBtn.setOnAction(e -> dialog.close());
+        content.getChildren().add(closeBtn);
+        
+        javafx.scene.Scene scene = new javafx.scene.Scene(content, 600, 500);
+        dialog.setScene(scene);
+        dialog.show();
+    }
+
+    /**
+     * Formats metrics snapshot for display
+     */
+    private String formatMetrics(MetricsSnapshot snapshot) {
+        return String.format(
+            "Junction:         %s\n" +
+            "Measurement Time: %.1f seconds\n" +
+            "Avg Speed:        %.2f m/s (%.1f km/h)\n" +
+            "Queue Length:     %d vehicles\n" +
+            "Est. Wait Time:   %.1f seconds",
+            snapshot.junctionId,
+            snapshot.timestamp,
+            snapshot.avgSpeed, snapshot.avgSpeed * 3.6,
+            snapshot.queueLength,
+            snapshot.waitTime
+        );
+    }
+
+    /**
+     * Formats before/after comparison
+     */
+    private String formatComparison(MetricsSnapshot before, MetricsSnapshot after) {
+        double speedDiff = after.avgSpeed - before.avgSpeed;
+        int queueDiff = after.queueLength - before.queueLength;
+        double waitDiff = after.waitTime - before.waitTime;
+        
+        return String.format(
+            "                    BEFORE    AFTER     CHANGE\n" +
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+            "Avg Speed:          %.2f     %.2f      %s%.2f m/s\n" +
+            "Queue Length:       %d       %d        %s%d veh\n" +
+            "Est. Wait Time:     %.1f     %.1f      %s%.1f s\n\n" +
+            "%s",
+            before.avgSpeed, after.avgSpeed, formatDiff(-speedDiff), Math.abs(speedDiff),
+            before.queueLength, after.queueLength, formatDiff(queueDiff), Math.abs(queueDiff),
+            before.waitTime, after.waitTime, formatDiff(waitDiff), Math.abs(waitDiff),
+            getRecommendation(speedDiff, queueDiff, waitDiff)
+        );
+    }
+
+    private String formatDiff(double diff) {
+        if (Math.abs(diff) < 0.01) return "±";
+        return diff > 0 ? "+" : "-";
+    }
+
+    private String getRecommendation(double speedDiff, int queueDiff, double waitDiff) {
+        if (speedDiff > 0.5 && queueDiff < -1 && waitDiff < -2) {
+            return "✓ IMPROVED: Timing changes reduced congestion significantly!";
+        } else if (speedDiff > 0.2 && (queueDiff <= 0 || waitDiff < 0)) {
+            return "✓ IMPROVED: Traffic flow slightly better with new timing.";
+        } else if (speedDiff < -0.5 || queueDiff > 2 || waitDiff > 5) {
+            return "✗ WORSENED: Consider reverting timing changes.";
+        } else {
+            return "~ NEUTRAL: Minor impact. Try longer observation period.";
+        }
+    }
+
+    /**
+     * Inner class to store metrics snapshot
+     */
+    private static class MetricsSnapshot {
+        final String junctionId;
+        final double avgSpeed;
+        final int queueLength;
+        final double waitTime;
+        final double timestamp;
+        
+        MetricsSnapshot(String junctionId, double avgSpeed, int queueLength, 
+                       double waitTime, double timestamp) {
+            this.junctionId = junctionId;
+            this.avgSpeed = avgSpeed;
+            this.queueLength = queueLength;
+            this.waitTime = waitTime;
+            this.timestamp = timestamp;
+        }
+    }
 }

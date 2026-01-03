@@ -11,7 +11,7 @@
     </time>
     
     <processing>
-        <step-length value="0.1"/>
+        <step-length value="0.3"/>
         <time-to-teleport value="300"/>
         <max-depart-delay value="900"/>
     </processing>

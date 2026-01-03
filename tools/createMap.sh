@@ -52,11 +52,11 @@ DEFAULT_SPEED=10.89      # m/s
 NUM_TRIES=150 
 # Traffic density (seconds between vehicles)
 # Lower values = more vehicles spawned
-CAR_PERIOD=5          # Cars every 5 seconds (was 100)
-TRUCK_PERIOD=40       # Trucks every 40 seconds (was 6000)
-MOTORCYCLE_PERIOD=15  # Motorcycles every 15 seconds (was 1000)
-BUS_PERIOD=30         # Buses every 30 seconds (was 650)
-EMERGENCY_PERIOD=60   # Emergency vehicles every 60 seconds (was 900) 
+CAR_PERIOD=3          # Cars every 5 seconds (was 100)
+TRUCK_PERIOD=20       # Trucks every 40 seconds (was 6000)
+MOTORCYCLE_PERIOD=6  # Motorcycles every 15 seconds (was 1000)
+BUS_PERIOD=15         # Buses every 30 seconds (was 650)
+EMERGENCY_PERIOD=30   # Emergency vehicles every 60 seconds (was 900) 
 
 # Create resource directory
 
