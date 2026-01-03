@@ -757,17 +757,13 @@ public class TrafficLightControlPanel {
     }
 
     /**
-     * Displays a success dialog with the specified message
-     * 
-     * @param message The success message to display
-     */
-    /**
-     * Displays an alert dialog
+     * Displays an alert dialog with configurable blocking behavior.
      * 
      * @param type Alert type (ERROR or INFORMATION)
-     * @param title Dialog title
-     * @param message Message to display
-     * @param blocking If true, waits for user to close; if false, shows non-blocking
+     * @param title Dialog window title
+     * @param message Message content to display
+     * @param blocking If true, blocks execution until user closes (showAndWait); 
+     *                 if false, shows non-blocking dialog (show)
      */
     private void showAlert(javafx.scene.control.Alert.AlertType type, String title, String message, boolean blocking) {
         javafx.scene.control.Alert alert = new javafx.scene.control.Alert(type);
@@ -782,7 +778,11 @@ public class TrafficLightControlPanel {
     }
 
     /**
-     * Logs metrics snapshot to console for debugging
+     * Logs metrics snapshot data to console for debugging purposes.
+     * Outputs average speed, queue length, and wait time, or a warning if snapshot is null.
+     * 
+     * @param label Descriptive label for the log entry (e.g., "BEFORE METRICS CAPTURED")
+     * @param snapshot The metrics snapshot to log, or null if capture failed
      */
     private void logMetrics(String label, MetricsSnapshot snapshot) {
         if (snapshot != null) {
@@ -795,14 +795,32 @@ public class TrafficLightControlPanel {
         }
     }
 
+    /**
+     * Displays a blocking success dialog with the specified message.
+     * User must click OK before execution continues.
+     * 
+     * @param message The success message to display
+     */
     private void showSuccess(String message) {
         showAlert(javafx.scene.control.Alert.AlertType.INFORMATION, "Success", message, true);
     }
 
+    /**
+     * Displays a non-blocking information dialog with the specified message.
+     * Execution continues immediately without waiting for user interaction.
+     * 
+     * @param message The information message to display
+     */
     private void showInfo(String message) {
         showAlert(javafx.scene.control.Alert.AlertType.INFORMATION, "Information", message, false);
     }
 
+    /**
+     * Displays a blocking error dialog with the specified message.
+     * User must acknowledge the error before execution continues.
+     * 
+     * @param message The error message to display
+     */
     private void showError(String message) {
         showAlert(javafx.scene.control.Alert.AlertType.ERROR, "Error", message, true);
     }
@@ -896,7 +914,11 @@ public class TrafficLightControlPanel {
     }
 
     /**
-     * Creates button to view performance metrics
+     * Creates a button to view performance metrics comparison.
+     * Opens the metrics dialog showing before/after traffic performance data
+     * when phase timing changes are made.
+     * 
+     * @return Button configured with teal styling that opens the metrics dialog
      */
     private Button createMetricsButton() {
         metricsBtn = new Button("View Performance Metrics");
@@ -909,7 +931,12 @@ public class TrafficLightControlPanel {
     }
 
     /**
-     * ========== Captures current metrics snapshot for the junction ==========
+     * Captures current traffic metrics for vehicles near the selected junction.
+     * Collects average speed, queue length, and waiting time for all vehicles
+     * within MEASUREMENT_RADIUS (100m) of the junction center.
+     * 
+     * @return MetricsSnapshot containing averaged traffic metrics, or null if capture fails
+     *         (e.g., SUMO disconnected, junction not found, no vehicles nearby)
      */
     private MetricsSnapshot captureCurrentMetrics() {
         try {
@@ -949,7 +976,7 @@ public class TrafficLightControlPanel {
                         }
                     }
 
-                    // Get actual accumulated waiting time from SUMO
+                    // Get actual waiting time from SUMO
                     try {
                         double waitTime = adapter.getVehicleWaitingTime(v.getId());
                         waitTimes.add(waitTime);
@@ -982,7 +1009,11 @@ public class TrafficLightControlPanel {
     }
 
     /**
-     * Finds junction object by ID
+     * Finds and returns the Junction object matching the specified junction ID.
+     * Searches through all junctions managed by the traffic manager.
+     * 
+     * @param junctionId The identifier of the junction to find
+     * @return The Junction object with matching ID, or null if not found
      */
     private Junction findJunctionByIdInternal(String junctionId) {
         for (Junction j : trafficManager.getJunctions()) {
@@ -994,7 +1025,16 @@ public class TrafficLightControlPanel {
     }
 
     /**
-     * ========== Shows performance metrics comparison dialog ==========
+     * Displays a modal dialog showing performance metrics comparison.
+     * Shows before/after traffic metrics if both snapshots are available,
+     * observation progress if measurement is in progress, or instructions
+     * for capturing metrics if no data is available yet.
+     * 
+     * The dialog displays:
+     * - Before/After comparison table with speed, queue length, and wait time
+     * - Recommendation based on performance changes
+     * - Real-time countdown during observation period
+     * - Step-by-step instructions when no metrics are captured
      */
     private void showMetricsDialog() {
         javafx.stage.Stage dialog = new javafx.stage.Stage();
@@ -1006,7 +1046,7 @@ public class TrafficLightControlPanel {
         content.setAlignment(Pos.CENTER);
         content.setStyle("-fx-background-color: " + UIStyles.BG_PRIMARY + ";");
         
-        Label title = new Label("📊 PERFORMANCE COMPARISON");
+        Label title = new Label("PERFORMANCE COMPARISON");
         title.setStyle(UIStyles.TITLE_STYLE);
         content.getChildren().add(title);
         
@@ -1028,12 +1068,12 @@ public class TrafficLightControlPanel {
             Label statusLabel = new Label();
             
             if (beforeSnapshot == null && afterSnapshot == null) {
-                statusLabel.setText("💡 To measure performance impact:\n\n" +
+                statusLabel.setText("To measure performance impact:\n\n" +
                     "1. Click 'Edit Phase Timing'\n" +
                     "2. Change the duration and click 'Apply & Resume'\n" +
                     "3. Wait " + (MEASUREMENT_DURATION_MS/1000) + " seconds for observation\n" +
                     "4. Return here to see before/after comparison\n\n" +
-                    "📈 Current real-time metrics are shown in the Dashboard.");
+                    "Current real-time metrics are shown in the Dashboard.");
                 statusLabel.setStyle("-fx-text-fill: #FFA726; -fx-font-size: 16;");
             } else if (beforeSnapshot != null && afterSnapshot == null) {
                 if (afterMeasurementStart > 0) {
@@ -1069,7 +1109,11 @@ public class TrafficLightControlPanel {
     }
 
     /**
-     * ========== Formats before/after comparison for display ==========
+     * Formats before/after metrics comparison into a readable text table.
+     * 
+     * @param before The metrics snapshot captured before phase timing change
+     * @param after The metrics snapshot captured after phase timing change
+     * @return Formatted string showing BEFORE, AFTER, and CHANGE columns with recommendation
      */
     private String formatComparison(MetricsSnapshot before, MetricsSnapshot after) {
         double speedDiff = after.avgSpeed - before.avgSpeed;
@@ -1094,7 +1138,12 @@ public class TrafficLightControlPanel {
     }
 
     /**
-     * ========== Generates recommendation based on metrics changes ==========
+     * Generates a recommendation message based on traffic metrics changes.
+     * 
+     * @param speedDiff Change in average speed (after - before) in m/s
+     * @param queueDiff Change in queue length (after - before) in vehicles
+     * @param waitDiff Change in wait time (after - before) in seconds
+     * @return Recommendation string: IMPROVED, WORSENED, or NEUTRAL with explanation
      */
     private String getRecommendation(double speedDiff, int queueDiff, double waitDiff) {
         if (speedDiff > 0.5 && queueDiff < -1 && waitDiff < -2) {
@@ -1109,7 +1158,14 @@ public class TrafficLightControlPanel {
     }
 
     /**
-     * ========== Inner class to store metrics snapshot data ==========
+     * A data class storing a snapshot of traffic metrics at a specific moment.
+     * Used to capture before/after performance data for comparison when phase timing changes.
+     * 
+     * @param junctionId The junction ID where metrics were captured
+     * @param avgSpeed Average vehicle speed in m/s within measurement radius
+     * @param queueLength Number of stopped/slow vehicles (speed < 2.0 m/s)
+     * @param waitTime Average waiting time in seconds
+     * @param timestamp Simulation time when snapshot was captured
      */
     private static class MetricsSnapshot {
         final String junctionId;
