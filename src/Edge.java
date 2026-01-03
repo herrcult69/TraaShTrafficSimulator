@@ -35,6 +35,10 @@ public class Edge {
     private Junction fromJunction;
     private Junction toJunction;
     private List<Lane> lanes;
+    
+    // Edge statistics
+    private int vehicleCount;
+    private double edgeLength;
 
     /**
      * Constructs a new visual Edge from parsed network data.
@@ -56,6 +60,12 @@ public class Edge {
         this.fromJunction = fromJunc;
         this.toJunction = toJunc;
         this.lanes = new ArrayList<>();
+        
+        // Calculate edge length
+        double dx = toX - fromX;
+        double dy = toY - fromY;
+        this.edgeLength = Math.sqrt(dx * dx + dy * dy);
+        this.vehicleCount = 0;
 
         createLanes();
     }
@@ -302,6 +312,43 @@ public class Edge {
         return toJunction;
     }
 
+    /**
+     * Updates the vehicle count on this edge.
+     * 
+     * @param count The number of vehicles currently on this edge
+     */
+    public void setVehicleCount(int count) {
+        this.vehicleCount = count;
+    }
+    
+    /**
+     * Returns the number of vehicles currently on this edge.
+     * 
+     * @return The vehicle count
+     */
+    public int getVehicleCount() {
+        return vehicleCount;
+    }
+    
+    /**
+     * Returns the vehicle density (vehicles per kilometer) on this edge.
+     * 
+     * @return The vehicle density in vehicles/km
+     */
+    public double getVehicleDensity() {
+        if (edgeLength <= 0) return 0.0;
+        return (vehicleCount * 1000.0) / edgeLength; // Convert to vehicles per km
+    }
+    
+    /**
+     * Returns the length of this edge in meters.
+     * 
+     * @return The edge length
+     */
+    public double getEdgeLength() {
+        return edgeLength;
+    }
+    
     /**
      * Highlights this edge with a colored overlay.
      * Used during route selection to show selected edges.

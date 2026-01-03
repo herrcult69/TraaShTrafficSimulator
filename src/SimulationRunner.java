@@ -46,6 +46,7 @@ public class SimulationRunner implements Runnable {
     private final Map<String, Double> vehicleSpeeds = new ConcurrentHashMap<>();
     private volatile double simulationTime = 0.0;
     private final Map<String, TrafficLight.TrafficLightData> trafficLightData = new ConcurrentHashMap<>();
+    private final Map<String, String> vehicleEdges = new ConcurrentHashMap<>();
     private ConnectionListener connectionListener;
 
     /**
@@ -102,6 +103,15 @@ public class SimulationRunner implements Runnable {
      */
     public Map<String, TrafficLight.TrafficLightData> getTrafficLightData() {
         return trafficLightData;
+    }
+    
+    /**
+     * Returns a thread-safe map of vehicle road IDs.
+     * 
+     * @return Map from vehicle ID to edge ID
+     */
+    public Map<String, String> getVehicleEdges() {
+        return vehicleEdges;
     }
 
     /**
@@ -187,19 +197,25 @@ public class SimulationRunner implements Runnable {
                     List<String> ids = adapter.getVehicleIds();
                     vehiclePositions.keySet().removeIf(id -> !ids.contains(id));
                     vehicleSpeeds.keySet().removeIf(id -> !ids.contains(id));
+                    vehicleEdges.keySet().removeIf(id -> !ids.contains(id));
                     for (String id : ids) {
                         double[] p = adapter.getVehiclePosition(id);
                         double ang = 0.0;
                         double speed = 0.0;
                         int signals = 0;
+                        String edgeId = "";
                         try {
                             ang = adapter.getVehicleAngle(id);
                             speed = adapter.getVehicleSpeed(id);
                             signals = adapter.getVehicleSignals(id);
+                            edgeId = adapter.getVehicleRoadID(id);
                         } catch (Exception ignore) {
                         }
                         vehiclePositions.put(id, new double[] { p[0], p[1], ang, (double) signals });
                         vehicleSpeeds.put(id, speed);
+                        if (!edgeId.isEmpty()) {
+                            vehicleEdges.put(id, edgeId);
+                        }
                     }
 
                     // Update traffic lights (only if not in manual mode)

@@ -172,6 +172,49 @@ public class TrafficManager {
         // Remove vehicles that are no longer in SUMO
         vehicles.entrySet().removeIf(entry -> !vehiclePositions.containsKey(entry.getKey()));
     }
+    
+    /**
+     * Updates vehicle speed statistics from SUMO simulation data.
+     * 
+     * @param vehicleSpeeds Map from vehicle ID to speed in m/s
+     */
+    public void updateVehicleSpeeds(Map<String, Double> vehicleSpeeds) {
+        for (Map.Entry<String, Double> entry : vehicleSpeeds.entrySet()) {
+            String vehicleId = entry.getKey();
+            Double speed = entry.getValue();
+            
+            Vehicle vehicle = vehicles.get(vehicleId);
+            if (vehicle != null && speed != null) {
+                vehicle.updateSpeed(speed);
+            }
+        }
+    }
+    
+    /**
+     * Updates edge statistics including vehicle counts and density.
+     * 
+     * @param vehicleEdges Map from vehicle ID to edge ID
+     */
+    public void updateEdgeStatistics(Map<String, String> vehicleEdges) {
+        // Reset all edge counts
+        for (Edge edge : edges) {
+            edge.setVehicleCount(0);
+        }
+        
+        // Count vehicles on each edge
+        Map<String, Integer> edgeCounts = new java.util.HashMap<>();
+        for (String edgeId : vehicleEdges.values()) {
+            edgeCounts.put(edgeId, edgeCounts.getOrDefault(edgeId, 0) + 1);
+        }
+        
+        // Update edge vehicle counts
+        for (Map.Entry<String, Integer> entry : edgeCounts.entrySet()) {
+            Edge edge = getEdgeById(entry.getKey());
+            if (edge != null) {
+                edge.setVehicleCount(entry.getValue());
+            }
+        }
+    }
 
     /**
      * Updates traffic light states from SUMO simulation data.
@@ -278,6 +321,8 @@ public class TrafficManager {
     private void highlightObject(GraphicsContext g, CoordinateTransform transform, Object obj, Color color) {
         if (obj instanceof Vehicle) {
             ((Vehicle) obj).highlight(g, transform, color);
+        } else if (obj instanceof Edge) {
+            ((Edge) obj).highlight(g, transform, color);
         } else if (obj instanceof Lane) {
             ((Lane) obj).highlight(g, transform, color);
         } else if (obj instanceof Junction) {

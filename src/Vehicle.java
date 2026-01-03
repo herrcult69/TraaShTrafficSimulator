@@ -35,6 +35,12 @@ public class Vehicle {
     private double length, width;
     private Rectangle2D bounds;
     private int signals;
+    
+    // Speed statistics
+    private double currentSpeed;
+    private double maxSpeed;
+    private double totalSpeed;
+    private int speedSampleCount;
 
     /**
      * Constructs a new vehicle with the specified position and orientation.
@@ -50,6 +56,12 @@ public class Vehicle {
         this.worldX = worldX;
         this.worldY = worldY;
         this.angle = angle;
+        
+        // Initialize speed statistics
+        this.currentSpeed = 0.0;
+        this.maxSpeed = 0.0;
+        this.totalSpeed = 0.0;
+        this.speedSampleCount = 0;
 
         // Determine vehicle type and dimensions from ID
         determineTypeFromId();
@@ -311,5 +323,53 @@ public class Vehicle {
      */
     public Rectangle2D getBounds() {
         return bounds;
+    }
+    
+    /**
+     * Updates the vehicle's current speed and statistics.
+     * Automatically tracks maximum speed and calculates running average.
+     * 
+     * @param speed The current speed in m/s
+     */
+    public void updateSpeed(double speed) {
+        this.currentSpeed = speed;
+        this.totalSpeed += speed;
+        this.speedSampleCount++;
+        
+        if (speed > this.maxSpeed) {
+            this.maxSpeed = speed;
+        }
+    }
+    
+    /**
+     * Returns the vehicle's current speed.
+     * 
+     * @return The current speed in m/s
+     */
+    public double getCurrentSpeed() {
+        return currentSpeed;
+    }
+    
+    /**
+     * Returns the vehicle's maximum recorded speed.
+     * 
+     * @return The maximum speed in m/s
+     */
+    public double getMaxSpeed() {
+        return maxSpeed;
+    }
+    
+    /**
+     * Returns the vehicle's average speed since it entered the simulation.
+     * 
+     * @return The average speed in m/s, or 0.0 if no samples
+     */
+    public double getAverageSpeed() {
+        if (speedSampleCount == 0) {
+            return 0.0;
+        }
+        else {
+            return totalSpeed / speedSampleCount;
+        }
     }
 }
