@@ -975,69 +975,61 @@ public class TrafficLightControlPanel {
         dialog.setTitle("Performance Metrics - " + selectedLight.getJunctionId());
         dialog.initModality(javafx.stage.Modality.APPLICATION_MODAL);
         
-        VBox content = new VBox(15);
-        content.setPadding(new Insets(20));
+        VBox content = new VBox(20);
+        content.setPadding(new Insets(30));
+        content.setAlignment(Pos.CENTER);
         content.setStyle("-fx-background-color: " + UIStyles.BG_PRIMARY + ";");
         
-        Label title = new Label("📊 TRAFFIC PERFORMANCE METRICS");
+        Label title = new Label("📊 PERFORMANCE COMPARISON");
         title.setStyle(UIStyles.TITLE_STYLE);
         content.getChildren().add(title);
         
-        // Current metrics
-        MetricsSnapshot current = captureCurrentMetrics();
-        if (current != null) {
-            Label currentTitle = new Label("Current Metrics:");
-            currentTitle.setStyle("-fx-text-fill: #4CAF50; -fx-font-size: 14; -fx-font-weight: bold;");
-            
-            Label currentData = new Label(formatMetrics(current));
-            currentData.setStyle("-fx-text-fill: #ffffff; -fx-font-size: 12; -fx-font-family: monospace;");
-            
-            content.getChildren().addAll(currentTitle, currentData);
-        }
-        
-        // Before/After comparison
+        // Show Before/After comparison if available
         if (beforeSnapshot != null && afterSnapshot != null) {
-            content.getChildren().add(new javafx.scene.control.Separator());
-            
-            Label compareTitle = new Label("Before vs After Timing Change:");
-            compareTitle.setStyle("-fx-text-fill: #FFA726; -fx-font-size: 14; -fx-font-weight: bold;");
+            Label compareTitle = new Label("Before vs After Phase Duration Change:");
+            compareTitle.setStyle("-fx-text-fill: #FFA726; -fx-font-size: 16; -fx-font-weight: bold;");
+            compareTitle.setAlignment(Pos.CENTER);
+            compareTitle.setMaxWidth(Double.MAX_VALUE);
             
             Label comparison = new Label(formatComparison(beforeSnapshot, afterSnapshot));
-            comparison.setStyle("-fx-text-fill: #ffffff; -fx-font-size: 12; -fx-font-family: monospace;");
+            comparison.setStyle("-fx-text-fill: #ffffff; -fx-font-size: 16; -fx-font-family: monospace;");
+            comparison.setAlignment(Pos.CENTER);
+            comparison.setMaxWidth(Double.MAX_VALUE);
             
             content.getChildren().addAll(compareTitle, comparison);
         } else {
-            // Show status of measurement
-            content.getChildren().add(new javafx.scene.control.Separator());
+            // Show status/instructions
             Label statusLabel = new Label();
             
             if (beforeSnapshot == null && afterSnapshot == null) {
-                statusLabel.setText("💡 To see before/after comparison:\n" +
+                statusLabel.setText("💡 To measure performance impact:\n\n" +
                     "1. Click 'Edit Phase Timing'\n" +
-                    "2. Change the duration and click Apply\n" +
-                    "3. Wait 60 seconds for observation\n" +
-                    "4. Return here to see results");
-                statusLabel.setStyle("-fx-text-fill: #FFA726; -fx-font-size: 11;");
+                    "2. Change the duration and click 'Apply & Resume'\n" +
+                    "3. Wait " + (MEASUREMENT_DURATION_MS/1000) + " seconds for observation\n" +
+                    "4. Return here to see before/after comparison\n\n" +
+                    "📈 Current real-time metrics are shown in the Dashboard.");
+                statusLabel.setStyle("-fx-text-fill: #FFA726; -fx-font-size: 16;");
             } else if (beforeSnapshot != null && afterSnapshot == null) {
                 if (afterMeasurementStart > 0) {
                     long elapsed = System.currentTimeMillis() - afterMeasurementStart;
                     long remaining = (MEASUREMENT_DURATION_MS - elapsed) / 1000;
-                    statusLabel.setText("⏱ Observation in progress...\n" +
+                    statusLabel.setText("⏱ Observation in progress...\n\n" +
                         "Time remaining: " + Math.max(0, remaining) + " seconds\n\n" +
-                        "Come back after observation completes to see comparison.");
-                    statusLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-size: 11;");
+                        "Come back after observation completes to see comparison.\n" +
+                        "You can close this dialog and continue using the application.");
+                    statusLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-size: 16;");
                 } else {
-                    statusLabel.setText("⚠ Before metrics captured, but no timing change applied yet.\n" +
-                        "Apply a timing change to start the after observation.");
-                    statusLabel.setStyle("-fx-text-fill: #FFA726; -fx-font-size: 11;");
+                    statusLabel.setText("✓ BEFORE metrics captured\n\n" +
+                        "Ready to apply timing change.\n" +
+                        "Edit phase duration and the system will automatically\n" +
+                        "measure the AFTER performance.");
+                    statusLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-size: 16;");
                 }
-            } else if (beforeSnapshot == null && afterSnapshot != null) {
-                statusLabel.setText("⚠ After metrics available but before metrics missing.\n" +
-                    "This shouldn't happen - please restart measurement.");
-                statusLabel.setStyle("-fx-text-fill: #FF5252; -fx-font-size: 11;");
             }
             
             statusLabel.setWrapText(true);
+            statusLabel.setAlignment(Pos.CENTER);
+            statusLabel.setMaxWidth(Double.MAX_VALUE);
             content.getChildren().add(statusLabel);
         }
         
@@ -1045,7 +1037,7 @@ public class TrafficLightControlPanel {
         closeBtn.setOnAction(e -> dialog.close());
         content.getChildren().add(closeBtn);
         
-        javafx.scene.Scene scene = new javafx.scene.Scene(content, 600, 500);
+        javafx.scene.Scene scene = new javafx.scene.Scene(content, 750, 550);
         dialog.setScene(scene);
         dialog.show();
     }
