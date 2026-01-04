@@ -13,21 +13,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Adapter class for communicating with SUMO via the TraCI (Traffic Control Interface) protocol.
+ * Adapter class for communicating with SUMO via TraCI protocol.
+ * Provides simplified methods for querying simulation state and controlling traffic.
  * 
- * <p>This class wraps the TraaS (TraCI as a Service) library and provides simplified methods for:
- * <ul>
- *   <li>Querying simulation state (time, vehicle positions, angles, speeds, signals)</li>
- *   <li>Querying and controlling traffic lights (state, program)</li>
- *   <li>Adding vehicles and routes dynamically during simulation</li>
- *   <li>Finding valid routes between edges using SUMO's routing</li>
- * </ul>
- * 
- * <p>All methods may throw exceptions if the TraCI connection is not established
- * or if SUMO returns an error (e.g., invalid vehicle ID, route not found).</p>
- *
  * @author M A T^2 H Team
- * @version 2.0 
+ * @version 2.0
  * @see SimulationRunner
  */
 @SuppressWarnings("unchecked")
@@ -79,8 +69,8 @@ public class TraaSAdapter {
      * Returns the orientation angle of a vehicle.
      * 
      * @param id The vehicle identifier
-     * @return Angle in degrees (0 = east, 90 = north, as per SUMO convention)
-     * @throws Exception if TraCI communication fails or vehicle doesn't exist
+     * @return Angle in degrees
+     * @throws Exception if TraCI communication fails
      */
     public double getVehicleAngle(String id) throws Exception {
         // Angle in degrees as provided by SUMO (0 = east, 90 = north)
@@ -99,12 +89,11 @@ public class TraaSAdapter {
     }
 
     /**
-     * Returns the waiting time of a vehicle.
-     * Waiting time is the total time (in seconds) the vehicle has been below a certain speed threshold.
+     * Returns the waiting time of a vehicle in seconds.
      * 
      * @param id The vehicle identifier
      * @return Waiting time in seconds
-     * @throws Exception if TraCI communication fails or vehicle doesn't exist
+     * @throws Exception if TraCI communication fails
      */
     public double getVehicleWaitingTime(String id) throws Exception {
         return ((Number) conn.do_job_get(Vehicle.getWaitingTime(id))).doubleValue();
@@ -112,17 +101,10 @@ public class TraaSAdapter {
 
     /**
      * Returns the signal state of a vehicle (turn signals, brake lights).
-     * The result is a bit field where:
-     * <ul>
-     *   <li>Bit 0 (1): Right turn signal</li>
-     *   <li>Bit 1 (2): Left turn signal</li>
-     *   <li>Bit 2 (4): Emergency flashers (both turn signals)</li>
-     *   <li>Bit 3 (8): Brake lights</li>
-     * </ul>
      * 
      * @param id The vehicle identifier
      * @return Signal state as an integer bit field
-     * @throws Exception if TraCI communication fails or vehicle doesn't exist
+     * @throws Exception if TraCI communication fails
      */
     public int getVehicleSignals(String id) throws Exception {
         return ((Number) conn.do_job_get(Vehicle.getSignals(id))).intValue();
@@ -139,12 +121,11 @@ public class TraaSAdapter {
     }
 
     /**
-     * Returns the current state of a traffic light as a string of signal characters.
-     * Each character represents one signal: 'r'/'R' = red, 'y'/'Y' = yellow, 'g'/'G' = green, 'o' = off.
+     * Returns the current state of a traffic light.
      * 
-     * @param tlId The traffic light (junction) identifier
-     * @return State string (e.g., "GrGr" for a 4-signal light)
-     * @throws Exception if TraCI communication fails or traffic light doesn't exist
+     * @param tlId The traffic light identifier
+     * @return State string (e.g., "GrGr")
+     * @throws Exception if TraCI communication fails
      */
     public String getTrafficLightState(String tlId) throws Exception {
         return (String) conn.do_job_get(Trafficlight.getRedYellowGreenState(tlId));
@@ -152,22 +133,21 @@ public class TraaSAdapter {
 
     /**
      * Sets the state of a traffic light manually.
-     * This overrides automatic control until setTrafficLightProgram is called.
      * 
-     * @param tlId The traffic light (junction) identifier
-     * @param state State string (e.g., "GGrr") where each character controls one signal
-     * @throws Exception if TraCI communication fails or state is invalid
+     * @param tlId The traffic light identifier
+     * @param state State string (e.g., "GGrr")
+     * @throws Exception if TraCI communication fails
      */
     public void setTrafficLightState(String tlId, String state) throws Exception {
         conn.do_job_set(Trafficlight.setRedYellowGreenState(tlId, state));
     }
 
     /**
-     * Sets the traffic light program, typically used to return to automatic control.
+     * Sets the traffic light program.
      * 
-     * @param tlId The traffic light (junction) identifier
-     * @param programId The program ID ("0" is typically the default automatic program)
-     * @throws Exception if TraCI communication fails or program doesn't exist
+     * @param tlId The traffic light identifier
+     * @param programId The program ID
+     * @throws Exception if TraCI communication fails
      */
     public void setTrafficLightProgram(String tlId, String programId) throws Exception {
         conn.do_job_set(Trafficlight.setProgram(tlId, programId));
@@ -189,11 +169,10 @@ public class TraaSAdapter {
 
     /**
      * Adds a new route to the simulation.
-     * Routes define a sequence of edges that vehicles can follow.
      * 
      * @param routeId Unique route identifier
-     * @param edges List of edge IDs that form the route
-     * @throws Exception if TraCI communication fails or route is invalid
+     * @param edges List of edge IDs
+     * @throws Exception if TraCI communication fails
      */
     public void addRoute(String routeId, List<String> edges) throws Exception {
         SumoStringList edgeList = new SumoStringList();
@@ -205,12 +184,11 @@ public class TraaSAdapter {
 
     /**
      * Adds a new vehicle to the simulation.
-     * The vehicle will appear at the start of the specified route at the next simulation step.
      * 
      * @param vehicleId Unique vehicle identifier
-     * @param routeId The route ID for this vehicle to follow
-     * @param vehicleClass The vehicle class (passenger, truck, bus, motorcycle, emergency)
-     * @throws Exception if TraCI communication fails, route doesn't exist, or vehicle ID is duplicate
+     * @param routeId The route ID
+     * @param vehicleClass The vehicle class
+     * @throws Exception if TraCI communication fails
      */
     public void addVehicle(String vehicleId, String routeId, String vehicleClass)
             throws Exception {
@@ -250,13 +228,12 @@ public class TraaSAdapter {
     }
 
     /**
-     * Finds a valid route between two edges using SUMO's built-in routing algorithm.
-     * This respects the network topology and returns the shortest path.
+     * Finds a valid route between two edges using SUMO's routing.
      * 
      * @param fromEdge Starting edge ID
      * @param toEdge Destination edge ID
-     * @return List of edge IDs forming the route, or null if no route exists
-     * @throws Exception if TraCI communication fails or edges don't exist
+     * @return List of edge IDs forming the route, or null
+     * @throws Exception if TraCI communication fails
      */
     public List<String> findRoute(String fromEdge, String toEdge) throws Exception {
         // Use Simulation.findRoute to get a valid path
@@ -285,7 +262,7 @@ public class TraaSAdapter {
     }
 
     /**
-     * Returns the default total duration of the currently active phase in seconds.
+     * Returns the current phase duration in seconds.
      * 
      * @param tlId The traffic light identifier
      * @return Phase duration in seconds
@@ -296,7 +273,7 @@ public class TraaSAdapter {
     }
 
     /**
-     * Returns the time until the next phase switching
+     * Returns the time until the next phase switching.
      * 
      * @param tlId The traffic light identifier
      * @return Time in seconds until next switch
@@ -307,23 +284,22 @@ public class TraaSAdapter {
     }
 
     /**
-     * Sets the duration of the currently active phase
-     * This modifies timing for this cycle only
+     * Sets the duration of the currently active phase.
      * 
      * @param tlId The traffic light identifier
      * @param duration New duration in seconds
-     * @throws Exception if TraCi communication fails
+     * @throws Exception if TraCI communication fails
      */
     public void setPhaseDuration(String tlId, double duration) throws Exception{
         conn.do_job_set(Trafficlight.setPhaseDuration(tlId, duration));
     }
 
     /**
-     * Sets a specific phase as the current active phase
+     * Sets a specific phase as the current active phase.
      * 
      * @param tlId The traffic light identifier
      * @param phaseIndex The phase index to switch to
-     * @throws Exception if TraCi communication fails
+     * @throws Exception if TraCI communication fails
      */
     public void setPhase(String tlId, int phaseIndex) throws Exception {
         conn.do_job_set(Trafficlight.setPhase(tlId, phaseIndex));

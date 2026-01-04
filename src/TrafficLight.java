@@ -18,13 +18,21 @@ import java.util.ArrayList;
  * 
  * <p>The traffic light state is represented as a string where each character controls
  * one signal: 'G'/'g' = green, 'y'/'Y' = yellow, 'r'/'R' = red, 'o' = off.</p>
+ * 
+ * <p><b>OOP Architecture:</b></p>
+ * <ul>
+ *   <li><b>Abstract Class:</b> Extends {@link Renderable} (IS-A relationship)</li>
+ *   <li><b>Interface:</b> Implements {@link Updatable} (CAN-BE-UPDATED capability)</li>
+ * </ul>
  *
  * @author M A T^2 H Team
  * @version 2.0 
  * @see TrafficManager
  * @see Junction
+ * @see Renderable
+ * @see Updatable
  */
-public class TrafficLight {
+public class TrafficLight extends Renderable implements Updatable {
     // Color constants
     private static final Color RED = Color.rgb(255, 0, 0);
     private static final Color YELLOW = Color.rgb(255, 255, 0);
@@ -248,6 +256,38 @@ public class TrafficLight {
         this.currentState = fullState;
     }
 
+    // ========== Updatable Interface Implementation ==========
+    
+    /**
+     * Updates this traffic light's state from simulation data.
+     * Implements the Updatable interface for polymorphic updates.
+     * 
+     * @param data TrafficLightData object from SUMO
+     */
+    @Override
+    public void updateFromSimulation(Object data) {
+        if (data instanceof TrafficLightData) {
+            TrafficLightData tlData = (TrafficLightData) data;
+            if (!manualMode) {
+                setState(tlData.state);
+            }
+        } else if (data instanceof String) {
+            if (!manualMode) {
+                setState((String) data);
+            }
+        }
+    }
+    
+    /**
+     * Returns the junction ID for matching with simulation updates.
+     * 
+     * @return The junction identifier
+     */
+    @Override
+    public String getUpdateId() {
+        return junctionId;
+    }
+
     /**
      * Returns the color for a signal based on its link index in the state string.
      * 
@@ -304,6 +344,7 @@ public class TrafficLight {
      * @param g The graphics context to draw on
      * @param transform The coordinate transformation
      */
+    @Override
     public void render(GraphicsContext g, CoordinateTransform transform) {
         // Render each individual signal
         for (Signal signal : signals) {
@@ -402,6 +443,7 @@ public class TrafficLight {
      * @param transform The coordinate transformation
      * @return true if the point hits any signal
      */
+    @Override
     public boolean contains(double screenX, double screenY, CoordinateTransform transform) {
         // Check if click is on any signal
         for (Signal signal : signals) {
@@ -440,6 +482,7 @@ public class TrafficLight {
      * @param transform The coordinate transformation
      * @param color The highlight color
      */
+    @Override
     public void highlight(GraphicsContext g, CoordinateTransform transform, Color color) {
         // Highlight all signals for this traffic light
         for (Signal signal : signals) {

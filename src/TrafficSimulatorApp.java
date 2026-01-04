@@ -14,31 +14,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 
 /**
- * Main application class for the real-time SUMO traffic visualization system.
- * 
- * <p>This JavaFX application provides an interactive visualization of SUMO traffic simulations
- * with the following key features:</p>
- * <ul>
- *   <li>Coordinate transformation between SUMO (Y-up) and JavaFX (Y-down) coordinate systems</li>
- *   <li>Multi-level view management: base scale, user zoom, and pan offset</li>
- *   <li>Object-oriented rendering with hit detection for vehicles, junctions, edges, and traffic lights</li>
- *   <li>60fps animation loop with background simulation thread</li>
- *   <li>Interactive vehicle injection with visual route selection mode</li>
- *   <li>Manual traffic light control with junction-wide synchronization</li>
- *   <li>Real-time dashboard displaying traffic metrics and statistics</li>
- * </ul>
- * 
- * <p>The application follows an MVC-like architecture where {@link TrafficManager} manages
- * all simulation objects, {@link ViewManager} handles view transformations, and UI panels
- * provide user interaction.</p>
+ * Main JavaFX application for visualizing SUMO traffic simulations.
+ * Handles coordinate transformation, rendering, user interaction, and real-time updates.
  *
  * @author M A T^2 H Team
- * @version 2.0 
+ * @version 2.0
  * @see TrafficManager
  * @see ViewManager
- * @see SimulationRunner
- * @see ControlPanel
- * @see DashBoard
  */
 public class TrafficSimulatorApp extends Application {
     private static final String NETWORK_FILE = "SumoConfig/network.net.xml";
@@ -67,10 +49,9 @@ public class TrafficSimulatorApp extends Application {
 
     /**
      * Initializes and starts the JavaFX application.
-     * Sets up the network, canvas, simulation runner, view manager, control panel, and event handlers.
      * 
-     * @param stage The primary stage for this application
-     * @throws Exception if network file cannot be parsed or simulation cannot start
+     * @param stage The primary stage
+     * @throws Exception if setup fails
      */
     @Override
     public void start(Stage stage) throws Exception {
@@ -133,9 +114,7 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /**
-     * Main rendering loop called approximately 60 times per second by the AnimationTimer.
-     * Updates vehicle positions, traffic light states, renders all objects, highlights selections,
-     * and updates the dashboard at a reduced frequency.
+     * Main rendering loop (called ~60fps). Updates and draws all simulation objects.
      */
     private void draw() {
         GraphicsContext g = canvas.getGraphicsContext2D();
@@ -173,10 +152,10 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /**
-     * Draws an information box overlay showing details of the selected object.
+     * Draws an info box showing details of the selected object.
      * 
-     * @param g The graphics context for rendering
-     * @param selected The selected object (Vehicle, Lane, or Junction)
+     * @param g Graphics context
+     * @param selected Selected object
      */
     private void drawInfoBox(GraphicsContext g, Object selected) {
         double x = 10;
@@ -209,8 +188,7 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /**
-     * Collects current simulation metrics and updates the dashboard.
-     * Called at a reduced frequency to avoid excessive UI updates.
+     * Collects simulation metrics and updates the dashboard.
      */
     private void updateDashboard() {
         DashBoard.DashBoardData data = new DashBoard.DashBoardData();
@@ -220,19 +198,16 @@ public class TrafficSimulatorApp extends Application {
         dashboard.update(data);
     }
 
-    /**
-     * Callback invoked when route selection mode starts.
-     * Clears the selected route edges list.
-     */
+    /** Callback when route selection starts. Clears selected edges. */
     private void onStartRouteSelection() {
         selectedRouteEdges.clear();
         System.out.println("Route selection mode started");
     }
 
     /**
-     * Callback invoked when route selection mode changes state.
+     * Callback when route selection mode toggles.
      * 
-     * @param active true if entering route selection mode, false if exiting
+     * @param active true if entering mode, false if exiting
      */
     private void onRouteSelectionModeChange(Boolean active) {
         routeSelectionMode = active;
@@ -242,10 +217,7 @@ public class TrafficSimulatorApp extends Application {
         }
     }
 
-    /**
-     * Callback invoked when a vehicle is successfully added to the simulation.
-     * Clears the route selection state and exits route selection mode.
-     */
+    /** Callback when a vehicle is successfully added. */
     private void onVehicleAdded() {
         selectedRouteEdges.clear();
         routeSelectionMode = false;
@@ -254,10 +226,9 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /**
-     * Renders route selection highlights on the canvas.
-     * Start edge is shown in green, end edge in red, computed route in cyan, and hovered edge in yellow.
+     * Renders route selection highlights (green=start, red=end, cyan=route, yellow=hover).
      * 
-     * @param g The graphics context for rendering
+     * @param g Graphics context
      */
     private void renderRouteSelection(GraphicsContext g) {
         VehicleAddPanel panel = controlPanel.getVehicleAddPanel();
@@ -285,12 +256,12 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /**
-     * Highlights a specific edge by its ID with the given color.
+     * Highlights an edge by ID.
      * 
-     * @param edgeId The edge identifier to highlight
-     * @param color The highlight color
-     * @param g The graphics context for rendering
-     * @param t The coordinate transformation
+     * @param edgeId Edge ID
+     * @param color Highlight color
+     * @param g Graphics context
+     * @param t Coordinate transform
      */
     private void highlightEdge(String edgeId, Color color, GraphicsContext g, CoordinateTransform t) {
         if (edgeId == null) return;
@@ -299,10 +270,9 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /**
-     * Draws an overlay box with route selection instructions and status.
-     * Shows current selection state (start edge, end edge, computed route).
+     * Draws route selection instructions overlay.
      * 
-     * @param g The graphics context for rendering
+     * @param g Graphics context
      */
     private void drawRouteSelectionOverlay(GraphicsContext g) {
         VehicleAddPanel vehicleAddPanel = controlPanel.getVehicleAddPanel();
@@ -351,10 +321,10 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /**
-     * Sets up the canvas with size bindings, resize listeners, and starts the animation timer.
+     * Sets up canvas bindings and starts the animation loop.
      * 
-     * @param root The root BorderPane containing the canvas
-     * @param stage The primary stage
+     * @param root Root BorderPane
+     * @param stage Primary stage
      */
     private void setupCanvas(BorderPane root, Stage stage) {
         canvas.widthProperty().bind(root.widthProperty().subtract(300));
@@ -381,10 +351,7 @@ public class TrafficSimulatorApp extends Application {
         }.start();
     }
 
-    /**
-     * Sets up mouse and scroll event handlers for canvas interaction.
-     * Handles zoom, pan, hover detection, and click handling.
-     */
+    /** Sets up mouse and scroll event handlers for zoom, pan, and selection. */
     private void setupEventHandlers() {
         canvas.setOnScroll(e -> viewManager.zoomToPoint(e.getDeltaY() > 0 ? 1.1 : 0.9, e.getX(), e.getY()));
         canvas.setOnMousePressed(e -> viewManager.startPan(e.getX(), e.getY()));
@@ -399,10 +366,10 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /**
-     * Handles canvas click events for object selection or route selection.
+     * Handles canvas clicks for selection or route building.
      * 
-     * @param x The X coordinate of the click in screen space
-     * @param y The Y coordinate of the click in screen space
+     * @param x Screen X coordinate
+     * @param y Screen Y coordinate
      */
     private void handleCanvasClick(double x, double y) {
         if (routeSelectionMode) {
@@ -425,11 +392,10 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /**
-     * Handles click events during route selection mode.
-     * Passes the clicked edge ID to the vehicle add panel.
+     * Handles clicks during route selection.
      * 
-     * @param x The X coordinate of the click in screen space
-     * @param y The Y coordinate of the click in screen space
+     * @param x Screen X coordinate
+     * @param y Screen Y coordinate
      */
     private void handleRouteSelectionClick(double x, double y) {
         String edgeId = scene.getEdgeIdAt(x, y, viewManager.getTransform());
@@ -443,9 +409,9 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /**
-     * Logs information about the clicked element to the console.
+     * Logs clicked element info to console.
      * 
-     * @param element The clicked object (Vehicle, Lane, or Junction)
+     * @param element Clicked object
      */
     private void logClickedElement(Object element) {
         System.out.println("Clicked: " + element.getClass().getSimpleName());
@@ -461,10 +427,9 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /**
-     * Collects vehicle metrics including counts by type and average speed.
-     * Populates the dashboard data object with current statistics.
+     * Collects vehicle statistics for the dashboard.
      * 
-     * @param data The dashboard data object to populate
+     * @param data Dashboard data to populate
      */
     private void collectVehicleMetrics(DashBoard.DashBoardData data) {
         var positions = runner.getVehiclePositions();
@@ -496,7 +461,7 @@ public class TrafficSimulatorApp extends Application {
     /**
      * Application entry point.
      * 
-     * @param args Command line arguments (not used)
+     * @param args Command line arguments
      */
     public static void main(String[] args) {
         launch(args);

@@ -17,17 +17,13 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 /**
- * Panel for adding new vehicles to the simulation interactively.
- * Allows selection of vehicle type and route building by clicking start and end edges on the map.
- * SUMO automatically computes a valid path between the selected edges using its routing algorithm.
- * Supports auto-generated vehicle IDs and provides visual feedback during route selection.
+ * Panel for adding vehicles to the simulation interactively.
+ * Supports route selection, auto-generated IDs, and stress testing.
  *
  * @author M A T^2 H Team
- * @version 2.0 
+ * @version 2.0
  * @see SimulationRunner
  * @see TraaSAdapter
- * @see Edge
- * @see ControlPanel
  */
 public class VehicleAddPanel extends VBox {
 
@@ -90,13 +86,13 @@ public class VehicleAddPanel extends VBox {
     private static int vehicleCounter = 1;
 
     /**
-     * Constructs a new vehicle addition panel with necessary callbacks.
+     * Constructs a new vehicle addition panel.
      * 
-     * @param runner The simulation runner for SUMO communication
-     * @param onCancel Callback invoked when user cancels vehicle addition
+     * @param runner The simulation runner
+     * @param onCancel Callback invoked on cancel
      * @param onStartRouteSelection Callback invoked when route selection starts
-     * @param onRouteSelectionModeChange Callback for route selection mode changes (true = active)
-     * @param onVehicleAdded Callback invoked when vehicle is successfully added
+     * @param onRouteSelectionModeChange Callback for route selection mode changes
+     * @param onVehicleAdded Callback invoked when vehicle is added
      */
     public VehicleAddPanel(SimulationRunner runner, Runnable onCancel,
             Runnable onStartRouteSelection, java.util.function.Consumer<Boolean> onRouteSelectionModeChange,
@@ -115,7 +111,6 @@ public class VehicleAddPanel extends VBox {
 
     /**
      * Creates the complete UI for the vehicle addition panel.
-     * Includes vehicle type selector, ID field, route selection controls, and action buttons.
      */
     private void createUI() {
         setAlignment(Pos.TOP_CENTER);
@@ -287,7 +282,7 @@ public class VehicleAddPanel extends VBox {
     }
 
     /**
-     * Creates an informational box with step-by-step instructions for adding a vehicle.
+     * Creates an informational box with step-by-step instructions.
      * 
      * @return A VBox containing the help instructions
      */
@@ -318,8 +313,7 @@ public class VehicleAddPanel extends VBox {
     }
 
     /**
-     * Updates the vehicle ID field based on the selected vehicle type and counter.
-     * Generates IDs like "car_new_1", "truck_new_2", etc.
+     * Updates the vehicle ID field based on selected type.
      */
     private void updateVehicleId() {
         String type = vehicleTypeCombo.getValue();
@@ -348,7 +342,7 @@ public class VehicleAddPanel extends VBox {
     }
 
     /**
-     * Enters route selection mode, pauses simulation, and updates UI for edge selection.
+     * Enters route selection mode and updates UI.
      */
     private void enterRouteSelectionMode() {
         // Pause simulation when entering route selection mode
@@ -371,7 +365,7 @@ public class VehicleAddPanel extends VBox {
     }
 
     /**
-     * Exits route selection mode and updates UI to show route status or instructions.
+     * Exits route selection mode and updates UI.
      */
     private void exitRouteSelectionModeUI() {
         addEdgeBtn.setText("📍 Select Route");
@@ -389,7 +383,7 @@ public class VehicleAddPanel extends VBox {
     }
 
     /**
-     * Cleanly exits route selection mode by disabling it and notifying callbacks.
+     * Cleanly exits route selection mode.
      */
     private void exitRouteSelectionMode() {
         if (routeSelectionMode) {
@@ -400,7 +394,6 @@ public class VehicleAddPanel extends VBox {
 
     /**
      * Adds an edge to the route during route selection mode.
-     * First click sets start edge (green), second click sets end edge (red) and computes route.
      * 
      * @param edgeId The ID of the clicked edge
      */
@@ -438,8 +431,7 @@ public class VehicleAddPanel extends VBox {
     }
 
     /**
-     * Computes a route using SUMO's routing algorithm between the selected start and end edges.
-     * Displays the computed route in the route list view.
+     * Computes a route using SUMO's routing algorithm.
      */
     private void computeRoute() {
         if (startEdge == null || endEdge == null)
@@ -597,7 +589,7 @@ public class VehicleAddPanel extends VBox {
     }
 
     /**
-     * Stops the stress test and displays final statistics.
+     * Stops the stress test and displays statistics.
      */
     private void stopStressTest() {
         if (!stressTestRunning) return;
@@ -643,7 +635,6 @@ public class VehicleAddPanel extends VBox {
 
     /**
      * Injects a single vehicle with a random route.
-     * Called periodically by the stress test timer.
      */
     private void injectRandomVehicle() {
         try {
@@ -720,7 +711,6 @@ public class VehicleAddPanel extends VBox {
 
     /**
      * Starts the FPS counter using AnimationTimer.
-     * Tracks frame render times to calculate real-time FPS.
      */
     private void startFpsCounter() {
         frameTimeIndex = 0;
@@ -773,7 +763,7 @@ public class VehicleAddPanel extends VBox {
     }
 
     /**
-     * Clears the current route selection, resetting start/end edges and route list.
+     * Clears the current route selection.
      */
     private void clearRoute() {
         startEdge = null;
@@ -790,7 +780,6 @@ public class VehicleAddPanel extends VBox {
 
     /**
      * Adds the configured vehicle to the SUMO simulation.
-     * Validates inputs, creates route in SUMO, adds vehicle, and resets the form.
      */
     private void addVehicle() {
         // Validation

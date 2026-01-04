@@ -7,32 +7,11 @@ import javafx.scene.paint.Color;
 
 /**
  * Manages all traffic simulation objects including junctions, edges, vehicles, and traffic lights.
- * 
- * <p>This class serves as the central manager for the visual traffic network, handling:
- * <ul>
- *   <li>Creating visual objects from parsed network data</li>
- *   <li>Updating vehicle positions from SUMO simulation data</li>
- *   <li>Updating traffic light states from SUMO</li>
- *   <li>Rendering all simulation objects in proper layered order</li>
- *   <li>Hit detection for user interaction (clicking on objects)</li>
- *   <li>Highlighting selected and hovered objects</li>
- * </ul>
- * 
- * <p>The manager maintains several collections:
- * <ul>
- *   <li>Visual junctions and edges created from network topology</li>
- *   <li>Dynamic vehicles updated each simulation step</li>
- *   <li>Traffic lights with multiple signals per junction</li>
- *   <li>Index maps for fast lookup by ID</li>
- * </ul>
+ * Handles creation from network data, updates from SUMO, rendering, and hit detection.
  * 
  * @author M A T^2 H Team
  * @version 2.0
  * @see NetworkParser
- * @see Junction
- * @see Edge
- * @see Vehicle
- * @see TrafficLight
  */
 public class TrafficManager {
     private List<Junction> junctions;
@@ -56,9 +35,8 @@ public class TrafficManager {
 
     /**
      * Initializes all visual objects from parsed network data.
-     * Creates junctions, edges, lanes, and traffic lights from SUMO network topology.
      * 
-     * @param network The parsed network data containing junctions, edges, and connections
+     * @param network The parsed network data
      */
     public void initializeFromNetwork(NetworkParser.NetworkData network) {
         // Build junction index and create visual junctions
@@ -90,8 +68,6 @@ public class TrafficManager {
 
     /**
      * Creates traffic light objects from network connections.
-     * Groups connections by junction and incoming edge to create separate traffic lights
-     * for each incoming road at a junction.
      * 
      * @param connections List of network connections with traffic light assignments
      */
@@ -147,7 +123,6 @@ public class TrafficManager {
 
     /**
      * Updates vehicle positions and states from SUMO simulation data.
-     * Creates new vehicles as they appear and removes vehicles that have left the simulation.
      * 
      * @param vehiclePositions Map from vehicle ID to array [x, y, angle, signals]
      */
@@ -175,7 +150,6 @@ public class TrafficManager {
 
     /**
      * Updates traffic light states from SUMO simulation data.
-     * Only updates lights not in manual control mode.
      * 
      * @param tlData Map from junction ID to traffic light state data
      */
@@ -198,12 +172,11 @@ public class TrafficManager {
     }
 
     /**
-     * Sets manual mode for ALL traffic lights at a junction.
-     * This ensures the entire junction is synchronized in manual or automatic control.
+     * Sets manual mode for all traffic lights at a junction.
      * 
      * @param junctionId The junction ID
      * @param manualMode true for manual control, false for automatic
-     * @param state Optional state string to set (can be null)
+     * @param state Optional state string to set
      */
     public void setJunctionManualMode(String junctionId, boolean manualMode, String state) {
         for (TrafficLight tl : trafficLights) {
@@ -217,13 +190,12 @@ public class TrafficManager {
     }
 
     /**
-     * Performs hit detection to find the simulation object at the given screen coordinates.
-     * Checks layers in order: vehicles (top), traffic lights, junctions, lanes (bottom).
+     * Finds the simulation object at the given screen coordinates.
      * 
      * @param screenX The X coordinate in screen space
      * @param screenY The Y coordinate in screen space
      * @param transform The coordinate transformation
-     * @return The object at that position, or null if none
+     * @return The object at that position, or null
      */
     public Object getElementAt(double screenX, double screenY, CoordinateTransform transform) {
         // Check vehicles first (top layer)
@@ -259,12 +231,11 @@ public class TrafficManager {
 
     /**
      * Renders highlight overlays for selected and hovered objects.
-     * Selected objects are highlighted in cyan, hovered in yellow.
      * 
      * @param g The graphics context
      * @param transform The coordinate transformation
-     * @param selected The currently selected object (can be null)
-     * @param hovered The currently hovered object (can be null)
+     * @param selected The currently selected object
+     * @param hovered The currently hovered object
      */
     public void renderHighlight(GraphicsContext g, CoordinateTransform transform, Object selected, Object hovered) {
         if (selected != null) {
@@ -276,20 +247,14 @@ public class TrafficManager {
     }
 
     private void highlightObject(GraphicsContext g, CoordinateTransform transform, Object obj, Color color) {
-        if (obj instanceof Vehicle) {
-            ((Vehicle) obj).highlight(g, transform, color);
-        } else if (obj instanceof Lane) {
-            ((Lane) obj).highlight(g, transform, color);
-        } else if (obj instanceof Junction) {
-            ((Junction) obj).highlight(g, transform, color);
-        } else if (obj instanceof TrafficLight) {
-            ((TrafficLight) obj).highlight(g, transform, color);
+        // Use polymorphism with Renderable abstract class
+        if (obj instanceof Renderable) {
+            ((Renderable) obj).highlight(g, transform, color);
         }
     }
 
     /**
-     * Renders all simulation objects in proper layered order.
-     * Order: edges (bottom), junctions, traffic lights, vehicles (top).
+     * Renders all simulation objects in layered order.
      * 
      * @param g The graphics context
      * @param transform The coordinate transformation
@@ -355,12 +320,11 @@ public class TrafficManager {
     
     /**
      * Returns the network edge ID at the given screen position.
-     * Used for route selection when clicking on edges.
      * 
      * @param screenX Screen X coordinate
      * @param screenY Screen Y coordinate
      * @param transform Coordinate transformation
-     * @return The edge ID, or null if no edge at that position
+     * @return The edge ID, or null
      */
     public String getEdgeIdAt(double screenX, double screenY, CoordinateTransform transform) {
         for (Edge edge : edges) {

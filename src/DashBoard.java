@@ -11,13 +11,11 @@ import javafx.scene.text.FontWeight;
 
 /**
  * Real-time dashboard displaying simulation metrics and traffic statistics.
- * Shows simulation time, active vehicle count, average speed, vehicle type breakdown,
- * and a live chart of average speed over the last 60 seconds.
+ * Shows time, vehicle count, speeds, and a live chart.
  *
  * @author M A T^2 H Team
- * @version 2.0 
+ * @version 2.0
  * @see ControlPanel
- * @see TrafficSimulatorApp
  */
 public class DashBoard extends VBox {
     // Metric labels
@@ -51,7 +49,7 @@ public class DashBoard extends VBox {
     }
 
     /**
-     * Initializes all dashboard UI components including labels, vehicle type breakdown, and speed chart.
+     * Initializes all dashboard UI components.
      */
     private void initializeComponents() {
         Label title = createHeaderLabel("―――DASHBOARD―――");
@@ -146,7 +144,6 @@ public class DashBoard extends VBox {
 
     /**
      * Updates all dashboard metrics with new simulation data.
-     * Refreshes labels, adds data point to chart, and maintains sliding window.
      * 
      * @param data The current dashboard data
      */
@@ -176,7 +173,6 @@ public class DashBoard extends VBox {
 
     /**
      * Data container for dashboard metrics.
-     * Holds simulation time, vehicle counts by type, and average speed.
      */
     public static class DashBoardData {
         /** Simulation time in seconds */

@@ -4,32 +4,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Represents a directed road edge (segment) between two junctions.
- * 
- * <p>An edge is a one-way road segment containing multiple lanes. Key features:
- * <ul>
- *   <li>Directional: Each physical road typically has two edges (one per direction)</li>
- *   <li>Contains 1+ lanes positioned perpendicular to the edge centerline</li>
- *   <li>Clipped at junction boundaries to avoid visual overlaps</li>
- *   <li>Rendered with proper lane markings (center line and dividers)</li>
- * </ul>
- * 
- * <p>Rendering includes:
- * <ul>
- *   <li>Road surface as a thick line</li>
- *   <li>Yellow center line (drawn only for positive edge IDs to avoid duplication)</li>
- *   <li>White dashed lane dividers between lanes</li>
- *   <li>Proper clipping at source and destination junctions</li>
- * </ul>
+ * Represents a directed road segment between two junctions.
+ * Contains multiple lanes and handles rendering with lane markings.
  *
  * @author M A T^2 H Team
- * @version 2.0 
- * @see Lane
- * @see Junction
- * @see NetworkParser.Edge
- * @see TrafficManager
+ * @version 2.0
+ * @see Renderable
  */
-public class Edge {
+public class Edge extends Renderable {
     private NetworkParser.Edge networkEdge;
     private double fromX, fromY, toX, toY; // World coordinates
     private Junction fromJunction;
@@ -38,7 +20,6 @@ public class Edge {
 
     /**
      * Constructs a new visual Edge from parsed network data.
-     * Automatically creates visual Lane objects for each lane in the network edge.
      * 
      * @param networkEdge The parsed edge data from SUMO network file
      * @param from The source junction network data
@@ -62,7 +43,6 @@ public class Edge {
 
     /**
      * Creates visual Lane objects for all lanes in this edge.
-     * Calculates each lane's offset from the edge centerline based on cumulative lane widths.
      */
     private void createLanes() {
         // Create lanes directly from SUMO network data
@@ -88,7 +68,6 @@ public class Edge {
 
     /**
      * Returns the lane at the specified screen coordinates, or null if none.
-     * Used for hit detection when clicking on the edge.
      * 
      * @param screenX The X coordinate in screen space
      * @param screenY The Y coordinate in screen space
@@ -106,18 +85,11 @@ public class Edge {
 
     /**
      * Renders the edge including road surface and lane markings.
-     * <p>
-     * The rendering process:
-     * <ol>
-     *   <li>Calculates junction-clipped endpoints</li>
-     *   <li>Draws road surface as a thick line</li>
-     *   <li>Draws yellow center line (one direction only)</li>
-     *   <li>Draws white dashed lane dividers</li>
-     * </ol>
      * 
      * @param g The graphics context to draw on
      * @param transform The coordinate transformation
      */
+    @Override
     public void render(GraphicsContext g, CoordinateTransform transform) {
         // Calculate edge direction
         double dx = toX - fromX;
@@ -310,6 +282,7 @@ public class Edge {
      * @param transform The coordinate transformation
      * @param color The highlight color
      */
+    @Override
     public void highlight(GraphicsContext g, CoordinateTransform transform, Color color) {
         // Calculate edge direction
         double dx = toX - fromX;
@@ -363,5 +336,14 @@ public class Edge {
         g.setStroke(Color.color(color.getRed(), color.getGreen(), color.getBlue(), 0.4));
         g.setLineWidth(screenWidth);
         g.strokeLine(x1, y1, x2, y2);
+    }
+
+    /**
+     * Not used - hit detection uses getLaneAt() instead.
+     * Required by Renderable abstract class.
+     */
+    @Override
+    public boolean contains(double screenX, double screenY, CoordinateTransform transform) {
+        return false;
     }
 }

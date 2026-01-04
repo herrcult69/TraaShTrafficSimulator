@@ -1,22 +1,12 @@
 import javafx.scene.control.Button;
 
 /**
- * Centralized UI styling constants and helper methods for the traffic simulator application.
- * 
- * <p>This utility class provides a consistent design system across all UI panels, including:
- * <ul>
- *   <li>Color palette for backgrounds, text, and semantic colors</li>
- *   <li>Pre-configured style strings for common UI elements</li>
- *   <li>Factory methods for creating styled buttons with hover effects</li>
- * </ul>
- * 
- * <p>All fields and methods are static - this class should not be instantiated.</p>
+ * Centralized UI styling constants and helper methods.
+ * Provides consistent color palette and styled button factory methods.
  *
  * @author M A T^2 H Team
- * @version 2.0 
+ * @version 2.0
  * @see ControlPanel
- * @see VehicleAddPanel
- * @see TrafficLightControlPanel
  */
 public class UIStyles {
     /** Primary background color for main panels (dark navy blue) */
@@ -123,9 +113,10 @@ public class UIStyles {
         "-fx-background-radius: 5;";
     
     /**
-     * Create a standard styled button with hover effect
+     * Creates a standard styled button with hover effect.
+     * 
      * @param text Button text
-     * @return Configured button with standard styling
+     * @return Configured button
      */
     public static Button createStyledButton(String text) {
         Button btn = new Button(text);
@@ -137,9 +128,10 @@ public class UIStyles {
     }
     
     /**
-     * Create an accent styled button (for primary actions)
+     * Creates an accent styled button for primary actions.
+     * 
      * @param text Button text
-     * @return Configured button with accent styling
+     * @return Configured button
      */
     public static Button createAccentButton(String text) {
         Button btn = new Button(text);
@@ -151,7 +143,8 @@ public class UIStyles {
     }
     
     /**
-     * Apply standard button styling to an existing button
+     * Applies standard button styling to an existing button.
+     * 
      * @param btn Button to style
      */
     public static void applyStandardButtonStyle(Button btn) {
@@ -161,7 +154,8 @@ public class UIStyles {
     }
     
     /**
-     * Apply accent button styling to an existing button
+     * Applies accent button styling to an existing button.
+     * 
      * @param btn Button to style
      */
     public static void applyAccentButtonStyle(Button btn) {

@@ -3,31 +3,16 @@ import javafx.scene.paint.Color;
 import javafx.geometry.Rectangle2D;
 
 /**
- * Represents a single vehicle in the traffic simulation.
- * 
- * <p>Each vehicle has:
- * <ul>
- *   <li>Unique identifier determining its type (car, truck, bus, motorcycle, emergency)</li>
- *   <li>Position and orientation in world coordinates</li>
- *   <li>Type-specific dimensions and visual appearance</li>
- *   <li>Signal state (turn signals, brake lights, emergency flashers)</li>
- * </ul>
- * 
- * <p>The vehicle type is automatically determined from its ID prefix:
- * <ul>
- *   <li>"car" → Passenger car (4.5m × 1.8m)</li>
- *   <li>"truck" → Truck (8.0m × 2.5m)</li>
- *   <li>"bus" → Bus (10.0m × 2.5m)</li>
- *   <li>"moto" → Motorcycle (2.0m × 0.8m)</li>
- *   <li>"ambu" → Emergency vehicle (6.0m × 2.5m)</li>
- * </ul>
+ * Represents a vehicle in the traffic simulation.
+ * Type is determined from ID prefix (car, truck, bus, moto, ambu).
+ * Extends Renderable and implements Updatable for SUMO updates.
  *
  * @author M A T^2 H Team
- * @version 2.0 
- * @see TrafficManager
- * @see SimulationRunner
+ * @version 2.0
+ * @see Renderable
+ * @see Updatable
  */
-public class Vehicle {
+public class Vehicle extends Renderable implements Updatable {
     private String id;
     private String type;
     private double worldX, worldY;
@@ -37,13 +22,13 @@ public class Vehicle {
     private int signals;
 
     /**
-     * Constructs a new vehicle with the specified position and orientation.
-     * The vehicle type and dimensions are automatically determined from the ID prefix.
+     * Creates a vehicle with position and orientation.
+     * Type and dimensions are determined from ID prefix.
      * 
-     * @param id The unique vehicle identifier (prefix determines type)
-     * @param worldX The X coordinate in world space (meters)
-     * @param worldY The Y coordinate in world space (meters)
-     * @param angle The orientation angle in degrees (0 = east, 90 = north)
+     * @param id Vehicle ID (prefix determines type)
+     * @param worldX X coordinate in meters
+     * @param worldY Y coordinate in meters
+     * @param angle Orientation in degrees
      */
     public Vehicle(String id, double worldX, double worldY, double angle) {
         this.id = id;
@@ -56,9 +41,7 @@ public class Vehicle {
         updateBounds();
     }
 
-    /**
-     * Determines the vehicle type and sets appropriate dimensions based on the ID prefix.
-     */
+    /** Sets vehicle type and dimensions based on ID prefix. */
     private void determineTypeFromId() {
         if (id.startsWith("car")) {
             type = "car";
@@ -88,12 +71,9 @@ public class Vehicle {
     }
 
     /**
-     * Updates the vehicle's position, angle, and signal state from SUMO data.
+     * Updates position, angle, and signals from SUMO data.
      * 
-     * @param sumoData Array containing [x, y, angle, signals] where:
-     *                 x, y are world coordinates in meters,
-     *                 angle is in degrees (SUMO format),
-     *                 signals is a bit field for turn signals and brake lights
+     * @param sumoData Array [x, y, angle, signals]
      */
     public void updatePosition(double[] sumoData) {
         this.worldX = sumoData[0];
@@ -107,9 +87,31 @@ public class Vehicle {
         updateBounds();
     }
 
+    // ========== Updatable Interface Implementation ==========
+    
     /**
-     * Updates the vehicle's bounding rectangle based on current position and dimensions.
+     * Updates vehicle state from simulation data (Updatable interface).
+     * 
+     * @param data Double array from SUMO
      */
+    @Override
+    public void updateFromSimulation(Object data) {
+        if (data instanceof double[]) {
+            updatePosition((double[]) data);
+        }
+    }
+    
+    /**
+     * Returns vehicle ID for simulation matching.
+     * 
+     * @return Vehicle ID
+     */
+    @Override
+    public String getUpdateId() {
+        return id;
+    }
+
+    /** Updates the bounding rectangle. */
     private void updateBounds() {
         double halfWidth = width / 2;
         // Bounds with head at (worldX, worldY) extending backward
@@ -119,14 +121,14 @@ public class Vehicle {
     }
 
     /**
-     * Checks if a screen point falls within the vehicle's clickable area.
-     * Uses circular hit detection for better user interaction.
+     * Checks if screen point is within vehicle (circular hit detection).
      * 
-     * @param screenX The X coordinate in screen space
-     * @param screenY The Y coordinate in screen space
-     * @param transform The coordinate transformation
-     * @return true if the point is within the vehicle's clickable radius
+     * @param screenX Screen X coordinate
+     * @param screenY Screen Y coordinate
+     * @param transform Coordinate transform
+     * @return true if point hits vehicle
      */
+    @Override
     public boolean contains(double screenX, double screenY, CoordinateTransform transform) {
         double clickWorldX = transform.screenToWorldX(screenX);
         double clickWorldY = transform.screenToWorldY(screenY);
@@ -141,12 +143,13 @@ public class Vehicle {
     }
 
     /**
-     * Draws a dashed rectangle outline around the vehicle when selected or hovered.
+     * Draws dashed outline when selected/hovered.
      * 
-     * @param g The graphics context to draw on
-     * @param transform The coordinate transformation
-     * @param color The highlight color
+     * @param g Graphics context
+     * @param transform Coordinate transform
+     * @param color Highlight color
      */
+    @Override
     public void highlight(GraphicsContext g, CoordinateTransform transform, Color color) {
         double screenX = transform.worldToScreenX(worldX);
         double screenY = transform.worldToScreenY(worldY);
@@ -169,12 +172,12 @@ public class Vehicle {
     }
 
     /**
-     * Renders the vehicle with proper body, windshield, headlights, and signal indicators.
-     * The vehicle is drawn with its front at (worldX, worldY) extending backward.
+     * Renders vehicle with body, windshield, headlights, and signals.
      * 
-     * @param g The graphics context to draw on
-     * @param transform The coordinate transformation
+     * @param g Graphics context
+     * @param transform Coordinate transform
      */
+    @Override
     public void render(GraphicsContext g, CoordinateTransform transform) {
         double screenX = transform.worldToScreenX(worldX);
         double screenY = transform.worldToScreenY(worldY);
@@ -242,11 +245,7 @@ public class Vehicle {
         g.restore();
     }
 
-    /**
-     * Returns the color associated with this vehicle type.
-     * 
-     * @return The vehicle's color based on its type
-     */
+    /** Returns color for this vehicle type. */
     private Color getVehicleColor() {
         return switch (type) {
             case "car" -> Color.rgb(220, 60, 115);
@@ -259,56 +258,32 @@ public class Vehicle {
     }
 
     // Getters
-    /**
-     * Returns the unique vehicle identifier.
-     * 
-     * @return The vehicle ID
-     */
+    /** Returns vehicle ID. */
     public String getId() {
         return id;
     }
 
-    /**
-     * Returns the vehicle type (car, truck, bus, motorcycle, emergency, or unknown).
-     * 
-     * @return The vehicle type as a string
-     */
+    /** Returns vehicle type. */
     public String getType() {
         return type;
     }
 
-    /**
-     * Returns the vehicle's current X coordinate in world space.
-     * 
-     * @return The X coordinate in meters
-     */
+    /** Returns X coordinate in meters. */
     public double getWorldX() {
         return worldX;
     }
 
-    /**
-     * Returns the vehicle's current Y coordinate in world space.
-     * 
-     * @return The Y coordinate in meters
-     */
+    /** Returns Y coordinate in meters. */
     public double getWorldY() {
         return worldY;
     }
 
-    /**
-     * Returns the vehicle's current orientation angle.
-     * 
-     * @return The angle in degrees
-     */
+    /** Returns orientation angle in degrees. */
     public double getAngle() {
         return angle;
     }
 
-    /**
-     * Returns the vehicle's bounding rectangle in world coordinates.
-     * 
-     * @return The bounding rectangle
-     */
+    /** Returns bounding rectangle. */
     public Rectangle2D getBounds() {
         return bounds;
     }
