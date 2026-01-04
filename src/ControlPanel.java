@@ -8,6 +8,9 @@ import javafx.scene.control.Separator;
 import javafx.scene.layout.VBox;
 import java.util.function.Consumer;
 
+import javafx.stage.FileChooser;
+import java.io.File;
+
 /**
  * Main control panel for the simulation interface.
  * Provides buttons for simulation control (play, pause, stop), view manipulation (zoom, pan),
@@ -46,7 +49,7 @@ public class ControlPanel {
     private Runnable onStartRouteSelection;
     private Consumer<Boolean> onRouteSelectionModeChange;
     private Runnable onVehicleAdded;
-
+    private StatisticsWindow statsWindow;
     /**
      * Constructs a new control panel with simulation and view controls.
      * 
@@ -81,6 +84,8 @@ public class ControlPanel {
         // Add view controls
         addViewControls();
 
+        // Add statistics controls
+        addStatisticsControl();
         // Add separator
         controlPanel.getChildren().add(new Separator());
 
@@ -161,6 +166,54 @@ public class ControlPanel {
         controlPanel.getChildren().addAll(viewLabel, zoomIn, zoomOut, reset);
     }
 
+    /**
+     * Adds statistics control buttons (view stats, export csv, export pdf)
+     * @return The View Statistics section
+     */
+    private void addStatisticsControl() {
+        Label statsLabel = new Label ("---Statistics---");
+        statsLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14");
+
+        Button viewStatsButton = UIStyles.createAccentButton("View Live Statistics");
+        Button exportCSV = UIStyles.createStyledButton("Export to CSV");
+        Button exportPDF = UIStyles.createStyledButton("Export to PDF");
+        exportPDF.setDisable(true);
+
+        viewStatsButton.setOnAction(e -> showStatisticsWindow());
+        exportCSV.setOnAction(e -> exportTrafficData());
+
+        controlPanel.getChildren().addAll(statsLabel, viewStatsButton, exportCSV, exportPDF);
+    }
+    private void exportTrafficData() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Export Simulation Data");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
+        fileChooser.setInitialFileName("Simulation_data.csv");
+        
+        File file = fileChooser.showSaveDialog(null);
+        if (file != null) {
+            try {
+                String filePath = file.getAbsolutePath();
+                if (!filePath.toLowerCase().endsWith(".csv")) {
+                    filePath += ".csv";
+                }
+                TrafficDataExporter.exportToCSV(filePath, runner, trafficManager);
+                System.out.println("Simulation data exported to: " + filePath);
+            } catch (java.io.IOException ex) {
+                System.err.println("Error exporting CSV: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+        }
+    }
+    private void showStatisticsWindow() {
+        if (statsWindow == null || !statsWindow.isShowing()) {
+            statsWindow = new StatisticsWindow(runner, trafficManager);
+            statsWindow.show();
+        } else {
+            statsWindow.toFront();  // Bring existing window to front
+        }
+        System.out.println("Statistics window opened");
+    }
     /**
      * Returns the scroll pane containing the control panel.
      * 
