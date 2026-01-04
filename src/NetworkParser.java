@@ -6,6 +6,7 @@ import org.w3c.dom.NodeList;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * Parses SUMO network files (.net.xml) to extract road network topology.
@@ -16,6 +17,8 @@ import java.util.List;
  * @see TrafficManager
  */
 public class NetworkParser {
+    private static final Logger logger = Logger.getLogger(NetworkParser.class.getName());
+    
     /**
      * Data class representing a junction in the road network.
      */
@@ -26,18 +29,23 @@ public class NetworkParser {
         public final double x;
         /** The Y coordinate in meters */
         public final double y;
-        /** The junction type (e.g., "priority", "traffic_light", "right_before_left") */
+        /**
+         * The junction type (e.g., "priority", "traffic_light", "right_before_left")
+         */
         public final String type;
-        /** The junction boundary shape as a space-separated list of "x,y" coordinate pairs */
+        /**
+         * The junction boundary shape as a space-separated list of "x,y" coordinate
+         * pairs
+         */
         public final String shape;
 
         /**
          * Constructs a new Junction.
          * 
-         * @param id The junction identifier
-         * @param x The X coordinate
-         * @param y The Y coordinate
-         * @param type The junction type
+         * @param id    The junction identifier
+         * @param x     The X coordinate
+         * @param y     The Y coordinate
+         * @param type  The junction type
          * @param shape The boundary shape string
          */
         public Junction(String id, double x, double y, String type, String shape) {
@@ -67,11 +75,11 @@ public class NetworkParser {
         /**
          * Constructs a new Lane.
          * 
-         * @param id The lane identifier
-         * @param index The lane index
-         * @param speed Max speed in m/s
+         * @param id     The lane identifier
+         * @param index  The lane index
+         * @param speed  Max speed in m/s
          * @param length Lane length in meters
-         * @param width Lane width in meters
+         * @param width  Lane width in meters
          */
         public Lane(String id, int index, double speed, double length, double width) {
             this.id = id;
@@ -100,7 +108,9 @@ public class NetworkParser {
         public final String tl;
         /** Link index in the traffic light state string */
         public final int linkIndex;
-        /** Direction code: 's'=straight, 'l'/'L'=left, 'r'/'R'=right, 't'=turn around */
+        /**
+         * Direction code: 's'=straight, 'l'/'L'=left, 'r'/'R'=right, 't'=turn around
+         */
         public final String dir;
         /** Initial state character */
         public final String state;
@@ -108,18 +118,18 @@ public class NetworkParser {
         /**
          * Constructs a new Connection.
          * 
-         * @param from Source edge ID
-         * @param to Destination edge ID
-         * @param fromLane Source lane index
-         * @param toLane Destination lane index
-         * @param via Internal edge ID
-         * @param tl Traffic light ID
+         * @param from      Source edge ID
+         * @param to        Destination edge ID
+         * @param fromLane  Source lane index
+         * @param toLane    Destination lane index
+         * @param via       Internal edge ID
+         * @param tl        Traffic light ID
          * @param linkIndex Link index in TLS state
-         * @param dir Direction code
-         * @param state Initial state
+         * @param dir       Direction code
+         * @param state     Initial state
          */
-        public Connection(String from, String to, int fromLane, int toLane, 
-                         String via, String tl, int linkIndex, String dir, String state) {
+        public Connection(String from, String to, int fromLane, int toLane,
+                String via, String tl, int linkIndex, String dir, String state) {
             this.from = from;
             this.to = to;
             this.fromLane = fromLane;
@@ -148,9 +158,9 @@ public class NetworkParser {
         /**
          * Constructs a new Edge.
          * 
-         * @param id The edge identifier
-         * @param from Source junction ID
-         * @param to Destination junction ID
+         * @param id    The edge identifier
+         * @param from  Source junction ID
+         * @param to    Destination junction ID
          * @param lanes List of lanes
          */
         public Edge(String id, String from, String to, List<Lane> lanes) {
@@ -201,16 +211,16 @@ public class NetworkParser {
         /**
          * Constructs a new NetworkData container.
          * 
-         * @param js List of junctions
-         * @param es List of edges
+         * @param js    List of junctions
+         * @param es    List of edges
          * @param conns List of connections
-         * @param minX Minimum X coordinate
-         * @param maxX Maximum X coordinate
-         * @param minY Minimum Y coordinate
-         * @param maxY Maximum Y coordinate
+         * @param minX  Minimum X coordinate
+         * @param maxX  Maximum X coordinate
+         * @param minY  Minimum Y coordinate
+         * @param maxY  Maximum Y coordinate
          */
-        public NetworkData(List<Junction> js, List<Edge> es, List<Connection> conns, 
-                          double minX, double maxX, double minY, double maxY) {
+        public NetworkData(List<Junction> js, List<Edge> es, List<Connection> conns,
+                double minX, double maxX, double minY, double maxY) {
             this.junctions = js;
             this.edges = es;
             this.connections = conns;
@@ -229,115 +239,133 @@ public class NetworkParser {
      * @throws Exception if file not found or parsing fails
      */
     public static NetworkData parse(String path) throws Exception {
+        logger.info("Parsing network file: " + path);
         File f = new File(path);
         if (!f.exists())
             throw new IllegalArgumentException("Network file not found: " + path);
 
-        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-        DocumentBuilder db = dbf.newDocumentBuilder();
-        Document doc = db.parse(f);
+        try {
+            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+            DocumentBuilder db = dbf.newDocumentBuilder();
+            Document doc = db.parse(f);
 
-        dbf.setIgnoringComments(true);
-        doc.getDocumentElement().normalize();
+            dbf.setIgnoringComments(true);
+            doc.getDocumentElement().normalize();
 
-        // Parse junctions
-        NodeList junctionNodes = doc.getElementsByTagName("junction");
-        List<Junction> junctions = new ArrayList<>();
-        double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE, maxX = -Double.MAX_VALUE, maxY = -Double.MAX_VALUE;
-        for (int i = 0; i < junctionNodes.getLength(); i++) {
-            Element e = (Element) junctionNodes.item(i);
+            // Parse junctions
+            NodeList junctionNodes = doc.getElementsByTagName("junction");
+            List<Junction> junctions = new ArrayList<>();
+            double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE, maxX = -Double.MAX_VALUE, maxY = -Double.MAX_VALUE;
+            for (int i = 0; i < junctionNodes.getLength(); i++) {
+                Element e = (Element) junctionNodes.item(i);
 
-            if (e.getAttribute("type").equals("internal")) {
-                continue;
+                if (e.getAttribute("type").equals("internal")) {
+                    continue;
+                }
+                if (e.hasAttribute("x") && e.hasAttribute("y")) {
+                    String id = e.getAttribute("id");
+                    double x = Double.parseDouble(e.getAttribute("x"));
+                    double y = Double.parseDouble(e.getAttribute("y"));
+                    String type = e.hasAttribute("type") ? e.getAttribute("type") : "priority";
+                    String shape = e.hasAttribute("shape") ? e.getAttribute("shape") : null;
+                    junctions.add(new Junction(id, x, y, type, shape));
+                    if (x < minX)
+                        minX = x;
+                    if (x > maxX)
+                        maxX = x;
+                    if (y < minY)
+                        minY = y;
+                    if (y > maxY)
+                        maxY = y;
+                }
             }
-            if (e.hasAttribute("x") && e.hasAttribute("y")) {
-                String id = e.getAttribute("id");
-                double x = Double.parseDouble(e.getAttribute("x"));
-                double y = Double.parseDouble(e.getAttribute("y"));
-                String type = e.hasAttribute("type") ? e.getAttribute("type") : "priority";
-                String shape = e.hasAttribute("shape") ? e.getAttribute("shape") : null;
-                junctions.add(new Junction(id, x, y, type, shape));
-                if (x < minX)
-                    minX = x;
-                if (x > maxX)
-                    maxX = x;
-                if (y < minY)
-                    minY = y;
-                if (y > maxY)
-                    maxY = y;
+
+            // Parse edges with lanes
+            NodeList edgeNodes = doc.getElementsByTagName("edge");
+            List<Edge> edges = new ArrayList<>();
+            for (int i = 0; i < edgeNodes.getLength(); i++) {
+                Element edgeElem = (Element) edgeNodes.item(i);
+                if (!edgeElem.hasAttribute("from") || !edgeElem.hasAttribute("to"))
+                    continue;
+                // Skip internal edges (intersection connectors)
+                if (edgeElem.hasAttribute("function") && edgeElem.getAttribute("function").equals("internal"))
+                    continue;
+
+                String edgeId = edgeElem.getAttribute("id");
+                String from = edgeElem.getAttribute("from");
+                String to = edgeElem.getAttribute("to");
+
+                // Parse lanes within this edge
+                NodeList laneNodes = edgeElem.getElementsByTagName("lane");
+                List<Lane> lanes = new ArrayList<>();
+                for (int j = 0; j < laneNodes.getLength(); j++) {
+                    Element laneElem = (Element) laneNodes.item(j);
+                    String laneId = laneElem.getAttribute("id");
+
+                    // Parse lane attributes with defaults
+                    int index = laneElem.hasAttribute("index")
+                            ? Integer.parseInt(laneElem.getAttribute("index"))
+                            : j;
+
+                    double speed = laneElem.hasAttribute("speed")
+                            ? Double.parseDouble(laneElem.getAttribute("speed"))
+                            : 13.89; // Default ~50 km/h in m/s
+
+                    double length = laneElem.hasAttribute("length")
+                            ? Double.parseDouble(laneElem.getAttribute("length"))
+                            : 0.0;
+
+                    double width = laneElem.hasAttribute("width")
+                            ? Double.parseDouble(laneElem.getAttribute("width"))
+                            : 3.2; // SUMO default lane width
+
+                    lanes.add(new Lane(laneId, index, speed, length, width));
+                }
+
+                // Only add edges that have lanes
+                if (!lanes.isEmpty()) {
+                    edges.add(new Edge(edgeId, from, to, lanes));
+                }
             }
+
+            // Parse connections
+            NodeList connectionNodes = doc.getElementsByTagName("connection");
+            List<Connection> connections = new ArrayList<>();
+            for (int i = 0; i < connectionNodes.getLength(); i++) {
+                Element connElem = (Element) connectionNodes.item(i);
+
+                String from = connElem.getAttribute("from");
+                String to = connElem.getAttribute("to");
+                int fromLane = connElem.hasAttribute("fromLane")
+                        ? Integer.parseInt(connElem.getAttribute("fromLane"))
+                        : 0;
+                int toLane = connElem.hasAttribute("toLane")
+                        ? Integer.parseInt(connElem.getAttribute("toLane"))
+                        : 0;
+                String via = connElem.hasAttribute("via") ? connElem.getAttribute("via") : "";
+                String tl = connElem.hasAttribute("tl") ? connElem.getAttribute("tl") : null;
+                int linkIndex = connElem.hasAttribute("linkIndex")
+                        ? Integer.parseInt(connElem.getAttribute("linkIndex"))
+                        : -1;
+                String dir = connElem.hasAttribute("dir") ? connElem.getAttribute("dir") : "";
+                String state = connElem.hasAttribute("state") ? connElem.getAttribute("state") : "";
+
+                connections.add(new Connection(from, to, fromLane, toLane, via, tl, linkIndex, dir, state));
+            }
+
+            return new NetworkData(junctions, edges, connections, minX, maxX, minY, maxY);
+        } catch (java.io.FileNotFoundException e) {
+            System.err.println("ERROR: Network file not found: " + path);
+            throw new Exception("Network file not found: " + path, e);
+        } catch (org.xml.sax.SAXException e) {
+            System.err.println("ERROR: Invalid XML format in network file");
+            throw new Exception("Failed to parse network XML: Invalid format", e);
+        } catch (NumberFormatException e) {
+            System.err.println("ERROR: Invalid numeric value in network file");
+            throw new Exception("Failed to parse network data: Invalid number format", e);
+        } catch (Exception e) {
+            System.err.println("ERROR: Unexpected error parsing network: " + e.getMessage());
+            throw new Exception("Failed to parse network file", e);
         }
-
-        // Parse edges with lanes
-        NodeList edgeNodes = doc.getElementsByTagName("edge");
-        List<Edge> edges = new ArrayList<>();
-        for (int i = 0; i < edgeNodes.getLength(); i++) {
-            Element edgeElem = (Element) edgeNodes.item(i);
-            if (!edgeElem.hasAttribute("from") || !edgeElem.hasAttribute("to"))
-                continue;
-            // Skip internal edges (intersection connectors)
-            if (edgeElem.hasAttribute("function") && edgeElem.getAttribute("function").equals("internal"))
-                continue;
-
-            String edgeId = edgeElem.getAttribute("id");
-            String from = edgeElem.getAttribute("from");
-            String to = edgeElem.getAttribute("to");
-
-            // Parse lanes within this edge
-            NodeList laneNodes = edgeElem.getElementsByTagName("lane");
-            List<Lane> lanes = new ArrayList<>();
-            for (int j = 0; j < laneNodes.getLength(); j++) {
-                Element laneElem = (Element) laneNodes.item(j);
-                String laneId = laneElem.getAttribute("id");
-
-                // Parse lane attributes with defaults
-                int index = laneElem.hasAttribute("index")
-                        ? Integer.parseInt(laneElem.getAttribute("index"))
-                        : j;
-
-                double speed = laneElem.hasAttribute("speed")
-                        ? Double.parseDouble(laneElem.getAttribute("speed"))
-                        : 13.89; // Default ~50 km/h in m/s
-
-                double length = laneElem.hasAttribute("length")
-                        ? Double.parseDouble(laneElem.getAttribute("length"))
-                        : 0.0;
-
-                double width = laneElem.hasAttribute("width")
-                        ? Double.parseDouble(laneElem.getAttribute("width"))
-                        : 3.2; // SUMO default lane width
-
-                lanes.add(new Lane(laneId, index, speed, length, width));
-            }
-
-            // Only add edges that have lanes
-            if (!lanes.isEmpty()) {
-                edges.add(new Edge(edgeId, from, to, lanes));
-            }
-        }
-
-        // Parse connections
-        NodeList connectionNodes = doc.getElementsByTagName("connection");
-        List<Connection> connections = new ArrayList<>();
-        for (int i = 0; i < connectionNodes.getLength(); i++) {
-            Element connElem = (Element) connectionNodes.item(i);
-            
-            String from = connElem.getAttribute("from");
-            String to = connElem.getAttribute("to");
-            int fromLane = connElem.hasAttribute("fromLane") 
-                ? Integer.parseInt(connElem.getAttribute("fromLane")) : 0;
-            int toLane = connElem.hasAttribute("toLane") 
-                ? Integer.parseInt(connElem.getAttribute("toLane")) : 0;
-            String via = connElem.hasAttribute("via") ? connElem.getAttribute("via") : "";
-            String tl = connElem.hasAttribute("tl") ? connElem.getAttribute("tl") : null;
-            int linkIndex = connElem.hasAttribute("linkIndex") 
-                ? Integer.parseInt(connElem.getAttribute("linkIndex")) : -1;
-            String dir = connElem.hasAttribute("dir") ? connElem.getAttribute("dir") : "";
-            String state = connElem.hasAttribute("state") ? connElem.getAttribute("state") : "";
-            
-            connections.add(new Connection(from, to, fromLane, toLane, via, tl, linkIndex, dir, state));
-        }
-
-        return new NetworkData(junctions, edges, connections, minX, maxX, minY, maxY);
     }
 }

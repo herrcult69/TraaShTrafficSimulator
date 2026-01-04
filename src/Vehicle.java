@@ -25,10 +25,10 @@ public class Vehicle extends Renderable implements Updatable {
      * Creates a vehicle with position and orientation.
      * Type and dimensions are determined from ID prefix.
      * 
-     * @param id Vehicle ID (prefix determines type)
+     * @param id     Vehicle ID (prefix determines type)
      * @param worldX X coordinate in meters
      * @param worldY Y coordinate in meters
-     * @param angle Orientation in degrees
+     * @param angle  Orientation in degrees
      */
     public Vehicle(String id, double worldX, double worldY, double angle) {
         this.id = id;
@@ -88,7 +88,7 @@ public class Vehicle extends Renderable implements Updatable {
     }
 
     // ========== Updatable Interface Implementation ==========
-    
+
     /**
      * Updates vehicle state from simulation data (Updatable interface).
      * 
@@ -100,7 +100,7 @@ public class Vehicle extends Renderable implements Updatable {
             updatePosition((double[]) data);
         }
     }
-    
+
     /**
      * Returns vehicle ID for simulation matching.
      * 
@@ -123,8 +123,8 @@ public class Vehicle extends Renderable implements Updatable {
     /**
      * Checks if screen point is within vehicle (circular hit detection).
      * 
-     * @param screenX Screen X coordinate
-     * @param screenY Screen Y coordinate
+     * @param screenX   Screen X coordinate
+     * @param screenY   Screen Y coordinate
      * @param transform Coordinate transform
      * @return true if point hits vehicle
      */
@@ -138,16 +138,16 @@ public class Vehicle extends Renderable implements Updatable {
         double distance = Math.sqrt(dx * dx + dy * dy);
 
         // The circle should be a little bit smaller than the width
-        double radius = width * .90 ;
+        double radius = width * .90;
         return distance <= radius;
     }
 
     /**
      * Draws dashed outline when selected/hovered.
      * 
-     * @param g Graphics context
+     * @param g         Graphics context
      * @param transform Coordinate transform
-     * @param color Highlight color
+     * @param color     Highlight color
      */
     @Override
     public void highlight(GraphicsContext g, CoordinateTransform transform, Color color) {
@@ -159,7 +159,6 @@ public class Vehicle extends Renderable implements Updatable {
         g.save();
         g.translate(screenX, screenY);
         g.rotate(angle);
-
 
         // Dashed outline
         g.setStroke(color);
@@ -174,7 +173,7 @@ public class Vehicle extends Renderable implements Updatable {
     /**
      * Renders vehicle with body, windshield, headlights, and signals.
      * 
-     * @param g Graphics context
+     * @param g         Graphics context
      * @param transform Coordinate transform
      */
     @Override

@@ -1,19 +1,23 @@
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
+import java.util.HashMap;import java.util.logging.Logger;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 
 /**
- * Manages all traffic simulation objects including junctions, edges, vehicles, and traffic lights.
- * Handles creation from network data, updates from SUMO, rendering, and hit detection.
+ * Manages all traffic simulation objects including junctions, edges, vehicles,
+ * and traffic lights.
+ * Handles creation from network data, updates from SUMO, rendering, and hit
+ * detection.
  * 
  * @author M A T^2 H Team
  * @version 2.0
  * @see NetworkParser
  */
 public class TrafficManager {
+    private static final Logger logger = Logger.getLogger(TrafficManager.class.getName());
+    
     private List<Junction> junctions;
     private List<Edge> edges;
     private Map<String, Vehicle> vehicles;
@@ -46,7 +50,7 @@ public class TrafficManager {
             junctions.add(visualJunction);
             visualJunctionIndex.put(junction.id, visualJunction);
         }
-        System.out.println("Created " + junctions.size() + " junctions");
+        logger.info("Created " + junctions.size() + " junctions");
 
         // Create visual edges with junction references
         for (NetworkParser.Edge edge : network.edges) {
@@ -60,7 +64,7 @@ public class TrafficManager {
                 edges.add(visualEdge);
             }
         }
-        System.out.println("Created " + edges.size() + " edges");
+        logger.info("Created " + edges.size() + " edges with lanes");
 
         // Initialize traffic lights from connections
         initializeTrafficLightsFromConnections(network.connections);
@@ -75,7 +79,7 @@ public class TrafficManager {
         // Group connections by traffic light ID AND incoming edge
         // This creates separate TrafficLight objects for each incoming road
         Map<String, List<NetworkParser.Connection>> connectionsByEdge = new HashMap<>();
-        
+
         for (NetworkParser.Connection conn : connections) {
             if (conn.tl != null && !conn.tl.isEmpty()) {
                 // Key: "junctionId:fromEdge" - creates separate TL per incoming edge
@@ -93,7 +97,7 @@ public class TrafficManager {
 
             Junction junction = visualJunctionIndex.get(junctionId);
             if (junction == null) {
-                System.out.println("WARNING: Junction not found for traffic light: " + junctionId);
+                logger.warning("Junction not found for traffic light: " + junctionId);
                 continue;
             }
 
@@ -102,13 +106,12 @@ public class TrafficManager {
             // Create a signal for each connection from this specific edge
             for (NetworkParser.Connection conn : tlConnections) {
                 TrafficLight.Signal signal = new TrafficLight.Signal(
-                    conn.from,
-                    conn.fromLane,
-                    conn.to,
-                    conn.toLane,
-                    conn.linkIndex,
-                    conn.dir
-                );
+                        conn.from,
+                        conn.fromLane,
+                        conn.to,
+                        conn.toLane,
+                        conn.linkIndex,
+                        conn.dir);
                 trafficLight.addSignal(signal);
             }
 
@@ -117,8 +120,8 @@ public class TrafficManager {
             trafficLights.add(trafficLight);
         }
 
-        System.out.println("Initialized " + trafficLights.size() + " traffic lights (one per incoming edge) with " + 
-                         connections.stream().filter(c -> c.tl != null).count() + " total signals");
+        logger.info("Initialized " + trafficLights.size() + " traffic lights with " +
+                connections.stream().filter(c -> c.tl != null).count() + " total signals");
     }
 
     /**
@@ -176,7 +179,7 @@ public class TrafficManager {
      * 
      * @param junctionId The junction ID
      * @param manualMode true for manual control, false for automatic
-     * @param state Optional state string to set
+     * @param state      Optional state string to set
      */
     public void setJunctionManualMode(String junctionId, boolean manualMode, String state) {
         for (TrafficLight tl : trafficLights) {
@@ -192,8 +195,8 @@ public class TrafficManager {
     /**
      * Finds the simulation object at the given screen coordinates.
      * 
-     * @param screenX The X coordinate in screen space
-     * @param screenY The Y coordinate in screen space
+     * @param screenX   The X coordinate in screen space
+     * @param screenY   The Y coordinate in screen space
      * @param transform The coordinate transformation
      * @return The object at that position, or null
      */
@@ -232,10 +235,10 @@ public class TrafficManager {
     /**
      * Renders highlight overlays for selected and hovered objects.
      * 
-     * @param g The graphics context
+     * @param g         The graphics context
      * @param transform The coordinate transformation
-     * @param selected The currently selected object
-     * @param hovered The currently hovered object
+     * @param selected  The currently selected object
+     * @param hovered   The currently hovered object
      */
     public void renderHighlight(GraphicsContext g, CoordinateTransform transform, Object selected, Object hovered) {
         if (selected != null) {
@@ -256,7 +259,7 @@ public class TrafficManager {
     /**
      * Renders all simulation objects in layered order.
      * 
-     * @param g The graphics context
+     * @param g         The graphics context
      * @param transform The coordinate transformation
      */
     public void render(GraphicsContext g, CoordinateTransform transform) {
@@ -317,12 +320,12 @@ public class TrafficManager {
     public List<TrafficLight> getTrafficLights() {
         return trafficLights;
     }
-    
+
     /**
      * Returns the network edge ID at the given screen position.
      * 
-     * @param screenX Screen X coordinate
-     * @param screenY Screen Y coordinate
+     * @param screenX   Screen X coordinate
+     * @param screenY   Screen Y coordinate
      * @param transform Coordinate transformation
      * @return The edge ID, or null
      */
@@ -336,12 +339,12 @@ public class TrafficManager {
         }
         return null;
     }
-    
+
     /**
      * Returns the Edge object at the given screen position.
      * 
-     * @param screenX Screen X coordinate
-     * @param screenY Screen Y coordinate
+     * @param screenX   Screen X coordinate
+     * @param screenY   Screen Y coordinate
      * @param transform Coordinate transformation
      * @return The Edge object, or null if none at that position
      */
@@ -354,7 +357,7 @@ public class TrafficManager {
         }
         return null;
     }
-    
+
     /**
      * Finds an edge by its network ID.
      * 

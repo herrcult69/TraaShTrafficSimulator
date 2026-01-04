@@ -2,31 +2,42 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.logging.Logger;
 
 /**
  * Represents a traffic light controlling connections at a junction.
  * 
- * <p>A traffic light consists of multiple signals, where each signal controls a specific
+ * <p>
+ * A traffic light consists of multiple signals, where each signal controls a
+ * specific
  * lane-to-lane connection at the junction. Key features:
  * <ul>
- *   <li>Multiple signals per junction (one per incoming edge)</li>
- *   <li>Each signal displays a directional arrow (straight, left, right, turn-around)</li>
- *   <li>Signal colors: red, yellow, green, or gray (off)</li>
- *   <li>Manual control mode allows overriding automatic SUMO control</li>
- *   <li>Precise positioning at lane stop lines</li>
+ * <li>Multiple signals per junction (one per incoming edge)</li>
+ * <li>Each signal displays a directional arrow (straight, left, right,
+ * turn-around)</li>
+ * <li>Signal colors: red, yellow, green, or gray (off)</li>
+ * <li>Manual control mode allows overriding automatic SUMO control</li>
+ * <li>Precise positioning at lane stop lines</li>
  * </ul>
  * 
- * <p>The traffic light state is represented as a string where each character controls
- * one signal: 'G'/'g' = green, 'y'/'Y' = yellow, 'r'/'R' = red, 'o' = off.</p>
+ * <p>
+ * The traffic light state is represented as a string where each character
+ * controls
+ * one signal: 'G'/'g' = green, 'y'/'Y' = yellow, 'r'/'R' = red, 'o' = off.
+ * </p>
  * 
- * <p><b>OOP Architecture:</b></p>
+ * <p>
+ * <b>OOP Architecture:</b>
+ * </p>
  * <ul>
- *   <li><b>Abstract Class:</b> Extends {@link Renderable} (IS-A relationship)</li>
- *   <li><b>Interface:</b> Implements {@link Updatable} (CAN-BE-UPDATED capability)</li>
+ * <li><b>Abstract Class:</b> Extends {@link Renderable} (IS-A
+ * relationship)</li>
+ * <li><b>Interface:</b> Implements {@link Updatable} (CAN-BE-UPDATED
+ * capability)</li>
  * </ul>
  *
  * @author M A T^2 H Team
- * @version 2.0 
+ * @version 2.0
  * @see TrafficManager
  * @see Junction
  * @see Renderable
@@ -38,7 +49,7 @@ public class TrafficLight extends Renderable implements Updatable {
     private static final Color YELLOW = Color.rgb(255, 255, 0);
     private static final Color GREEN = Color.rgb(0, 255, 0);
     private static final Color GRAY = Color.rgb(80, 80, 80);
-    
+
     // Dimension constants
     private static final double DEFAULT_LANE_WIDTH = 3.2;
     private static final double FORWARD_OFFSET = 1.0;
@@ -50,7 +61,8 @@ public class TrafficLight extends Renderable implements Updatable {
 
     /**
      * Represents an individual signal controlling one lane-to-lane connection.
-     * Each signal has its own position, direction, and link index in the traffic light state.
+     * Each signal has its own position, direction, and link index in the traffic
+     * light state.
      */
     public static class Signal {
         /** Source edge ID */
@@ -69,21 +81,23 @@ public class TrafficLight extends Renderable implements Updatable {
         public double y;
         /** Rotation angle for the signal display */
         public double rotationAngle;
-        /** Direction code: 's'=straight, 'l'/'L'=left, 'r'/'R'=right, 't'=turn around */
+        /**
+         * Direction code: 's'=straight, 'l'/'L'=left, 'r'/'R'=right, 't'=turn around
+         */
         public String direction;
-        
+
         /**
          * Constructs a new Signal.
          * 
-         * @param fromEdge Source edge ID
+         * @param fromEdge      Source edge ID
          * @param fromLaneIndex Source lane index
-         * @param toEdge Destination edge ID
-         * @param toLaneIndex Destination lane index
-         * @param linkIndex Index in traffic light state string
-         * @param direction Direction code for arrow display
+         * @param toEdge        Destination edge ID
+         * @param toLaneIndex   Destination lane index
+         * @param linkIndex     Index in traffic light state string
+         * @param direction     Direction code for arrow display
          */
-        public Signal(String fromEdge, int fromLaneIndex, String toEdge, int toLaneIndex, 
-                     int linkIndex, String direction) {
+        public Signal(String fromEdge, int fromLaneIndex, String toEdge, int toLaneIndex,
+                int linkIndex, String direction) {
             this.fromEdge = fromEdge;
             this.fromLaneIndex = fromLaneIndex;
             this.toEdge = toEdge;
@@ -93,6 +107,8 @@ public class TrafficLight extends Renderable implements Updatable {
         }
     }
 
+    private static final Logger logger = Logger.getLogger(TrafficLight.class.getName());
+    
     private String junctionId;
     private Junction junction;
     private List<Signal> signals;
@@ -113,8 +129,8 @@ public class TrafficLight extends Renderable implements Updatable {
         /**
          * Constructs TrafficLightData.
          * 
-         * @param state The state string
-         * @param lanes List of controlled lanes
+         * @param state     The state string
+         * @param lanes     List of controlled lanes
          * @param linkCount Number of links
          */
         public TrafficLightData(String state, List<String> lanes, int linkCount) {
@@ -128,7 +144,7 @@ public class TrafficLight extends Renderable implements Updatable {
      * Constructs a new traffic light for a specific junction.
      * 
      * @param junctionId The junction ID this traffic light belongs to
-     * @param junction The Junction object for position reference
+     * @param junction   The Junction object for position reference
      */
     public TrafficLight(String junctionId, Junction junction) {
         this.junctionId = junctionId;
@@ -147,7 +163,8 @@ public class TrafficLight extends Renderable implements Updatable {
     }
 
     /**
-     * Calculates the world positions for all signals based on their controlled lanes.
+     * Calculates the world positions for all signals based on their controlled
+     * lanes.
      * Must be called after all signals are added and before rendering.
      * 
      * @param edges List of all edges in the network for position calculation
@@ -163,7 +180,7 @@ public class TrafficLight extends Renderable implements Updatable {
      * Positions the signal at the stop line of the controlled lane.
      * 
      * @param signal The signal to position
-     * @param edges List of all edges for lookup
+     * @param edges  List of all edges for lookup
      */
     private void calculateSignalPosition(Signal signal, List<Edge> edges) {
         // Find the edge this signal controls
@@ -174,21 +191,21 @@ public class TrafficLight extends Renderable implements Updatable {
                 break;
             }
         }
-        
+
         if (fromEdge == null || fromEdge.getLanes().isEmpty()) {
-            System.out.println("WARNING: Could not find edge for signal: " + signal.fromEdge);
+            logger.warning("Could not find edge for signal: " + signal.fromEdge);
             return;
         }
 
         // SUMO lane index directly maps to visual lane index
         // Each edge contains only lanes for its specific direction
         int visualLaneIndex = signal.fromLaneIndex;
-        
+
         // Check if lane index is valid
         if (visualLaneIndex < 0 || visualLaneIndex >= fromEdge.getLanes().size()) {
-            System.out.println("WARNING: Lane index " + visualLaneIndex + 
-                             " out of bounds for edge " + signal.fromEdge + 
-                             " (has " + fromEdge.getLanes().size() + " lanes)");
+            logger.warning("Lane index " + visualLaneIndex +
+                    " out of bounds for edge " + signal.fromEdge +
+                    " (has " + fromEdge.getLanes().size() + " lanes)");
             return;
         }
 
@@ -207,7 +224,7 @@ public class TrafficLight extends Renderable implements Updatable {
         double length = Math.sqrt(dx * dx + dy * dy);
 
         if (length < 0.001) {
-            System.out.println("WARNING: Zero-length edge [" + signal.fromEdge + "]");
+            logger.warning("Zero-length edge: " + signal.fromEdge);
             signal.x = junction.getX();
             signal.y = junction.getY();
             return;
@@ -217,24 +234,26 @@ public class TrafficLight extends Renderable implements Updatable {
         double dirY = dy / length;
 
         // Perpendicular vector for lateral offset (flipped to opposite side)
-        double perpX = -dy / length;  // Negated to flip to opposite side
-        double perpY = dx / length;   // Negated to flip to opposite side
+        double perpX = -dy / length; // Negated to flip to opposite side
+        double perpY = dx / length; // Negated to flip to opposite side
 
         // Get the radius at the destination junction where the lane enters
         double toRadius = junction.getRadiusInDirection(-dirX, -dirY);
 
-        // Calculate clipped end position (where the lane meets the junction - the stop line)
+        // Calculate clipped end position (where the lane meets the junction - the stop
+        // line)
         double clippedEndX = edgeToX - toRadius * dirX;
         double clippedEndY = edgeToY - toRadius * dirY;
 
-        // Position traffic light forward from the stop line (toward junction) for better clickability
+        // Position traffic light forward from the stop line (toward junction) for
+        // better clickability
         double baseX = clippedEndX + FORWARD_OFFSET * dirX;
         double baseY = clippedEndY + FORWARD_OFFSET * dirY;
 
         // Position signal at the specific lane center
         // Each lane has a specific offset from the edge centerline
         double laneOffset = controlledLane.getOffsetFromCenter();
-        
+
         // Get total edge width to position signals consistently
         double totalEdgeWidth = fromEdge.getNetworkEdge().getTotalWidth();
 
@@ -257,7 +276,7 @@ public class TrafficLight extends Renderable implements Updatable {
     }
 
     // ========== Updatable Interface Implementation ==========
-    
+
     /**
      * Updates this traffic light's state from simulation data.
      * Implements the Updatable interface for polymorphic updates.
@@ -277,7 +296,7 @@ public class TrafficLight extends Renderable implements Updatable {
             }
         }
     }
-    
+
     /**
      * Returns the junction ID for matching with simulation updates.
      * 
@@ -341,7 +360,7 @@ public class TrafficLight extends Renderable implements Updatable {
     /**
      * Renders all signals of this traffic light.
      * 
-     * @param g The graphics context to draw on
+     * @param g         The graphics context to draw on
      * @param transform The coordinate transformation
      */
     @Override
@@ -355,9 +374,9 @@ public class TrafficLight extends Renderable implements Updatable {
     /**
      * Renders a single signal with directional arrow.
      * 
-     * @param g The graphics context
+     * @param g         The graphics context
      * @param transform The coordinate transformation
-     * @param signal The signal to render
+     * @param signal    The signal to render
      */
     private void renderSignal(GraphicsContext g, CoordinateTransform transform, Signal signal) {
         double screenX = transform.worldToScreenX(signal.x);
@@ -369,11 +388,11 @@ public class TrafficLight extends Renderable implements Updatable {
         g.save();
         g.translate(screenX, screenY);
         g.rotate(signal.rotationAngle);
-        
+
         g.setStroke(activeColor);
         g.setLineWidth(lineWidth);
         g.setLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
-        
+
         if (signal.direction != null && signal.direction.equals("t")) {
             drawTurnAroundArrow(g, lineLength, lineWidth);
         } else {
@@ -390,13 +409,13 @@ public class TrafficLight extends Renderable implements Updatable {
     private void drawTurnAroundArrow(GraphicsContext g, double lineLength, double lineWidth) {
         double sideOffset = lineLength * 0.5;
         double arrowSize = lineWidth * ARROW_SIZE_FACTOR;
-        
+
         // Draw horizontal line to the side
         g.strokeLine(0, 0, -sideOffset, 0);
-        
+
         // Draw arrow pointing backward
         g.strokeLine(-sideOffset, 0, -sideOffset, lineLength);
-        
+
         // Draw arrow head
         g.strokeLine(-sideOffset, lineLength, -sideOffset - arrowSize, lineLength - arrowSize);
         g.strokeLine(-sideOffset, lineLength, -sideOffset + arrowSize, lineLength - arrowSize);
@@ -405,10 +424,10 @@ public class TrafficLight extends Renderable implements Updatable {
     private void drawDirectionalArrow(GraphicsContext g, String direction, double lineLength, double lineWidth) {
         double directionAngle = getDirectionAngle(direction);
         g.rotate(directionAngle);
-        
+
         // Draw line from center outward
         g.strokeLine(0, 0, 0, -lineLength);
-        
+
         // Draw arrow head
         double arrowSize = lineWidth * ARROW_SIZE_FACTOR;
         g.strokeLine(0, -lineLength, -arrowSize, -lineLength + arrowSize);
@@ -423,23 +442,30 @@ public class TrafficLight extends Renderable implements Updatable {
         if (direction == null || direction.isEmpty()) {
             return 0;
         }
-        
+
         switch (direction.charAt(0)) {
-            case 's': return 0;      // straight
-            case 'l': return -30;    // slight left
-            case 'L': return -60;    // left
-            case 'r': return 30;     // slight right
-            case 'R': return 60;     // right
-            case 't': return 180;    // turn around (not used when drawTurnAroundArrow is called)
-            default: return 0;
+            case 's':
+                return 0; // straight
+            case 'l':
+                return -30; // slight left
+            case 'L':
+                return -60; // left
+            case 'r':
+                return 30; // slight right
+            case 'R':
+                return 60; // right
+            case 't':
+                return 180; // turn around (not used when drawTurnAroundArrow is called)
+            default:
+                return 0;
         }
     }
 
     /**
      * Checks if a screen point is within any signal's clickable area.
      * 
-     * @param screenX The X coordinate in screen space
-     * @param screenY The Y coordinate in screen space
+     * @param screenX   The X coordinate in screen space
+     * @param screenY   The Y coordinate in screen space
      * @param transform The coordinate transformation
      * @return true if the point hits any signal
      */
@@ -457,10 +483,10 @@ public class TrafficLight extends Renderable implements Updatable {
     /**
      * Checks if a screen point is within a specific signal's clickable area.
      * 
-     * @param screenX Screen X coordinate
-     * @param screenY Screen Y coordinate
+     * @param screenX   Screen X coordinate
+     * @param screenY   Screen Y coordinate
      * @param transform Coordinate transformation
-     * @param signal The signal to check
+     * @param signal    The signal to check
      * @return true if within clickable radius
      */
     private boolean containsSignal(double screenX, double screenY, CoordinateTransform transform, Signal signal) {
@@ -478,9 +504,9 @@ public class TrafficLight extends Renderable implements Updatable {
      * Highlights all signals of this traffic light with the specified color.
      * Used for selection and hover effects.
      * 
-     * @param g The graphics context for rendering
+     * @param g         The graphics context for rendering
      * @param transform The coordinate transformation
-     * @param color The highlight color
+     * @param color     The highlight color
      */
     @Override
     public void highlight(GraphicsContext g, CoordinateTransform transform, Color color) {
@@ -542,9 +568,10 @@ public class TrafficLight extends Renderable implements Updatable {
     public List<Signal> getSignals() {
         return signals;
     }
-    
+
     /**
-     * Returns list of link indices controlled by this traffic light, sorted in ascending order.
+     * Returns list of link indices controlled by this traffic light, sorted in
+     * ascending order.
      * 
      * @return Sorted list of link indices
      */

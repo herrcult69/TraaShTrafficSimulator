@@ -7,14 +7,14 @@
  * @see Vehicle
  */
 public interface Updatable {
-    
+
     /**
      * Updates this object's state with new data from SUMO.
      * 
      * @param data The update data from SUMO
      */
     void updateFromSimulation(Object data);
-    
+
     /**
      * Returns the unique identifier for this updatable object.
      * Used to match simulation data with the correct object instance.

@@ -14,7 +14,8 @@ import java.util.List;
 
 /**
  * Adapter class for communicating with SUMO via TraCI protocol.
- * Provides simplified methods for querying simulation state and controlling traffic.
+ * Provides simplified methods for querying simulation state and controlling
+ * traffic.
  * 
  * @author M A T^2 H Team
  * @version 2.0
@@ -134,7 +135,7 @@ public class TraaSAdapter {
     /**
      * Sets the state of a traffic light manually.
      * 
-     * @param tlId The traffic light identifier
+     * @param tlId  The traffic light identifier
      * @param state State string (e.g., "GGrr")
      * @throws Exception if TraCI communication fails
      */
@@ -145,7 +146,7 @@ public class TraaSAdapter {
     /**
      * Sets the traffic light program.
      * 
-     * @param tlId The traffic light identifier
+     * @param tlId      The traffic light identifier
      * @param programId The program ID
      * @throws Exception if TraCI communication fails
      */
@@ -171,7 +172,7 @@ public class TraaSAdapter {
      * Adds a new route to the simulation.
      * 
      * @param routeId Unique route identifier
-     * @param edges List of edge IDs
+     * @param edges   List of edge IDs
      * @throws Exception if TraCI communication fails
      */
     public void addRoute(String routeId, List<String> edges) throws Exception {
@@ -185,8 +186,8 @@ public class TraaSAdapter {
     /**
      * Adds a new vehicle to the simulation.
      * 
-     * @param vehicleId Unique vehicle identifier
-     * @param routeId The route ID
+     * @param vehicleId    Unique vehicle identifier
+     * @param routeId      The route ID
      * @param vehicleClass The vehicle class
      * @throws Exception if TraCI communication fails
      */
@@ -194,16 +195,17 @@ public class TraaSAdapter {
             throws Exception {
         // Add vehicle with the specified route
         // Use "DEFAULT_VEHTYPE" as the type - SUMO's built-in default vehicle type
-        // The vehicle class is already encoded in the ID prefix for our visual rendering
+        // The vehicle class is already encoded in the ID prefix for our visual
+        // rendering
         double currentTime = getSimulationTime();
         conn.do_job_set(Vehicle.add(
-                vehicleId,              // vehicle ID
-                "DEFAULT_VEHTYPE",      // use SUMO's default vehicle type
-                routeId,                // route ID
-                (int) currentTime + 1,  // depart time (next simulation step)
-                0.0,                    // depart position (0 = start of route)
-                0.0,                    // depart speed (0 = use default)
-                (byte) 0                // depart lane (0 = first lane)
+                vehicleId, // vehicle ID
+                "DEFAULT_VEHTYPE", // use SUMO's default vehicle type
+                routeId, // route ID
+                (int) currentTime + 1, // depart time (next simulation step)
+                0.0, // depart position (0 = start of route)
+                0.0, // depart speed (0 = use default)
+                (byte) 0 // depart lane (0 = first lane)
         ));
     }
 
@@ -231,7 +233,7 @@ public class TraaSAdapter {
      * Finds a valid route between two edges using SUMO's routing.
      * 
      * @param fromEdge Starting edge ID
-     * @param toEdge Destination edge ID
+     * @param toEdge   Destination edge ID
      * @return List of edge IDs forming the route, or null
      * @throws Exception if TraCI communication fails
      */
@@ -286,18 +288,18 @@ public class TraaSAdapter {
     /**
      * Sets the duration of the currently active phase.
      * 
-     * @param tlId The traffic light identifier
+     * @param tlId     The traffic light identifier
      * @param duration New duration in seconds
      * @throws Exception if TraCI communication fails
      */
-    public void setPhaseDuration(String tlId, double duration) throws Exception{
+    public void setPhaseDuration(String tlId, double duration) throws Exception {
         conn.do_job_set(Trafficlight.setPhaseDuration(tlId, duration));
     }
 
     /**
      * Sets a specific phase as the current active phase.
      * 
-     * @param tlId The traffic light identifier
+     * @param tlId       The traffic light identifier
      * @param phaseIndex The phase index to switch to
      * @throws Exception if TraCI communication fails
      */

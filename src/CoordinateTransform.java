@@ -1,5 +1,6 @@
 /**
- * Handles coordinate transformation between SUMO world coordinates and JavaFX screen coordinates.
+ * Handles coordinate transformation between SUMO world coordinates and JavaFX
+ * screen coordinates.
  * Applies scale, zoom, offset, pan, and Y-axis inversion.
  *
  * @author M A T^2 H Team
@@ -24,12 +25,12 @@ public class CoordinateTransform {
     /**
      * Updates all transformation parameters.
      * 
-     * @param scale Base scaling factor
+     * @param scale   Base scaling factor
      * @param offsetX Base X offset
      * @param offsetY Base Y offset
-     * @param zoom User-controlled zoom level
-     * @param panX Interactive pan offset in X
-     * @param panY Interactive pan offset in Y
+     * @param zoom    User-controlled zoom level
+     * @param panX    Interactive pan offset in X
+     * @param panY    Interactive pan offset in Y
      */
     public void updateTransform(double scale, double offsetX, double offsetY, double zoom, double panX, double panY) {
         this.scale = scale;

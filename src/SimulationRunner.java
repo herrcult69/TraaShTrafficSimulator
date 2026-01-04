@@ -40,7 +40,7 @@ public class SimulationRunner implements Runnable {
      * Constructs a new simulation runner.
      * 
      * @param configFile Path to the SUMO configuration file
-     * @param gui Whether to launch SUMO with GUI
+     * @param gui        Whether to launch SUMO with GUI
      */
     public SimulationRunner(String configFile, boolean gui) {
         this.configFile = configFile;

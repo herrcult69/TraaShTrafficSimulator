@@ -22,10 +22,10 @@ public class Edge extends Renderable {
      * Constructs a new visual Edge from parsed network data.
      * 
      * @param networkEdge The parsed edge data from SUMO network file
-     * @param from The source junction network data
-     * @param to The destination junction network data
-     * @param fromJunc The visual source junction object
-     * @param toJunc The visual destination junction object
+     * @param from        The source junction network data
+     * @param to          The destination junction network data
+     * @param fromJunc    The visual source junction object
+     * @param toJunc      The visual destination junction object
      */
     public Edge(NetworkParser.Edge networkEdge, NetworkParser.Junction from, NetworkParser.Junction to,
             Junction fromJunc, Junction toJunc) {
@@ -48,16 +48,16 @@ public class Edge extends Renderable {
         // Create lanes directly from SUMO network data
         // SUMO already handles directionality with positive/negative edge IDs
         // Each edge contains only the lanes for that specific direction
-        
+
         double cumulativeOffset = 0;
         for (int i = 0; i < networkEdge.lanes.size(); i++) {
             NetworkParser.Lane sumoLane = networkEdge.lanes.get(i);
             double laneWidth = sumoLane.width;
-            
+
             // Calculate offset from edge centerline
             // Lanes are ordered from right to left in SUMO
             double offset = cumulativeOffset + laneWidth / 2.0;
-            
+
             // Use SUMO's actual lane ID
             String laneId = sumoLane.id;
             Lane lane = new Lane(laneId, this, laneWidth, i, offset);
@@ -69,8 +69,8 @@ public class Edge extends Renderable {
     /**
      * Returns the lane at the specified screen coordinates, or null if none.
      * 
-     * @param screenX The X coordinate in screen space
-     * @param screenY The Y coordinate in screen space
+     * @param screenX   The X coordinate in screen space
+     * @param screenY   The Y coordinate in screen space
      * @param transform The coordinate transformation
      * @return The lane at that position, or null
      */
@@ -86,7 +86,7 @@ public class Edge extends Renderable {
     /**
      * Renders the edge including road surface and lane markings.
      * 
-     * @param g The graphics context to draw on
+     * @param g         The graphics context to draw on
      * @param transform The coordinate transformation
      */
     @Override
@@ -134,7 +134,7 @@ public class Edge extends Renderable {
         // Calculate actual width from lanes (one direction only)
         double totalWidth = networkEdge.getTotalWidth();
         double screenWidth = transform.worldToScreenSize(totalWidth);
-        
+
         // Offset the edge centerline by half its width to position it correctly
         double halfWidth = totalWidth / 2.0;
         double offsetStartX = startX + halfWidth * perpX;
@@ -146,11 +146,10 @@ public class Edge extends Renderable {
         g.setStroke(Color.rgb(55, 60, 65));
         g.setLineWidth(screenWidth);
         g.strokeLine(
-            transform.worldToScreenX(offsetStartX), 
-            transform.worldToScreenY(offsetStartY),
-            transform.worldToScreenX(offsetEndX), 
-            transform.worldToScreenY(offsetEndY)
-        );
+                transform.worldToScreenX(offsetStartX),
+                transform.worldToScreenY(offsetStartY),
+                transform.worldToScreenX(offsetEndX),
+                transform.worldToScreenY(offsetEndY));
 
         // Draw lane markings using clipped coordinates
         renderLaneMarkings(g, transform, startX, startY, endX, endY);
@@ -169,7 +168,8 @@ public class Edge extends Renderable {
 
         int numLanes = networkEdge.lanes.size();
 
-        // Draw center line (yellow) - only for positive edge IDs to avoid double drawing
+        // Draw center line (yellow) - only for positive edge IDs to avoid double
+        // drawing
         if (!networkEdge.id.startsWith("-")) {
             g.setStroke(Color.rgb(255, 220, 50));
             g.setLineWidth(Math.max(1, transform.worldToScreenSize(0.5)));
@@ -278,9 +278,9 @@ public class Edge extends Renderable {
      * Highlights this edge with a colored overlay.
      * Used during route selection to show selected edges.
      * 
-     * @param g The graphics context to draw on
+     * @param g         The graphics context to draw on
      * @param transform The coordinate transformation
-     * @param color The highlight color
+     * @param color     The highlight color
      */
     @Override
     public void highlight(GraphicsContext g, CoordinateTransform transform, Color color) {

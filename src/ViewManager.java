@@ -27,9 +27,9 @@ public class ViewManager {
     /**
      * Constructs a new view manager for the specified canvas and network.
      * 
-     * @param canvas The canvas to manage the view for
+     * @param canvas    The canvas to manage the view for
      * @param transform The coordinate transform to update
-     * @param network The network data containing bounds information
+     * @param network   The network data containing bounds information
      */
     public ViewManager(Canvas canvas, CoordinateTransform transform, NetworkParser.NetworkData network) {
         this.canvas = canvas;
@@ -80,7 +80,7 @@ public class ViewManager {
     /**
      * Zooms the view centered on a specific screen point.
      * 
-     * @param factor The zoom factor
+     * @param factor  The zoom factor
      * @param targetX The X coordinate to zoom toward
      * @param targetY The Y coordinate to zoom toward
      */

@@ -20,10 +20,10 @@ public class Lane extends Renderable {
     /**
      * Constructs a new lane with the specified properties.
      * 
-     * @param id The unique SUMO lane identifier
-     * @param parentEdge The edge containing this lane
-     * @param width The lane width in meters
-     * @param index The 0-based index of this lane
+     * @param id               The unique SUMO lane identifier
+     * @param parentEdge       The edge containing this lane
+     * @param width            The lane width in meters
+     * @param index            The 0-based index of this lane
      * @param offsetFromCenter The perpendicular distance from the edge centerline
      */
     public Lane(String id, Edge parentEdge, double width, int index, double offsetFromCenter) {
@@ -57,9 +57,10 @@ public class Lane extends Renderable {
     /**
      * Checks if a screen point falls within this lane's boundaries.
      * 
-     * @param screenX The X coordinate in screen space
-     * @param screenY The Y coordinate in screen space
-     * @param transform The coordinate transformation to convert screen to world coordinates
+     * @param screenX   The X coordinate in screen space
+     * @param screenY   The Y coordinate in screen space
+     * @param transform The coordinate transformation to convert screen to world
+     *                  coordinates
      * @return true if the point is within the lane boundaries
      */
     @Override
@@ -102,9 +103,9 @@ public class Lane extends Renderable {
     /**
      * Draws a highlighted rectangle overlay on this lane.
      * 
-     * @param g The graphics context to draw on
+     * @param g         The graphics context to draw on
      * @param transform The coordinate transformation
-     * @param color The highlight color
+     * @param color     The highlight color
      */
     @Override
     public void highlight(GraphicsContext g, CoordinateTransform transform, Color color) {

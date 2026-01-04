@@ -7,9 +7,11 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Separator;
 import javafx.scene.layout.VBox;
 import java.util.function.Consumer;
+import java.util.logging.Logger;
 
 /**
- * Main control panel for simulation control, view manipulation, and dashboard display.
+ * Main control panel for simulation control, view manipulation, and dashboard
+ * display.
  * Provides buttons for play/pause/stop, zoom, and access to specialized panels.
  * 
  * @author M A T^2 H Team
@@ -18,6 +20,8 @@ import java.util.function.Consumer;
  * @see ViewManager
  */
 public class ControlPanel {
+    private static final Logger logger = Logger.getLogger(ControlPanel.class.getName());
+    
     private VBox controlPanel;
     private ScrollPane scrollPane;
     private SimulationRunner runner;
@@ -33,9 +37,9 @@ public class ControlPanel {
     /**
      * Constructs a new control panel.
      * 
-     * @param runner The simulation runner
-     * @param viewManager The view manager
-     * @param dashboard The dashboard component
+     * @param runner         The simulation runner
+     * @param viewManager    The view manager
+     * @param dashboard      The dashboard component
      * @param trafficManager The traffic manager
      */
     public ControlPanel(SimulationRunner runner, ViewManager viewManager, DashBoard dashboard,
@@ -84,8 +88,10 @@ public class ControlPanel {
         scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         scrollPane.setMinWidth(300);
         scrollPane.setMaxWidth(300);
-        scrollPane.setStyle("-fx-background: " + UIStyles.BG_PRIMARY + "; -fx-background-color: " + UIStyles.BG_PRIMARY + ";");
+        scrollPane.setStyle(
+                "-fx-background: " + UIStyles.BG_PRIMARY + "; -fx-background-color: " + UIStyles.BG_PRIMARY + ";");
     }
+
     /**
      * Adds simulation control buttons to the panel.
      */
@@ -101,14 +107,14 @@ public class ControlPanel {
         playBtn.setOnAction(e -> {
             if (runner != null) {
                 runner.resume();
-                System.out.println("Simulation resumed");
+                logger.info("Simulation resumed");
             }
         });
 
         pauseBtn.setOnAction(e -> {
             if (runner != null) {
                 runner.pause();
-                System.out.println("Simulation paused");
+                logger.info("Simulation paused");
             }
         });
 
@@ -116,7 +122,7 @@ public class ControlPanel {
             if (runner != null) {
                 runner.stop();
             }
-            System.out.println("Simulation stopped - Exiting application");
+            logger.info("Simulation stopped - Exiting application");
             Platform.exit();
             System.exit(0);
         });
@@ -156,11 +162,12 @@ public class ControlPanel {
     /**
      * Sets callbacks for route selection mode interactions.
      * 
-     * @param onStartRouteSelection Called when route selection begins
+     * @param onStartRouteSelection      Called when route selection begins
      * @param onRouteSelectionModeChange Called when route selection mode changes
-     * @param onVehicleAdded Called when a vehicle is added
+     * @param onVehicleAdded             Called when a vehicle is added
      */
-    public void setRouteSelectionCallbacks(Runnable onStartRouteSelection, Consumer<Boolean> onRouteSelectionModeChange, Runnable onVehicleAdded) {
+    public void setRouteSelectionCallbacks(Runnable onStartRouteSelection, Consumer<Boolean> onRouteSelectionModeChange,
+            Runnable onVehicleAdded) {
         this.onStartRouteSelection = onStartRouteSelection;
         this.onRouteSelectionModeChange = onRouteSelectionModeChange;
         this.onVehicleAdded = onVehicleAdded;
@@ -190,7 +197,8 @@ public class ControlPanel {
      * @param tl The traffic light to control
      */
     public void showTrafficLightControl(TrafficLight tl) {
-        TrafficLightControlPanel tlPanel = new TrafficLightControlPanel(tl, runner, trafficManager, this::showNormalControls);
+        TrafficLightControlPanel tlPanel = new TrafficLightControlPanel(tl, runner, trafficManager,
+                this::showNormalControls);
         scrollPane.setContent(tlPanel.getPanel());
     }
 

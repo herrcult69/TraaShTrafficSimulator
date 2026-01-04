@@ -51,8 +51,8 @@ public class Junction extends Renderable {
     /**
      * Checks if a screen point falls within the junction's boundary polygon.
      * 
-     * @param screenX The X coordinate in screen space
-     * @param screenY The Y coordinate in screen space
+     * @param screenX   The X coordinate in screen space
+     * @param screenY   The Y coordinate in screen space
      * @param transform The coordinate transformation
      * @return true if the point is inside the junction boundary
      */
@@ -84,9 +84,9 @@ public class Junction extends Renderable {
     /**
      * Draws a semi-transparent polygon highlight over the junction.
      * 
-     * @param g The graphics context to draw on
+     * @param g         The graphics context to draw on
      * @param transform The coordinate transformation
-     * @param color The highlight color
+     * @param color     The highlight color
      */
     @Override
     public void highlight(GraphicsContext g, CoordinateTransform transform, Color color) {
@@ -116,7 +116,7 @@ public class Junction extends Renderable {
     /**
      * Draws the junction geometry. Skips internal junctions.
      * 
-     * @param g The graphics context to draw on
+     * @param g         The graphics context to draw on
      * @param transform The coordinate transformation
      */
     @Override
@@ -134,7 +134,7 @@ public class Junction extends Renderable {
     /**
      * Renders the junction as a filled polygon.
      * 
-     * @param g The graphics context to draw on
+     * @param g         The graphics context to draw on
      * @param transform The coordinate transformation
      */
     private void renderPolygonJunction(GraphicsContext g, CoordinateTransform transform) {

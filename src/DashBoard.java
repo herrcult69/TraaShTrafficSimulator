@@ -84,7 +84,8 @@ public class DashBoard extends VBox {
         speedChart.setMaxWidth(280);
         speedChart.setCreateSymbols(false);
         speedChart.setAnimated(false);
-        speedChart.setStyle("-fx-background-color: #0D1B2A; -fx-title-side: top; -fx-text-fill: #778DA9;-fx-font-weight: bold; -fx-font-size: 10;");
+        speedChart.setStyle(
+                "-fx-background-color: #0D1B2A; -fx-title-side: top; -fx-text-fill: #778DA9;-fx-font-weight: bold; -fx-font-size: 10;");
 
         speedSeries = new XYChart.Series<>();
         speedChart.getData().add(speedSeries);
