@@ -146,6 +146,7 @@ public class TrafficSimulatorApp extends Application {
         scene.updateVehicles(runner.getVehiclePositions());
         scene.updateVehicleSpeeds(runner.getVehicleSpeeds());
         scene.updateEdgeStatistics(runner.getVehicleEdges());
+        scene.updateCongestionHotspots(runner.getVehicleEdges(), runner.getVehicleSpeeds());
         scene.updateTrafficLights(runner.getTrafficLightData());
         scene.render(g, viewManager.getTransform());
         scene.renderHighlight(g, viewManager.getTransform(), selectedElement, hoveredElement);
@@ -165,11 +166,12 @@ public class TrafficSimulatorApp extends Application {
             drawRouteSelectionOverlay(g);
         }
 
-        // Update dashboard at reduced frequency
+        // Update dashboard and congestion monitor at reduced frequency
         long currentTime = System.nanoTime();
         double timeSinceLastUpdate = (currentTime - lastDashboardUpdate) / 1_000_000_000.0;
         if (timeSinceLastUpdate >= DASHBOARD_UPDATE_INTERVAL) {
             updateDashboard();
+            updateCongestionMonitor();
             lastDashboardUpdate = currentTime;
         }
     }
@@ -243,6 +245,16 @@ public class TrafficSimulatorApp extends Application {
         data.simTime = runner.getSimulationTime();
         collectVehicleMetrics(data);
         dashboard.update(data);
+    }
+    
+    /**
+     * Updates the congestion monitor panel with current hotspot data.
+     * Called at a reduced frequency to avoid excessive UI updates.
+     */
+    private void updateCongestionMonitor() {
+        java.util.List<CongestionHotspot> topHotspots = scene.getTopCongestionHotspots(5);
+        int totalCount = scene.getCongestionHotspots().size();
+        controlPanel.getCongestionMonitorPanel().updateHotspots(topHotspots, totalCount);
     }
 
     /**

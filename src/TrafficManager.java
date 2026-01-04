@@ -41,6 +41,10 @@ public class TrafficManager {
     private List<TrafficLight> trafficLights; // Changed to List for multiple lights per junction
     private Map<String, NetworkParser.Junction> junctionIndex;
     private Map<String, Junction> visualJunctionIndex;
+    
+    // Congestion tracking
+    private Map<String, CongestionHotspot> congestionHotspots;
+    private boolean showCongestionOverlay;
 
     /**
      * Constructs a new TrafficManager with empty collections.
@@ -52,6 +56,8 @@ public class TrafficManager {
         this.trafficLights = new ArrayList<>(); // Initialize traffic lights
         this.junctionIndex = new HashMap<>();
         this.visualJunctionIndex = new HashMap<>();
+        this.congestionHotspots = new HashMap<>();
+        this.showCongestionOverlay = false;
     }
 
     /**
@@ -215,6 +221,52 @@ public class TrafficManager {
             }
         }
     }
+    
+    /**
+     * Updates congestion hotspot tracking based on current traffic conditions.
+     * Analyzes vehicle density and speed on each edge to identify congestion.
+     * 
+     * @param vehicleEdges Map from vehicle ID to edge ID (for vehicle counting)
+     * @param vehicleSpeeds Map from vehicle ID to speed in m/s
+     */
+    public void updateCongestionHotspots(Map<String, String> vehicleEdges, Map<String, Double> vehicleSpeeds) {
+        // Reset speed statistics for all edges
+        for (Edge edge : edges) {
+            edge.resetSpeedStatistics();
+        }
+        
+        // Collect speed samples for each edge
+        for (Map.Entry<String, String> entry : vehicleEdges.entrySet()) {
+            String vehicleId = entry.getKey();
+            String edgeId = entry.getValue();
+            Double speed = vehicleSpeeds.get(vehicleId);
+            
+            if (speed != null) {
+                Edge edge = getEdgeById(edgeId);
+                if (edge != null) {
+                    edge.addSpeedSample(speed);
+                }
+            }
+        }
+        
+        // Update or create congestion hotspots
+        for (Edge edge : edges) {
+            String edgeId = edge.getNetworkEdge().id;
+            
+            // Get or create hotspot for this edge
+            CongestionHotspot hotspot = congestionHotspots.get(edgeId);
+            if (hotspot == null) {
+                hotspot = new CongestionHotspot(edge);
+                congestionHotspots.put(edgeId, hotspot);
+            }
+            
+            // Update metrics (retrieves speed and density directly from edge)
+            hotspot.updateMetrics();
+        }
+        
+        // Remove hotspots that are no longer congested
+        congestionHotspots.entrySet().removeIf(entry -> !entry.getValue().isCongested());
+    }
 
     /**
      * Updates traffic light states from SUMO simulation data.
@@ -344,6 +396,13 @@ public class TrafficManager {
         for (Edge edge : edges) {
             edge.render(g, transform);
         }
+        
+        // Render congestion overlays if enabled
+        if (showCongestionOverlay) {
+            for (CongestionHotspot hotspot : congestionHotspots.values()) {
+                hotspot.render(g, transform);
+            }
+        }
 
         // Render junctions
         for (Junction junction : junctions) {
@@ -449,5 +508,46 @@ public class TrafficManager {
             }
         }
         return null;
+    }
+    
+    /**
+     * Returns the map of all congestion hotspots currently tracked.
+     * 
+     * @return Map from edge ID to CongestionHotspot
+     */
+    public Map<String, CongestionHotspot> getCongestionHotspots() {
+        return congestionHotspots;
+    }
+    
+    /**
+     * Toggles the congestion overlay visualization.
+     * 
+     * @param show true to show congestion overlays, false to hide
+     */
+    public void setShowCongestionOverlay(boolean show) {
+        this.showCongestionOverlay = show;
+    }
+    
+    /**
+     * Returns whether congestion overlay is currently visible.
+     * 
+     * @return true if congestion overlay is enabled
+     */
+    public boolean isShowCongestionOverlay() {
+        return showCongestionOverlay;
+    }
+    
+    /**
+     * Returns the top N most congested edges sorted by severity.
+     * 
+     * @param n Number of top hotspots to return
+     * @return List of top congestion hotspots
+     */
+    public List<CongestionHotspot> getTopCongestionHotspots(int n) {
+        return congestionHotspots.values().stream()
+            .filter(CongestionHotspot::isCongested)
+            .sorted((a, b) -> Double.compare(b.getCongestionScore(), a.getCongestionScore()))
+            .limit(n)
+            .collect(java.util.stream.Collectors.toList());
     }
 }
