@@ -4,35 +4,23 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Runs the SUMO traffic simulation in a background thread and provides real-time updates.
- * 
- * <p>This class:
- * <ul>
- *   <li>Establishes and maintains a TraCI connection to SUMO</li>
- *   <li>Executes simulation time steps at ~10 Hz (100ms intervals)</li>
- *   <li>Periodically queries SUMO for vehicle positions, speeds, and traffic light states</li>
- *   <li>Provides thread-safe access to simulation data via concurrent maps</li>
- *   <li>Supports pause/resume and graceful shutdown</li>
- * </ul>
- * 
- * <p>The simulation runs independently in its own thread while the JavaFX rendering thread
- * reads from the shared concurrent maps at ~60 FPS for smooth visualization.</p>
+ * Runs the SUMO simulation in a background thread.
+ * Executes simulation steps and provides real-time updates via concurrent maps.
  *
  * @author M A T^2 H Team
- * @version 2.0 
+ * @version 2.0
  * @see TraaSAdapter
- * @see TrafficLight
  */
 public class SimulationRunner implements Runnable {
 
     /**
-     * Callback interface for notification when the SUMO connection is established.
+     * Callback interface for SUMO connection establishment.
      */
     public interface ConnectionListener {
         /**
-         * Called when the TraCI connection to SUMO is successfully established.
+         * Called when TraCI connection is established.
          * 
-         * @param adapter The TraaSAdapter for communicating with SUMO
+         * @param adapter The TraaSAdapter for SUMO communication
          */
         void onConnected(TraaSAdapter adapter);
     }
@@ -51,8 +39,8 @@ public class SimulationRunner implements Runnable {
     /**
      * Constructs a new simulation runner.
      * 
-     * @param configFile Path to the SUMO configuration file (.sumocfg)
-     * @param gui Whether to launch SUMO with GUI (true) or headless (false)
+     * @param configFile Path to the SUMO configuration file
+     * @param gui        Whether to launch SUMO with GUI
      */
     public SimulationRunner(String configFile, boolean gui) {
         this.configFile = configFile;
@@ -60,7 +48,7 @@ public class SimulationRunner implements Runnable {
     }
 
     /**
-     * Sets a listener to be notified when the SUMO connection is established.
+     * Sets a listener for connection establishment.
      * 
      * @param listener The connection listener callback
      */
@@ -154,15 +142,7 @@ public class SimulationRunner implements Runnable {
 
     /**
      * Main simulation loop that runs in a background thread.
-     * <p>
-     * This method:
-     * <ol>
-     *   <li>Establishes TraCI connection to SUMO</li>
-     *   <li>Notifies the connection listener</li>
-     *   <li>Executes simulation time steps at 100ms intervals</li>
-     *   <li>Updates vehicle positions, speeds, and traffic light states</li>
-     *   <li>Continues until stop() is called</li>
-     * </ol>
+     * Establishes TraCI connection and executes simulation steps.
      */
     @Override
     public void run() {
@@ -209,7 +189,7 @@ public class SimulationRunner implements Runnable {
                         trafficLightData.put(tlId, new TrafficLight.TrafficLightData(state, null, 0));
                     }
                 }
-                Thread.sleep(100);
+                Thread.sleep(20);
             }
             conn.close();
         } catch (Exception e) {
