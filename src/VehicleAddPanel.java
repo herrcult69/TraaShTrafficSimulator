@@ -10,6 +10,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.application.Platform;
 import javafx.animation.AnimationTimer;
+import javafx.scene.paint.Color;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -38,6 +39,9 @@ public class VehicleAddPanel extends VBox {
     // UI components
     private ComboBox<String> vehicleTypeCombo;
     private TextField vehicleIdField;
+    private TextField vehicleBatchField;
+    private TextField vehicleSpeedField;
+    private TextField vehicleColorField;
     private ListView<String> routeListView;
     private Label statusLabel;
     private Label instructionLabel;
@@ -55,6 +59,7 @@ public class VehicleAddPanel extends VBox {
      */
     private Button stressTestBtn;
     private TextField stressIntervalField;
+    private TextField stressBatchField;
     private Label stressStatusLabel;
     private Label stressStatsLabel;
     private Label fpsLabel;
@@ -166,6 +171,39 @@ public class VehicleAddPanel extends VBox {
         vehicleIdField.setStyle(UIStyles.INPUT_FIELD_STYLE + " -fx-font-family: monospace;");
         updateVehicleId();
 
+        // Vehicle Parameters
+        Label batchLabel = new Label("Batch count:");
+        batchLabel.setStyle(UIStyles.LABEL_STYLE);
+        vehicleBatchField = new TextField("1");
+        vehicleBatchField.setPrefWidth(80);
+        vehicleBatchField.setStyle(UIStyles.INPUT_FIELD_STYLE + " -fx-font-family: monospace;");
+        vehicleBatchField.textProperty().addListener((obs, oldVal, newVal) -> {
+            if (!newVal.matches("\\d*")) {
+                vehicleBatchField.setText(newVal.replaceAll("[^\\d]", ""));
+            }
+        });
+
+        Label speedLabel = new Label("Depart speed (m/s):");
+        speedLabel.setStyle(UIStyles.LABEL_STYLE);
+        vehicleSpeedField = new TextField("0");
+        vehicleSpeedField.setPrefWidth(80);
+        vehicleSpeedField.setStyle(UIStyles.INPUT_FIELD_STYLE + " -fx-font-family: monospace;");
+        vehicleSpeedField.textProperty().addListener((obs, oldVal, newVal) -> {
+            if (!newVal.matches("[0-9]*([.]?[0-9]*)?")) {
+                vehicleSpeedField.setText(oldVal);
+            }
+        });
+
+        HBox paramsRow = new HBox(10);
+        paramsRow.setAlignment(Pos.CENTER_LEFT);
+        paramsRow.getChildren().addAll(batchLabel, vehicleBatchField, speedLabel, vehicleSpeedField);
+
+        Label colorLabel = new Label("Color (hex #RRGGBB, optional):");
+        colorLabel.setStyle(UIStyles.LABEL_STYLE);
+        vehicleColorField = new TextField("");
+        vehicleColorField.setPrefWidth(250);
+        vehicleColorField.setStyle(UIStyles.INPUT_FIELD_STYLE + " -fx-font-family: monospace;");
+
         // Route Section
         Label routeLabel = new Label("Route Selection:");
         routeLabel.setStyle(UIStyles.LABEL_STYLE + " -fx-font-weight: bold;");
@@ -247,6 +285,20 @@ public class VehicleAddPanel extends VBox {
         intervalBox.setAlignment(Pos.CENTER_LEFT);
         intervalBox.getChildren().addAll(intervalLabel, stressIntervalField);
 
+        Label stressBatchLabel = new Label("Batch (veh/interval):");
+        stressBatchLabel.setStyle(UIStyles.LABEL_STYLE);
+        stressBatchField = new TextField("1");
+        stressBatchField.setPrefWidth(80);
+        stressBatchField.setStyle(UIStyles.INPUT_FIELD_STYLE + " -fx-font-family: monospace;");
+        stressBatchField.textProperty().addListener((obs, oldVal, newVal) -> {
+            if (!newVal.matches("\\d*")) {
+                stressBatchField.setText(newVal.replaceAll("[^\\d]", ""));
+            }
+        });
+        HBox stressBatchBox = new HBox(10);
+        stressBatchBox.setAlignment(Pos.CENTER_LEFT);
+        stressBatchBox.getChildren().addAll(stressBatchLabel, stressBatchField);
+
         stressTestBtn = UIStyles.createStyledButton("Start Stress Test");
         stressTestBtn.setPrefWidth(200);
         stressTestBtn.setStyle("-fx-background-color: #E53935; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;");
@@ -275,15 +327,31 @@ public class VehicleAddPanel extends VBox {
         getChildren().addAll(
                 backBtn, titleLabel, new Separator(),
                 typeLabel, vehicleTypeCombo,
-                idLabel, vehicleIdField, new Separator(),
+                idLabel, vehicleIdField,
+                paramsRow,
+                colorLabel, vehicleColorField,
+                new Separator(),
                 routeLabel, instructionLabel,
                 startEdgeLabel, endEdgeLabel,
                 computedRouteLabel, routeListView,
                 routeButtons, statusLabel, new Separator(),
                 confirmBtn, cancelBtn,
                 stressSeparator, stressTestTitle, stressDescLabel,
-                intervalBox, stressTestBtn, stressStatusLabel, stressStatsLabel, fpsLabel,
+                intervalBox, stressBatchBox, stressTestBtn, stressStatusLabel, stressStatsLabel, fpsLabel,
                 infoBox);
+    }
+
+    private Color parseHexColor(String text) {
+        if (text == null) return null;
+        String s = text.trim();
+        if (s.isEmpty()) return null;
+        if (!s.startsWith("#") || s.length() != 7) {
+            throw new IllegalArgumentException("Color must be in format #RRGGBB");
+        }
+        int r = Integer.parseInt(s.substring(1, 3), 16);
+        int g = Integer.parseInt(s.substring(3, 5), 16);
+        int b = Integer.parseInt(s.substring(5, 7), 16);
+        return Color.rgb(r, g, b);
     }
 
     /**
@@ -539,6 +607,25 @@ public class VehicleAddPanel extends VBox {
             return;
         }
 
+        // Get batch size
+        String batchText = stressBatchField.getText().trim();
+        if (batchText.isEmpty()) batchText = "1";
+        int batch;
+        try {
+            batch = Integer.parseInt(batchText);
+        } catch (NumberFormatException e) {
+            updateStressStatus("Invalid batch size!", UIStyles.TEXT_ERROR);
+            return;
+        }
+        if (batch < 1) {
+            updateStressStatus("Batch size must be >= 1", UIStyles.TEXT_ERROR);
+            return;
+        }
+        if (batch > 1000) {
+            updateStressStatus("Batch size too large (max 1000)", UIStyles.TEXT_ERROR);
+            return;
+        }
+
         // Load available edges for random routing
         try {
             availableEdges = adapter.getEdgeIds();
@@ -578,6 +665,7 @@ public class VehicleAddPanel extends VBox {
         confirmBtn.setDisable(true);
         addEdgeBtn.setDisable(true);
         stressIntervalField.setDisable(true);
+        stressBatchField.setDisable(true);
 
         // Start FPS counter
         startFpsCounter();
@@ -588,7 +676,9 @@ public class VehicleAddPanel extends VBox {
             @Override
             public void run() {
                 if (stressTestRunning) {
-                    injectRandomVehicle();
+                    for (int i = 0; i < batch && stressTestRunning; i++) {
+                        injectRandomVehicle();
+                    }
                 }
             }
         }, 0, interval);
@@ -635,6 +725,7 @@ public class VehicleAddPanel extends VBox {
             confirmBtn.setDisable(false);
             addEdgeBtn.setDisable(false);
             stressIntervalField.setDisable(false);
+            stressBatchField.setDisable(false);
         });
 
         System.out.println(String.format("Stress test stopped. Added: %d, Failed: %d, Duration: %.1fs, Rate: %.1f veh/s",
@@ -799,9 +890,51 @@ public class VehicleAddPanel extends VBox {
             return;
         }
 
-        String vehicleId = vehicleIdField.getText().trim();
-        if (vehicleId.isEmpty()) {
+        String baseVehicleId = vehicleIdField.getText().trim();
+        if (baseVehicleId.isEmpty()) {
             showError("Vehicle ID cannot be empty!");
+            return;
+        }
+
+        int batchCount = 1;
+        String batchText = vehicleBatchField.getText().trim();
+        if (!batchText.isEmpty()) {
+            try {
+                batchCount = Integer.parseInt(batchText);
+            } catch (NumberFormatException e) {
+                showError("Invalid batch count!");
+                return;
+            }
+        }
+        if (batchCount < 1) {
+            showError("Batch count must be >= 1");
+            return;
+        }
+        if (batchCount > 1000) {
+            showError("Batch count too large (max 1000)");
+            return;
+        }
+
+        double departSpeed = 0.0;
+        String speedText = vehicleSpeedField.getText().trim();
+        if (!speedText.isEmpty()) {
+            try {
+                departSpeed = Double.parseDouble(speedText);
+            } catch (NumberFormatException e) {
+                showError("Invalid speed value!");
+                return;
+            }
+        }
+        if (!Double.isFinite(departSpeed) || departSpeed < 0.0) {
+            showError("Speed must be a non-negative number");
+            return;
+        }
+
+        Color overrideColor = null;
+        try {
+            overrideColor = parseHexColor(vehicleColorField.getText());
+        } catch (Exception e) {
+            showError(e.getMessage());
             return;
         }
 
@@ -816,16 +949,24 @@ public class VehicleAddPanel extends VBox {
                 return;
             }
 
-            // Create route ID and add to SUMO
-            String routeId = "route_" + vehicleId;
-            adapter.addRoute(routeId, selectedRoute);
-            adapter.addVehicle(vehicleId, routeId, vehicleClass);
+            for (int i = 0; i < batchCount; i++) {
+                String vehicleId = (i == 0) ? baseVehicleId : (baseVehicleId + "_" + (i + 1));
+                String routeId = "route_" + vehicleId;
+                adapter.addRoute(routeId, selectedRoute);
+                adapter.addVehicle(vehicleId, routeId, vehicleClass, departSpeed);
 
-            statusLabel.setText("✓ Vehicle '" + vehicleId + "' added successfully!");
+                if (overrideColor != null) {
+                    Vehicle.setColorOverride(vehicleId, overrideColor);
+                }
+            }
+
+            statusLabel.setText(batchCount == 1
+                    ? ("✓ Vehicle '" + baseVehicleId + "' added successfully!")
+                    : ("✓ Added " + batchCount + " vehicles starting with '" + baseVehicleId + "'"));
             statusLabel.setStyle("-fx-text-fill: " + UIStyles.TEXT_SUCCESS + "; -fx-font-weight: bold; -fx-font-size: 11;");
 
             // Increment counter for next vehicle
-            vehicleCounter++;
+            vehicleCounter += batchCount;
 
             // Resume simulation
             if (runner != null && runner.isPaused()) {

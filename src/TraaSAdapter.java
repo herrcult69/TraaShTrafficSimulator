@@ -202,20 +202,36 @@ public class TraaSAdapter {
      */
     public void addVehicle(String vehicleId, String routeId, String vehicleClass)
             throws Exception {
+        addVehicle(vehicleId, routeId, vehicleClass, 0.0);
+    }
+
+        /**
+         * Adds a new vehicle to the simulation with an explicit departure speed.
+         *
+         * @param vehicleId Unique vehicle identifier
+         * @param routeId The route ID for this vehicle to follow
+         * @param vehicleClass The vehicle class (passenger, truck, bus, motorcycle, emergency)
+         * @param departSpeed Departure speed in m/s (0 = use default)
+         * @throws Exception if TraCI communication fails, route doesn't exist, or vehicle ID is duplicate
+         */
+        public void addVehicle(String vehicleId, String routeId, String vehicleClass, double departSpeed)
+            throws Exception {
         // Add vehicle with the specified route
         // Use "DEFAULT_VEHTYPE" as the type - SUMO's built-in default vehicle type
         // The vehicle class is already encoded in the ID prefix for our visual rendering
         double currentTime = getSimulationTime();
+        double speed = (Double.isFinite(departSpeed) && departSpeed >= 0.0) ? departSpeed : 0.0;
+
         conn.do_job_set(Vehicle.add(
-                vehicleId,              // vehicle ID
-                "DEFAULT_VEHTYPE",      // use SUMO's default vehicle type
-                routeId,                // route ID
-                (int) currentTime + 1,  // depart time (next simulation step)
-                0.0,                    // depart position (0 = start of route)
-                0.0,                    // depart speed (0 = use default)
-                (byte) 0                // depart lane (0 = first lane)
+            vehicleId,              // vehicle ID
+            "DEFAULT_VEHTYPE",      // use SUMO's default vehicle type
+            routeId,                // route ID
+            (int) currentTime + 1,  // depart time (next simulation step)
+            0.0,                    // depart position (0 = start of route)
+            speed,                  // depart speed (0 = use default)
+            (byte) 0                // depart lane (0 = first lane)
         ));
-    }
+        }
 
     /**
      * Returns the list of all edge IDs in the network.

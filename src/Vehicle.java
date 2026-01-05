@@ -1,6 +1,9 @@
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.geometry.Rectangle2D;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Represents a single vehicle in the traffic simulation.
@@ -28,6 +31,8 @@ import javafx.geometry.Rectangle2D;
  * @see SimulationRunner
  */
 public class Vehicle {
+    private static final Map<String, Color> COLOR_OVERRIDES = new ConcurrentHashMap<>();
+
     private String id;
     private String type;
     private double worldX, worldY;
@@ -54,6 +59,20 @@ public class Vehicle {
         // Determine vehicle type and dimensions from ID
         determineTypeFromId();
         updateBounds();
+    }
+
+    public static void setColorOverride(String vehicleId, Color color) {
+        if (vehicleId == null || vehicleId.isBlank()) return;
+        if (color == null) {
+            COLOR_OVERRIDES.remove(vehicleId);
+        } else {
+            COLOR_OVERRIDES.put(vehicleId, color);
+        }
+    }
+
+    public static void pruneColorOverrides(Set<String> activeVehicleIds) {
+        if (activeVehicleIds == null) return;
+        COLOR_OVERRIDES.keySet().removeIf(id -> !activeVehicleIds.contains(id));
     }
 
     /**
@@ -248,6 +267,8 @@ public class Vehicle {
      * @return The vehicle's color based on its type
      */
     private Color getVehicleColor() {
+        Color override = COLOR_OVERRIDES.get(id);
+        if (override != null) return override;
         return switch (type) {
             case "car" -> Color.rgb(220, 60, 115);
             case "truck" -> Color.rgb(50, 120, 230);

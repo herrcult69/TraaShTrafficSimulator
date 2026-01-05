@@ -171,6 +171,9 @@ public class TrafficManager {
 
         // Remove vehicles that are no longer in SUMO
         vehicles.entrySet().removeIf(entry -> !vehiclePositions.containsKey(entry.getKey()));
+
+        // Keep color overrides bounded (avoid leaking with stress tests)
+        Vehicle.pruneColorOverrides(vehiclePositions.keySet());
     }
 
     /**
