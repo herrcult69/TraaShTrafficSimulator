@@ -143,7 +143,7 @@ public class TrafficSimulatorApp extends Application {
         g.setFill(Color.rgb(26, 36, 47));
         g.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
-        scene.updateVehicles(runner.getVehiclePositions());
+        scene.updateVehicles(runner.getVehiclePositions(), runner.getSimulationTime());
         scene.updateVehicleSpeeds(runner.getVehicleSpeeds());
         scene.updateEdgeStatistics(runner.getVehicleEdges());
         scene.updateCongestionHotspots(runner.getVehicleEdges(), runner.getVehicleSpeeds());
@@ -190,7 +190,7 @@ public class TrafficSimulatorApp extends Application {
         
         // Increase height for vehicle to accommodate speed stats
         if (selected instanceof Vehicle) {
-            height = 140;
+            height = 180;
         }
 
         g.setFill(Color.rgb(0, 0, 0, 0.7));
@@ -209,6 +209,8 @@ public class TrafficSimulatorApp extends Application {
             g.fillText("Current Speed: " + String.format("%.2f", v.getCurrentSpeed() * 3.6) + " km/h", x + 10, y + 80);
             g.fillText("Average Speed: " + String.format("%.2f", v.getAverageSpeed() * 3.6) + " km/h", x + 10, y + 100);
             g.fillText("Max Speed: " + String.format("%.2f", v.getMaxSpeed() * 3.6) + " km/h", x + 10, y + 120);
+            g.fillText("Travel Time: " + String.format("%.2f", v.getTravelTime()) + " s", x + 10, y + 140);
+            g.fillText("Total Distance: " + String.format("%.2f", v.getTotalDistance()) + " m", x + 10, y + 160);
         } else if (selected instanceof Edge) {
             Edge edge = (Edge) selected;
             height = 140;

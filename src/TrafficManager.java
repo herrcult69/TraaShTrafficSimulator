@@ -45,6 +45,13 @@ public class TrafficManager {
     // Congestion tracking
     private Map<String, CongestionHotspot> congestionHotspots;
     private boolean showCongestionOverlay;
+    
+    // Travel time tracking
+    private List<Double> completedTravelTimes;
+    private double currentSimTime;
+
+    // Travel distance tracking
+    private List<Double> completedTravelDistances;
 
     /**
      * Constructs a new TrafficManager with empty collections.
@@ -58,6 +65,9 @@ public class TrafficManager {
         this.visualJunctionIndex = new HashMap<>();
         this.congestionHotspots = new HashMap<>();
         this.showCongestionOverlay = false;
+        this.completedTravelTimes = new ArrayList<>();
+        this.completedTravelDistances = new ArrayList<>();
+        this.currentSimTime = 0.0;
     }
 
     /**
@@ -156,8 +166,35 @@ public class TrafficManager {
      * Creates new vehicles as they appear and removes vehicles that have left the simulation.
      * 
      * @param vehiclePositions Map from vehicle ID to array [x, y, angle, signals]
+     * @param simTime The current simulation time in seconds
      */
-    public void updateVehicles(Map<String, double[]> vehiclePositions) {
+    public void updateVehicles(Map<String, double[]> vehiclePositions, double simTime) {
+        this.currentSimTime = simTime;
+        
+        // Track which vehicles are leaving
+        List<String> leavingVehicles = new ArrayList<>();
+        for (String vehicleId : vehicles.keySet()) {
+            if (!vehiclePositions.containsKey(vehicleId)) {
+                leavingVehicles.add(vehicleId);
+            }
+        }
+        
+        // Mark exiting vehicles and record their travel times
+        for (String vehicleId : leavingVehicles) {
+            Vehicle vehicle = vehicles.get(vehicleId);
+            if (vehicle != null && !vehicle.hasExited()) {
+                vehicle.markAsExited(simTime);
+                double travelTime = vehicle.getTravelTime();
+                if (travelTime > 0) {
+                    completedTravelTimes.add(travelTime);
+                }
+                double travelDistance = vehicle.getTotalDistance();
+                if (travelDistance > 0) {
+                    completedTravelDistances.add(travelDistance);
+                }
+            }
+        }
+        
         // Update existing vehicles and create new ones
         for (Map.Entry<String, double[]> entry : vehiclePositions.entrySet()) {
             String vehicleId = entry.getKey();
@@ -165,18 +202,30 @@ public class TrafficManager {
 
             Vehicle vehicle = vehicles.get(vehicleId);
             if (vehicle == null) {
-                // Create new vehicle
+                // Create new vehicle with entry time
                 vehicle = new Vehicle(vehicleId, position[0], position[1],
-                        position.length > 2 ? position[2] : 0.0);
+                        position.length > 2 ? position[2] : 0.0, simTime);
                 vehicles.put(vehicleId, vehicle);
             } else {
-                // Update existing vehicle
+                // Update existing vehicle position and current time
                 vehicle.updatePosition(position);
+                vehicle.setCurrentTime(simTime);
             }
         }
 
         // Remove vehicles that are no longer in SUMO
         vehicles.entrySet().removeIf(entry -> !vehiclePositions.containsKey(entry.getKey()));
+    }
+    
+    /**
+     * Legacy method for backward compatibility. Uses simTime = 0.0.
+     * 
+     * @param vehiclePositions Map from vehicle ID to array [x, y, angle, signals]
+     * @deprecated Use {@link #updateVehicles(Map, double)} instead
+     */
+    @Deprecated
+    public void updateVehicles(Map<String, double[]> vehiclePositions) {
+        updateVehicles(vehiclePositions, this.currentSimTime);
     }
     
     /**
@@ -550,4 +599,37 @@ public class TrafficManager {
             .limit(n)
             .collect(java.util.stream.Collectors.toList());
     }
+    
+    /**
+     * Returns the list of all completed travel times (in seconds).
+     * 
+     * @return List of travel times for vehicles that have exited the simulation
+     */
+    public List<Double> getCompletedTravelTimes() {
+        return new ArrayList<>(completedTravelTimes);
+    }
+    
+    /**
+     * Clears the travel time history.
+     */
+    public void clearTravelTimeHistory() {
+        completedTravelTimes.clear();
+    }
+    
+    /**
+     * Returns the list of all completed travel distances (in meters).
+     * 
+     * @return List of travel distances for vehicles that have exited the simulation
+     */
+    public List<Double> getCompletedTravelDistances() {
+        return new ArrayList<>(completedTravelDistances);
+    }
+
+    /**
+     * Clears the travel distance history.
+     */
+    public void clearTravelDistanceHistory() {
+        completedTravelDistances.clear();
+    }
+
 }

@@ -65,6 +65,13 @@ public class CongestionHotspot {
         this.avgSpeed = edge.getAverageSpeed();
         this.density = edge.getVehicleDensity();
         
+        // No congestion if there are no vehicles on the edge
+        if (edge.getVehicleCount() == 0) {
+            this.congestionScore = 0.0;
+            this.severityLevel = 0;
+            return;
+        }
+        
         // Calculate congestion score (0-100)
         // Higher score = worse congestion
         double speedFactor = 0.0;
