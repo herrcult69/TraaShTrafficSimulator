@@ -39,6 +39,8 @@ public class Edge {
     // Edge statistics
     private int vehicleCount;
     private double edgeLength;
+    private double totalSpeed;
+    private int speedSampleCount;
 
     /**
      * Constructs a new visual Edge from parsed network data.
@@ -66,6 +68,8 @@ public class Edge {
         double dy = toY - fromY;
         this.edgeLength = Math.sqrt(dx * dx + dy * dy);
         this.vehicleCount = 0;
+        this.totalSpeed = 0.0;
+        this.speedSampleCount = 0;
 
         createLanes();
     }
@@ -347,6 +351,35 @@ public class Edge {
      */
     public double getEdgeLength() {
         return edgeLength;
+    }
+    
+    /**
+     * Adds a speed sample for calculating average speed.
+     * 
+     * @param speed The speed to add (m/s)
+     */
+    public void addSpeedSample(double speed) {
+        this.totalSpeed += speed;
+        this.speedSampleCount++;
+    }
+    
+    /**
+     * Returns the average speed of vehicles on this edge.
+     * 
+     * @return The average speed in m/s, or 0 if no samples
+     */
+    public double getAverageSpeed() {
+        if (speedSampleCount == 0) return 0.0;
+        return totalSpeed / speedSampleCount;
+    }
+    
+    /**
+     * Resets the speed statistics for this edge.
+     * Should be called each simulation step before collecting new samples.
+     */
+    public void resetSpeedStatistics() {
+        this.totalSpeed = 0.0;
+        this.speedSampleCount = 0;
     }
     
     /**

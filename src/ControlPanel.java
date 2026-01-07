@@ -44,6 +44,7 @@ public class ControlPanel {
     private ViewManager viewManager;
     private TrafficManager trafficManager;
     private VehicleAddPanel vehicleAddPanel;
+    private CongestionMonitorPanel congestionMonitorPanel;
 
     // Callbacks for route selection mode
     private Runnable onStartRouteSelection;
@@ -91,6 +92,16 @@ public class ControlPanel {
 
         // Add dashboard
         controlPanel.getChildren().add(dashboard);
+        
+        // Add separator
+        controlPanel.getChildren().add(new Separator());
+        
+        // Add congestion monitor panel
+        congestionMonitorPanel = new CongestionMonitorPanel();
+        congestionMonitorPanel.setOnToggleOverlay(() -> {
+            trafficManager.setShowCongestionOverlay(!trafficManager.isShowCongestionOverlay());
+        });
+        controlPanel.getChildren().add(congestionMonitorPanel);
 
         // Style the panel
         controlPanel.setPadding(new Insets(10));
@@ -268,5 +279,14 @@ public class ControlPanel {
     public void showNormalControls() {
         vehicleAddPanel = null; // Clear reference
         scrollPane.setContent(controlPanel);
+    }
+    
+    /**
+     * Returns the congestion monitor panel for updating hotspot data.
+     * 
+     * @return The congestion monitor panel
+     */
+    public CongestionMonitorPanel getCongestionMonitorPanel() {
+        return congestionMonitorPanel;
     }
 }

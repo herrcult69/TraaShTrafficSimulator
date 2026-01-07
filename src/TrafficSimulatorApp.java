@@ -143,9 +143,10 @@ public class TrafficSimulatorApp extends Application {
         g.setFill(Color.rgb(26, 36, 47));
         g.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
-        scene.updateVehicles(runner.getVehiclePositions());
+        scene.updateVehicles(runner.getVehiclePositions(), runner.getSimulationTime());
         scene.updateVehicleSpeeds(runner.getVehicleSpeeds());
         scene.updateEdgeStatistics(runner.getVehicleEdges());
+        scene.updateCongestionHotspots(runner.getVehicleEdges(), runner.getVehicleSpeeds());
         scene.updateTrafficLights(runner.getTrafficLightData());
         scene.render(g, viewManager.getTransform());
         scene.renderHighlight(g, viewManager.getTransform(), selectedElement, hoveredElement);
@@ -165,11 +166,12 @@ public class TrafficSimulatorApp extends Application {
             drawRouteSelectionOverlay(g);
         }
 
-        // Update dashboard at reduced frequency
+        // Update dashboard and congestion monitor at reduced frequency
         long currentTime = System.nanoTime();
         double timeSinceLastUpdate = (currentTime - lastDashboardUpdate) / 1_000_000_000.0;
         if (timeSinceLastUpdate >= DASHBOARD_UPDATE_INTERVAL) {
             updateDashboard();
+            updateCongestionMonitor();
             lastDashboardUpdate = currentTime;
         }
     }
@@ -188,7 +190,7 @@ public class TrafficSimulatorApp extends Application {
         
         // Increase height for vehicle to accommodate speed stats
         if (selected instanceof Vehicle) {
-            height = 140;
+            height = 180;
         }
 
         g.setFill(Color.rgb(0, 0, 0, 0.7));
@@ -207,6 +209,8 @@ public class TrafficSimulatorApp extends Application {
             g.fillText("Current Speed: " + String.format("%.2f", v.getCurrentSpeed() * 3.6) + " km/h", x + 10, y + 80);
             g.fillText("Average Speed: " + String.format("%.2f", v.getAverageSpeed() * 3.6) + " km/h", x + 10, y + 100);
             g.fillText("Max Speed: " + String.format("%.2f", v.getMaxSpeed() * 3.6) + " km/h", x + 10, y + 120);
+            g.fillText("Travel Time: " + String.format("%.2f", v.getTravelTime()) + " s", x + 10, y + 140);
+            g.fillText("Total Distance: " + String.format("%.2f", v.getTotalDistance()) + " m", x + 10, y + 160);
         } else if (selected instanceof Edge) {
             Edge edge = (Edge) selected;
             height = 140;
@@ -243,6 +247,16 @@ public class TrafficSimulatorApp extends Application {
         data.simTime = runner.getSimulationTime();
         collectVehicleMetrics(data);
         dashboard.update(data);
+    }
+    
+    /**
+     * Updates the congestion monitor panel with current hotspot data.
+     * Called at a reduced frequency to avoid excessive UI updates.
+     */
+    private void updateCongestionMonitor() {
+        java.util.List<CongestionHotspot> topHotspots = scene.getTopCongestionHotspots(5);
+        int totalCount = scene.getCongestionHotspots().size();
+        controlPanel.getCongestionMonitorPanel().updateHotspots(topHotspots, totalCount);
     }
 
     /**
