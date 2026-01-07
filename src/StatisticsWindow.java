@@ -1,9 +1,11 @@
 import javafx.scene.Scene;
 import javafx.scene.chart.*;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-// import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 import javafx.geometry.Insets;
 import javafx.animation.Timeline;
@@ -11,10 +13,16 @@ import javafx.animation.KeyFrame;
 import javafx.util.Duration;
 import java.util.Map;
 import java.util.List;
+import javafx.scene.control.Alert;
+import javafx.scene.image.WritableImage;
+import javafx.scene.SnapshotParameters;
+import javafx.embed.swing.SwingFXUtils;
+import javafx.stage.FileChooser;
+import java.io.File;
 
 /**
  * Statistics window displaying real-time traffic analysis charts.
- * Shows two graphs (Average Speed, Vehicle Count) and a Traffic Stress Level indicator.
+ * Shows four charts: Average Speed, Vehicle Count, Travel Time Distribution, and Distance Distribution.
  */
 public class StatisticsWindow extends Stage {
     
@@ -40,6 +48,9 @@ public class StatisticsWindow extends Stage {
     // Stress Level Display
     private Label stressLevelLabel;
     
+    // Layout container for PDF export
+    private VBox root;
+    
     private Timeline updateTimeline;
     private int maxDataPoints = 240;  // Show last 120 seconds (at 2 updates/sec)
     
@@ -56,7 +67,7 @@ public class StatisticsWindow extends Stage {
     }
     
     private void createLayout() {
-        VBox root = new VBox(0);
+        root = new VBox(0);
         root.setPadding(new Insets(0));
         root.setStyle("-fx-background-color: white;");
         
@@ -75,12 +86,30 @@ public class StatisticsWindow extends Stage {
         
         root.getChildren().addAll(speedChart, vehicleCountChart, travelTimeChart, distanceTravelChart, stressLevelLabel);
         
-        // Wrap in ScrollPane for scrollability
+        // Export Button
+        Button exportButton = new Button("📄 Export to PDF");
+        exportButton.setStyle(
+            "-fx-font-size: 14px;" +
+            "-fx-padding: 10px 20px;" +
+            "-fx-background-color: #3498db;" +
+            "-fx-text-fill: white;" +
+            "-fx-cursor: hand;"
+        );
+        exportButton.setOnAction(e -> exportToPDF());
+        
+        HBox buttonBox = new HBox(exportButton);
+        buttonBox.setAlignment(javafx.geometry.Pos.CENTER);
+        buttonBox.setPadding(new Insets(10));
+        buttonBox.setStyle("-fx-background-color: #f0f0f0;");
+
+        BorderPane mainLayout = new BorderPane();
+    
         ScrollPane scrollPane = new ScrollPane(root);
         scrollPane.setFitToWidth(true);
         scrollPane.setStyle("-fx-background-color: white;");
-        
-        Scene scene = new Scene(scrollPane, 1200, 900);
+        mainLayout.setCenter(scrollPane);
+        mainLayout.setBottom(buttonBox);
+        Scene scene = new Scene(mainLayout, 1200, 900);
         setScene(scene);
     }
     
@@ -100,6 +129,7 @@ public class StatisticsWindow extends Stage {
         chart.setTitle("Average Speed Over Time");
         chart.setCreateSymbols(false);
         chart.setAnimated(false);
+        chart.setLegendVisible(false);
         
         chart.setStyle(
             "-fx-background-color: white;" +
@@ -128,7 +158,6 @@ public class StatisticsWindow extends Stage {
         speedSeries = new XYChart.Series<>();
         speedSeries.setName("Average Speed");
         chart.getData().add(speedSeries);
-        
         return chart;
     }
     private BarChart<String, Number> createVehicleCountChart() {
@@ -168,7 +197,7 @@ public class StatisticsWindow extends Stage {
             "-fx-padding: 20px;"
         );
         
-        // Apply additional CSS styling
+        // Make title bold
         chart.lookup(".chart-title").setStyle(
             "-fx-font-size: 20px;" +
             "-fx-font-weight: 900;" +
@@ -176,17 +205,12 @@ public class StatisticsWindow extends Stage {
             "-fx-text-fill: black;"
         );
         
+        // Set bar color to blue
         chart.getStylesheets().add("data:text/css," +
             ".chart-bar { -fx-bar-fill: #3498DB; }" +
-            ".chart-plot-background { -fx-background-color: white; }" +
-            ".chart-vertical-grid-lines { -fx-stroke: #E0E0E0; }" +
-            ".chart-horizontal-grid-lines { -fx-stroke: #E0E0E0; }" +
-            ".axis { -fx-stroke: black; -fx-stroke-width: 2px; }" +
-            ".axis-label { -fx-font-size: 14px; -fx-font-weight: bold; -fx-font-family: Arial; -fx-text-fill: black; }"
+            ".chart-plot-background { -fx-background-color: white; }"
         );
-
         return chart;
-
     }
     
     private BarChart<String, Number> createTravelTimeChart() {
@@ -209,7 +233,7 @@ public class StatisticsWindow extends Stage {
             "-fx-padding: 20px;"
         );
         
-        // Apply additional CSS styling
+        // Make title bold
         chart.lookup(".chart-title").setStyle(
             "-fx-font-size: 20px;" +
             "-fx-font-weight: 900;" +
@@ -217,13 +241,10 @@ public class StatisticsWindow extends Stage {
             "-fx-text-fill: black;"
         );
         
+        // Set bar color to purple
         chart.getStylesheets().add("data:text/css," +
             ".chart-bar { -fx-bar-fill: #9B59B6; }" +
-            ".chart-plot-background { -fx-background-color: white; }" +
-            ".chart-vertical-grid-lines { -fx-stroke: #E0E0E0; }" +
-            ".chart-horizontal-grid-lines { -fx-stroke: #E0E0E0; }" +
-            ".axis { -fx-stroke: black; -fx-stroke-width: 2px; }" +
-            ".axis-label { -fx-font-size: 14px; -fx-font-weight: bold; -fx-font-family: Arial; -fx-text-fill: black; }"
+            ".chart-plot-background { -fx-background-color: white; }"
         );
         
         travelTimeSeries = new XYChart.Series<>();
@@ -262,7 +283,7 @@ public class StatisticsWindow extends Stage {
             "-fx-padding: 20px;"
         );
         
-        // Apply additional CSS styling
+        // Make title bold
         chart.lookup(".chart-title").setStyle(
             "-fx-font-size: 20px;" +
             "-fx-font-weight: 900;" +
@@ -270,13 +291,10 @@ public class StatisticsWindow extends Stage {
             "-fx-text-fill: black;"
         );
         
+        // Set bar color to orange
         chart.getStylesheets().add("data:text/css," +
             ".chart-bar { -fx-bar-fill: #E67E22; }" +
-            ".chart-plot-background { -fx-background-color: white; }" +
-            ".chart-vertical-grid-lines { -fx-stroke: #E0E0E0; }" +
-            ".chart-horizontal-grid-lines { -fx-stroke: #E0E0E0; }" +
-            ".axis { -fx-stroke: black; -fx-stroke-width: 2px; }" +
-            ".axis-label { -fx-font-size: 14px; -fx-font-weight: bold; -fx-font-family: Arial; -fx-text-fill: black; }"
+            ".chart-plot-background { -fx-background-color: white; }"
         );
         
         distanceTravelSeries = new XYChart.Series<>();
@@ -467,5 +485,36 @@ public class StatisticsWindow extends Stage {
         distanceTravelSeries.getData().get(3).setYValue(bins[3]);
         distanceTravelSeries.getData().get(4).setYValue(bins[4]);
         distanceTravelSeries.getData().get(5).setYValue(bins[5]);
+    }
+    
+    private void exportToPDF() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Save Statistics as PDF");
+        fileChooser.getExtensionFilters().add(
+            new FileChooser.ExtensionFilter("PDF Files", "*.pdf")
+        );
+        fileChooser.setInitialFileName("traffic_statistics.pdf");
+        
+        File file = fileChooser.showSaveDialog(this);
+        
+        if (file != null) {
+            try {
+                WritableImage snapshot = root.snapshot(new SnapshotParameters(), null);
+                java.awt.image.BufferedImage bufferedImage = SwingFXUtils.fromFXImage(snapshot, null);
+                TrafficDataExporter.exportPDF(bufferedImage, file.getAbsolutePath());
+                
+                Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                alert.setTitle("Success");
+                alert.setHeaderText(null);
+                alert.setContentText("PDF exported successfully!");
+                alert.showAndWait();
+            } catch (Exception e) {
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("Export Failed");
+                alert.setHeaderText(null);
+                alert.setContentText("Error: " + e.getMessage());
+                alert.showAndWait();
+            }
+        }
     }
 }
