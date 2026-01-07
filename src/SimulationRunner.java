@@ -49,6 +49,7 @@ public class SimulationRunner implements Runnable {
     private final Map<String, String> vehicleEdges = new ConcurrentHashMap<>();
     private ConnectionListener connectionListener;
 
+    private final Map<String, Integer> vehicleCountsByType = new ConcurrentHashMap<>();
     /**
      * Constructs a new simulation runner.
      * 
@@ -112,6 +113,14 @@ public class SimulationRunner implements Runnable {
      */
     public Map<String, String> getVehicleEdges() {
         return vehicleEdges;
+    }
+    
+    /**
+     * Returns a thread-safe map of vehicle counts by type
+     * @return Map from vehicle type to count
+     */
+    public Map<String, Integer> getVehicleCountsByType() {
+        return vehicleCountsByType;
     }
 
     /**
@@ -198,6 +207,15 @@ public class SimulationRunner implements Runnable {
                     vehiclePositions.keySet().removeIf(id -> !ids.contains(id));
                     vehicleSpeeds.keySet().removeIf(id -> !ids.contains(id));
                     vehicleEdges.keySet().removeIf(id -> !ids.contains(id));
+
+                    // Reset counts
+                    vehicleCountsByType.clear();
+                    vehicleCountsByType.put("car", 0);
+                    vehicleCountsByType.put("truck", 0);
+                    vehicleCountsByType.put("bus", 0);
+                    vehicleCountsByType.put("moto", 0);
+                    vehicleCountsByType.put("emergency", 0);
+
                     for (String id : ids) {
                         double[] p = adapter.getVehiclePosition(id);
                         double ang = 0.0;
@@ -215,6 +233,19 @@ public class SimulationRunner implements Runnable {
                         vehicleSpeeds.put(id, speed);
                         if (!edgeId.isEmpty()) {
                             vehicleEdges.put(id, edgeId);
+                        }
+
+                        //Count by type
+                        if (id.startsWith("car")){
+                            vehicleCountsByType.merge("car", 1, Integer::sum);
+                        } else if (id.startsWith("truck")) {
+                            vehicleCountsByType.merge("truck", 1, Integer::sum);
+                        } else if (id.startsWith("bus")) {
+                            vehicleCountsByType.merge("bus", 1, Integer::sum);
+                        } else if (id.startsWith("moto")) {
+                            vehicleCountsByType.merge("moto", 1, Integer::sum);
+                        } else if (id.startsWith("ambu")) {
+                            vehicleCountsByType.merge("emergency", 1, Integer::sum);
                         }
                     }
 
