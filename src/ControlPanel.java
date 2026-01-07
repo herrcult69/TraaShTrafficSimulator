@@ -167,7 +167,7 @@ public class ControlPanel {
     }
 
     /**
-     * Adds statistics control buttons (view stats, export csv, export pdf)
+     * Adds statistics control buttons (view stats, export csv)
      * @return The View Statistics section
      */
     private void addStatisticsControl() {
@@ -176,15 +176,13 @@ public class ControlPanel {
 
         Button viewStatsButton = UIStyles.createAccentButton("View Live Statistics");
         Button exportCSV = UIStyles.createStyledButton("Export to CSV");
-        Button exportPDF = UIStyles.createStyledButton("Export to PDF");
-        exportPDF.setDisable(true);
 
         viewStatsButton.setOnAction(e -> showStatisticsWindow());
-        exportCSV.setOnAction(e -> exportTrafficData());
+        exportCSV.setOnAction(e -> exportCSVData());
 
-        controlPanel.getChildren().addAll(statsLabel, viewStatsButton, exportCSV, exportPDF);
+        controlPanel.getChildren().addAll(statsLabel, viewStatsButton, exportCSV);
     }
-    private void exportTrafficData() {
+    private void exportCSVData() {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Export Simulation Data");
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
