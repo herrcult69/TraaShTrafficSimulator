@@ -26,7 +26,6 @@ public class TrafficDataExporter {
      * @throws IOException if file writing fails
      */
     public static class Snapshot {
-        public long timeStamp;
         public double simulationTime;
         public int totalVehicles;
         public int cars;
@@ -37,19 +36,18 @@ public class TrafficDataExporter {
         public double avgSpeed;
 
         public String toCSVRow() {
-            return String.format("%d, %.2f, %d, %d, %d, %d, %d, %d, %.2f\n", timeStamp, simulationTime,totalVehicles, cars, trucks, buses, motorcycles, emergency, avgSpeed);
+            return String.format("%.2f, %d, %d, %d, %d, %d, %d, %.2f\n", simulationTime, totalVehicles, cars, trucks, buses, motorcycles, emergency, avgSpeed);
         }
         @Override
         public String toString() {
-            return String.format("Time: %.2fs - Total: %d (Cars: %d, Trucks: %d, Buses: %d, Motorcycles: %d, Emergency: %d) - Avg Speed: %.2f", timeStamp, simulationTime,totalVehicles, cars, trucks, buses, motorcycles, emergency, avgSpeed);
+            return String.format("Time: %.2fs - Total: %d (Cars: %d, Trucks: %d, Buses: %d, Motorcycles: %d, Emergency: %d) - Avg Speed: %.2f", simulationTime, totalVehicles, cars, trucks, buses, motorcycles, emergency, avgSpeed);
         }
     }
     
     public static void exportToCSV(String csvPath, SimulationRunner runner, TrafficManager trafficManager) throws IOException {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(csvPath))) {
-            writer.write("timestamp, simulation_time, total_vehicles, cars, trucks, buses, motorcycles, emergency, avg_speed\n ");
+            writer.write("simulation_time, total_vehicles, cars, trucks, buses, motorcycles, emergency, avg_speed\n ");
             //Get current simulation data 
-            long timeStamp = System.currentTimeMillis();
             double simTime;
             if (runner != null){
                 simTime = runner.getSimulationTime();
@@ -83,10 +81,11 @@ public class TrafficDataExporter {
                 avgSpeed = 0.0;
             }
             // Write data row
-            writer.write(String.format("%d,%.2f,%d,%d,%d,%d,%d,%d,%.2f\n",
-                timeStamp, simTime, totalVehicles, cars, trucks, buses, motorcycles, emergency, avgSpeed));
+            writer.write(String.format("%.2f,%d,%d,%d,%d,%d,%d,%.2f\n",
+                simTime, totalVehicles, cars, trucks, buses, motorcycles, emergency, avgSpeed));
             
             writer.flush();
         }
     }
+    
 }
