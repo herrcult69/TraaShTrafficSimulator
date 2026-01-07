@@ -32,6 +32,7 @@ public class DashBoard extends VBox {
     // private LineChart<Number, Number> speedChart;
     // private XYChart.Series<Number, Number> speedSeries;
     // private int maxDataPoints = 120; // 120 points at 2 updates/sec = 60 seconds
+    
 
     /**
      * Constructs a new dashboard with all metric labels and chart initialized.
