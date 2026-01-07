@@ -109,8 +109,9 @@ public class StatisticsWindow extends Stage {
         scrollPane.setStyle("-fx-background-color: white;");
         mainLayout.setCenter(scrollPane);
         mainLayout.setBottom(buttonBox);
-        Scene scene = new Scene(mainLayout, 1200, 900);
+        Scene scene = new Scene(mainLayout, 1000, 700);
         setScene(scene);
+        setResizable(true); // Allow user to resize the window
     }
     
     private LineChart<Number, Number> createSpeedChart() {
@@ -125,26 +126,26 @@ public class StatisticsWindow extends Stage {
         xAxis.setStyle("-fx-tick-label-font-size: 12px; -fx-font-weight: bold; -fx-tick-label-fill: black;");
         yAxis.setStyle("-fx-tick-label-font-size: 12px; -fx-font-weight: bold; -fx-tick-label-fill: black;");
         
-        LineChart<Number, Number> chart = new LineChart<>(xAxis, yAxis);
-        chart.setTitle("Average Speed Over Time");
-        chart.setCreateSymbols(false);
-        chart.setAnimated(false);
-        chart.setLegendVisible(false);
+        LineChart<Number, Number> speedLineChart = new LineChart<>(xAxis, yAxis);
+        speedLineChart.setTitle("Average Speed Over Time");
+        speedLineChart.setCreateSymbols(false);
+        speedLineChart.setAnimated(false);
+        speedLineChart.setLegendVisible(false);
         
-        chart.setStyle(
+        speedLineChart.setStyle(
             "-fx-background-color: white;" +
             "-fx-padding: 20px;"
         );
         
         // Apply additional CSS styling
-        chart.lookup(".chart-title").setStyle(
+        speedLineChart.lookup(".chart-title").setStyle(
             "-fx-font-size: 20px;" +
             "-fx-font-weight: 900;" +
             "-fx-font-family: 'Arial';" +
             "-fx-text-fill: black;"
         );
         
-        chart.getStylesheets().add("data:text/css," +
+        speedLineChart.getStylesheets().add("data:text/css," +
             ".chart-plot-background { -fx-background-color: white; }" +
             ".chart-vertical-grid-lines { -fx-stroke: #E0E0E0; }" +
             ".chart-horizontal-grid-lines { -fx-stroke: #E0E0E0; }" +
@@ -157,8 +158,8 @@ public class StatisticsWindow extends Stage {
         
         speedSeries = new XYChart.Series<>();
         speedSeries.setName("Average Speed");
-        chart.getData().add(speedSeries);
-        return chart;
+        speedLineChart.getData().add(speedSeries);
+        return speedLineChart;
     }
     private BarChart<String, Number> createVehicleCountChart() {
         CategoryAxis xAxis = new CategoryAxis();
@@ -175,12 +176,12 @@ public class StatisticsWindow extends Stage {
         xAxis.setStyle("-fx-tick-label-font-size: 12px; -fx-font-weight: bold; -fx-tick-label-fill: black;");
         yAxis.setStyle("-fx-tick-label-font-size: 12px; -fx-font-weight: bold; -fx-tick-label-fill: black;");
 
-        BarChart<String, Number> chart = new BarChart<>(xAxis, yAxis);
-        chart.setTitle("Current Vehicle Count by Type");
-        chart.setAnimated(false);
-        chart.setLegendVisible(false);
-        chart.setCategoryGap(30);
-        chart.setBarGap(5);
+        BarChart<String, Number> vehicleBarChart = new BarChart<>(xAxis, yAxis);
+        vehicleBarChart.setTitle("Current Vehicle Count by Type");
+        vehicleBarChart.setAnimated(false);
+        vehicleBarChart.setLegendVisible(false);
+        vehicleBarChart.setCategoryGap(30);
+        vehicleBarChart.setBarGap(5);
 
         //Create single series with all vehicle types
         vehicleCountSeries = new XYChart.Series<>();
@@ -190,15 +191,15 @@ public class StatisticsWindow extends Stage {
         vehicleCountSeries.getData().add(new XYChart.Data<>("Motorcycles", 0));
         vehicleCountSeries.getData().add(new XYChart.Data<>("Emergency", 0));
 
-        chart.getData().add(vehicleCountSeries);
+        vehicleBarChart.getData().add(vehicleCountSeries);
 
-        chart.setStyle(
+        vehicleBarChart.setStyle(
             "-fx-background-color: white;" +
             "-fx-padding: 20px;"
         );
         
         // Make title bold
-        chart.lookup(".chart-title").setStyle(
+        vehicleBarChart.lookup(".chart-title").setStyle(
             "-fx-font-size: 20px;" +
             "-fx-font-weight: 900;" +
             "-fx-font-family: 'Arial';" +
@@ -206,11 +207,11 @@ public class StatisticsWindow extends Stage {
         );
         
         // Set bar color to blue
-        chart.getStylesheets().add("data:text/css," +
+        vehicleBarChart.getStylesheets().add("data:text/css," +
             ".chart-bar { -fx-bar-fill: #3498DB; }" +
             ".chart-plot-background { -fx-background-color: white; }"
         );
-        return chart;
+        return vehicleBarChart;
     }
     
     private BarChart<String, Number> createTravelTimeChart() {
@@ -223,18 +224,18 @@ public class StatisticsWindow extends Stage {
         xAxis.setStyle("-fx-tick-label-font-size: 12px; -fx-font-weight: bold; -fx-tick-label-fill: black;");
         yAxis.setStyle("-fx-tick-label-font-size: 12px; -fx-font-weight: bold; -fx-tick-label-fill: black;");
         
-        BarChart<String, Number> chart = new BarChart<>(xAxis, yAxis);
-        chart.setTitle("Travel Time Distribution");
-        chart.setAnimated(false);
-        chart.setLegendVisible(false);
+        BarChart<String, Number> travelTimeBarChart = new BarChart<>(xAxis, yAxis);
+        travelTimeBarChart.setTitle("Travel Time Distribution");
+        travelTimeBarChart.setAnimated(false);
+        travelTimeBarChart.setLegendVisible(false);
         
-        chart.setStyle(
+        travelTimeBarChart.setStyle(
             "-fx-background-color: white;" +
             "-fx-padding: 20px;"
         );
         
         // Make title bold
-        chart.lookup(".chart-title").setStyle(
+        travelTimeBarChart.lookup(".chart-title").setStyle(
             "-fx-font-size: 20px;" +
             "-fx-font-weight: 900;" +
             "-fx-font-family: 'Arial';" +
@@ -242,7 +243,7 @@ public class StatisticsWindow extends Stage {
         );
         
         // Set bar color to purple
-        chart.getStylesheets().add("data:text/css," +
+        travelTimeBarChart.getStylesheets().add("data:text/css," +
             ".chart-bar { -fx-bar-fill: #9B59B6; }" +
             ".chart-plot-background { -fx-background-color: white; }"
         );
@@ -258,9 +259,9 @@ public class StatisticsWindow extends Stage {
         travelTimeSeries.getData().add(new XYChart.Data<>("120-150", 0));
         travelTimeSeries.getData().add(new XYChart.Data<>("150+", 0));
         
-        chart.getData().add(travelTimeSeries);
+        travelTimeBarChart.getData().add(travelTimeSeries);
         
-        return chart;
+        return travelTimeBarChart;
     }
 
     private BarChart<String, Number> createDistanceTravelChart() {
@@ -273,18 +274,18 @@ public class StatisticsWindow extends Stage {
         xAxis.setStyle("-fx-tick-label-font-size: 12px; -fx-font-weight: bold; -fx-tick-label-fill: black;");
         yAxis.setStyle("-fx-tick-label-font-size: 12px; -fx-font-weight: bold; -fx-tick-label-fill: black;");
         
-        BarChart<String, Number> chart = new BarChart<>(xAxis, yAxis);
-        chart.setTitle("Distance Traveled Distribution");
-        chart.setAnimated(false);
-        chart.setLegendVisible(false);
+        BarChart<String, Number> distanceBarChart = new BarChart<>(xAxis, yAxis);
+        distanceBarChart.setTitle("Distance Traveled Distribution");
+        distanceBarChart.setAnimated(false);
+        distanceBarChart.setLegendVisible(false);
         
-        chart.setStyle(
+        distanceBarChart.setStyle(
             "-fx-background-color: white;" +
             "-fx-padding: 20px;"
         );
         
         // Make title bold
-        chart.lookup(".chart-title").setStyle(
+        distanceBarChart.lookup(".chart-title").setStyle(
             "-fx-font-size: 20px;" +
             "-fx-font-weight: 900;" +
             "-fx-font-family: 'Arial';" +
@@ -292,7 +293,7 @@ public class StatisticsWindow extends Stage {
         );
         
         // Set bar color to orange
-        chart.getStylesheets().add("data:text/css," +
+        distanceBarChart.getStylesheets().add("data:text/css," +
             ".chart-bar { -fx-bar-fill: #E67E22; }" +
             ".chart-plot-background { -fx-background-color: white; }"
         );
@@ -308,9 +309,9 @@ public class StatisticsWindow extends Stage {
         distanceTravelSeries.getData().add(new XYChart.Data<>("800-1000", 0));
         distanceTravelSeries.getData().add(new XYChart.Data<>("1000+", 0));
         
-        chart.getData().add(distanceTravelSeries);
+        distanceBarChart.getData().add(distanceTravelSeries);
         
-        return chart;
+        return distanceBarChart;
     }
     
     private Label createStressLevelLabel() {
