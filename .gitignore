@@ -3,6 +3,7 @@
 
 # Log file
 *.log
+logs/
 
 # BlueJ files
 *.ctxt
@@ -36,6 +37,8 @@ lib/javafx/
 resource/*.rou.xml
 resource/*.net.xml
 resource/*.sumocfg
+SumoConfig/*.xml
+SumoConfig/*.sumocfg
 
 # Maven
 target/

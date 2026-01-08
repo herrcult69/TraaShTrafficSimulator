@@ -189,7 +189,7 @@ public class SimulationRunner implements Runnable {
                         trafficLightData.put(tlId, new TrafficLight.TrafficLightData(state, null, 0));
                     }
                 }
-                Thread.sleep(20);
+                Thread.sleep(80);
             }
             conn.close();
         } catch (Exception e) {

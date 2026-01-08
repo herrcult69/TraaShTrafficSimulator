@@ -508,10 +508,17 @@ public class TrafficSimulatorApp extends Application {
     public static void main(String[] args) {
         // Load logging configuration
         try {
+            // Create logs directory if it doesn't exist
+            java.nio.file.Files.createDirectories(java.nio.file.Paths.get("logs"));
+            
+            // Set log file pattern with date
+            String dateStr = new java.text.SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date());
+            System.setProperty("java.util.logging.FileHandler.pattern", "logs/traffic-simulator-" + dateStr + ".log");
+            
             java.io.FileInputStream configFile = new java.io.FileInputStream("logging.properties");
             java.util.logging.LogManager.getLogManager().readConfiguration(configFile);
             configFile.close();
-            System.out.println("Logging configured - output to console and traffic-simulator.log");
+            System.out.println("Logging configured - output to console and logs/traffic-simulator-" + dateStr + ".log");
         } catch (Exception e) {
             System.err.println("WARNING: Could not load logging.properties, using default logging");
             e.printStackTrace();
