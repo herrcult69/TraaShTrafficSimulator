@@ -17,9 +17,16 @@ public class Edge extends Renderable {
     private Junction fromJunction;
     private Junction toJunction;
     private List<Lane> lanes;
+    
+    // Congestion tracking fields
+    private double edgeLength;
+    private int vehicleCount;
+    private double totalSpeed;
+    private int speedSampleCount;
 
     /**
-     * Constructs an edge from network data.
+     * Constructs a new visual Edge from parsed network data.
+     * Automatically creates visual Lane objects for each lane in the network edge.
      * 
      * @param networkEdge Parsed edge data
      * @param from Source junction data
@@ -37,6 +44,14 @@ public class Edge extends Renderable {
         this.fromJunction = fromJunc;
         this.toJunction = toJunc;
         this.lanes = new ArrayList<>();
+        
+        // Calculate edge length
+        double dx = toX - fromX;
+        double dy = toY - fromY;
+        this.edgeLength = Math.sqrt(dx * dx + dy * dy);
+        this.vehicleCount = 0;
+        this.totalSpeed = 0.0;
+        this.speedSampleCount = 0;
 
         createLanes();
     }
@@ -271,6 +286,72 @@ public class Edge extends Renderable {
         return toJunction;
     }
 
+    /**
+     * Updates the vehicle count on this edge.
+     * 
+     * @param count The number of vehicles currently on this edge
+     */
+    public void setVehicleCount(int count) {
+        this.vehicleCount = count;
+    }
+    
+    /**
+     * Returns the number of vehicles currently on this edge.
+     * 
+     * @return The vehicle count
+     */
+    public int getVehicleCount() {
+        return vehicleCount;
+    }
+    
+    /**
+     * Returns the vehicle density (vehicles per kilometer) on this edge.
+     * 
+     * @return The vehicle density in vehicles/km
+     */
+    public double getVehicleDensity() {
+        if (edgeLength <= 0) return 0.0;
+        return (vehicleCount * 1000.0) / edgeLength; // Convert to vehicles per km
+    }
+    
+    /**
+     * Returns the length of this edge in meters.
+     * 
+     * @return The edge length
+     */
+    public double getEdgeLength() {
+        return edgeLength;
+    }
+    
+    /**
+     * Adds a speed sample for calculating average speed.
+     * 
+     * @param speed The speed to add (m/s)
+     */
+    public void addSpeedSample(double speed) {
+        this.totalSpeed += speed;
+        this.speedSampleCount++;
+    }
+    
+    /**
+     * Returns the average speed of vehicles on this edge.
+     * 
+     * @return The average speed in m/s, or 0 if no samples
+     */
+    public double getAverageSpeed() {
+        if (speedSampleCount == 0) return 0.0;
+        return totalSpeed / speedSampleCount;
+    }
+    
+    /**
+     * Resets the speed statistics for this edge.
+     * Should be called each simulation step before collecting new samples.
+     */
+    public void resetSpeedStatistics() {
+        this.totalSpeed = 0.0;
+        this.speedSampleCount = 0;
+    }
+    
     /**
      * Highlights edge during route selection.
      * 

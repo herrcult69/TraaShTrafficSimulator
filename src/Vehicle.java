@@ -25,6 +25,18 @@ public class Vehicle extends Renderable implements Updatable {
     private double length, width;
     private Rectangle2D bounds;
     private int signals;
+    
+    // Speed statistics
+    private double currentSpeed;
+    private double maxSpeed;
+    private double totalSpeed;
+    private int speedSampleCount;
+    
+    // Travel time tracking
+    private double entryTime;
+    private double exitTime;
+    private boolean hasExited;
+    private double currentTime;
 
     /**
      * Creates a vehicle at the specified position.
@@ -35,11 +47,35 @@ public class Vehicle extends Renderable implements Updatable {
      * @param angle Orientation in degrees
      */
     public Vehicle(String id, double worldX, double worldY, double angle) {
+        this(id, worldX, worldY, angle, 0.0);
+    }
+    
+    /**
+     * Constructs a new vehicle with the specified position, orientation, and entry time.
+     * 
+     * @param id The unique vehicle identifier (prefix determines type)
+     * @param worldX The X coordinate in world space (meters)
+     * @param worldY The Y coordinate in world space (meters)
+     * @param angle The orientation angle in degrees (0 = east, 90 = north)
+     * @param entryTime The simulation time when this vehicle entered (seconds)
+     */
+    public Vehicle(String id, double worldX, double worldY, double angle, double entryTime) {
         this.id = id;
         this.worldX = worldX;
         this.worldY = worldY;
         this.angle = angle;
-
+        
+        // Initialize speed statistics
+        this.currentSpeed = 0.0;
+        this.maxSpeed = 0.0;
+        this.totalSpeed = 0.0;
+        this.speedSampleCount = 0;
+        
+        // Initialize travel time tracking
+        this.entryTime = entryTime;
+        this.currentTime = 0.0;
+        this.hasExited = false;        
+        this.currentTime = entryTime;
         // Determine vehicle type and dimensions from ID
         determineTypeFromId();
         updateBounds();
@@ -304,5 +340,127 @@ public class Vehicle extends Renderable implements Updatable {
     /** Returns bounding rectangle. */
     public Rectangle2D getBounds() {
         return bounds;
+    }
+    
+    /**
+     * Updates the vehicle's current speed and statistics.
+     * Automatically tracks maximum speed and calculates running average.
+     * 
+     * @param speed The current speed in m/s
+     */
+    public void updateSpeed(double speed) {
+        this.currentSpeed = speed;
+        this.totalSpeed += speed;
+        this.speedSampleCount++;
+        
+        if (speed > this.maxSpeed) {
+            this.maxSpeed = speed;
+        }
+    }
+    
+    /**
+     * Returns the vehicle's current speed.
+     * 
+     * @return The current speed in m/s
+     */
+    public double getCurrentSpeed() {
+        return currentSpeed;
+    }
+    
+    /**
+     * Returns the vehicle's maximum recorded speed.
+     * 
+     * @return The maximum speed in m/s
+     */
+    public double getMaxSpeed() {
+        return maxSpeed;
+    }
+    
+    /**
+     * Returns the vehicle's average speed since it entered the simulation.
+     * 
+     * @return The average speed in m/s, or 0.0 if no samples
+     */
+    public double getAverageSpeed() {
+        if (speedSampleCount == 0) {
+            return 0.0;
+        }
+        else {
+            return totalSpeed / speedSampleCount;
+        }
+    }
+
+    /**
+     * Returns the estimated total distance traveled by this vehicle in the simulation.
+     * Calculated as average speed multiplied by time in simulation.
+     * 
+     * @return The estimated total distance in meters
+     */
+    public double getTotalDistance() {
+        if (speedSampleCount == 0) {
+            return 0.0;
+        } else {
+            return getAverageSpeed() * getTravelTime();
+        }
+    }
+    
+    /**
+     * Returns the simulation time when this vehicle entered.
+     * 
+     * @return The entry time in seconds
+     */
+    public double getEntryTime() {
+        return entryTime;
+    }
+    
+    /**
+     * Updates the current simulation time for this vehicle.
+     * 
+     * @param currentTime The current simulation time (seconds)
+     */
+    public void setCurrentTime(double currentTime) {
+        this.currentTime = currentTime;
+    }
+    
+    /**
+     * Marks the vehicle as having exited the simulation.
+     * 
+     * @param exitTime The simulation time when the vehicle exited (seconds)
+     */
+    public void markAsExited(double exitTime) {
+        this.exitTime = exitTime;
+        this.hasExited = true;
+    }
+    
+    /**
+     * Returns whether this vehicle has exited the simulation.
+     * 
+     * @return true if the vehicle has exited, false otherwise
+     */
+    public boolean hasExited() {
+        return hasExited;
+    }
+    
+    /**
+     * Returns the simulation time when this vehicle exited.
+     * 
+     * @return The exit time in seconds, or 0.0 if not yet exited
+     */
+    public double getExitTime() {
+        return exitTime;
+    }
+    
+    /**
+     * Returns the total travel time of this vehicle in the simulation.
+     * For active vehicles, returns (currentTime - entryTime).
+     * For exited vehicles, returns (exitTime - entryTime).
+     * 
+     * @return The travel time in seconds
+     */
+    public double getTravelTime() {
+        if (hasExited) {
+            return exitTime - entryTime;
+        }
+        return currentTime - entryTime;
     }
 }

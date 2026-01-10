@@ -148,7 +148,10 @@ public class TrafficSimulatorApp extends Application {
         g.setFill(Color.rgb(26, 36, 47));
         g.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
-        scene.updateVehicles(runner.getVehiclePositions());
+        scene.updateVehicles(runner.getVehiclePositions(), runner.getSimulationTime());
+        scene.updateVehicleSpeeds(runner.getVehicleSpeeds());
+        scene.updateEdgeStatistics(runner.getVehicleEdges());
+        scene.updateCongestionHotspots(runner.getVehicleEdges(), runner.getVehicleSpeeds());
         scene.updateTrafficLights(runner.getTrafficLightData());
         scene.render(g, viewManager.getTransform());
         scene.renderHighlight(g, viewManager.getTransform(), selectedElement, hoveredElement);
@@ -168,11 +171,12 @@ public class TrafficSimulatorApp extends Application {
             drawRouteSelectionOverlay(g);
         }
 
-        // Update dashboard at reduced frequency
+        // Update dashboard and congestion monitor at reduced frequency
         long currentTime = System.nanoTime();
         double timeSinceLastUpdate = (currentTime - lastDashboardUpdate) / 1_000_000_000.0;
         if (timeSinceLastUpdate >= DASHBOARD_UPDATE_INTERVAL) {
             updateDashboard();
+            updateCongestionMonitor();
             lastDashboardUpdate = currentTime;
         }
     }
@@ -188,6 +192,11 @@ public class TrafficSimulatorApp extends Application {
         double y = 10;
         double width = 250;
         double height = 100;
+        
+        // Increase height for vehicle to accommodate speed stats
+        if (selected instanceof Vehicle) {
+            height = 180;
+        }
 
         g.setFill(Color.rgb(0, 0, 0, 0.7));
         g.fillRect(x, y, width, height);
@@ -202,6 +211,26 @@ public class TrafficSimulatorApp extends Application {
             Vehicle v = (Vehicle) selected;
             g.fillText("ID: " + v.getId(), x + 10, y + 40);
             g.fillText("Type: " + v.getType(), x + 10, y + 60);
+            g.fillText("Current Speed: " + String.format("%.2f", v.getCurrentSpeed() * 3.6) + " km/h", x + 10, y + 80);
+            g.fillText("Average Speed: " + String.format("%.2f", v.getAverageSpeed() * 3.6) + " km/h", x + 10, y + 100);
+            g.fillText("Max Speed: " + String.format("%.2f", v.getMaxSpeed() * 3.6) + " km/h", x + 10, y + 120);
+            g.fillText("Travel Time: " + String.format("%.2f", v.getTravelTime()) + " s", x + 10, y + 140);
+            g.fillText("Total Distance: " + String.format("%.2f", v.getTotalDistance()) + " m", x + 10, y + 160);
+        } else if (selected instanceof Edge) {
+            Edge edge = (Edge) selected;
+            height = 140;
+            g.setFill(Color.rgb(0, 0, 0, 0.7));
+            g.fillRect(x, y, width, height);
+            g.setStroke(Color.WHITE);
+            g.setLineWidth(1.0);
+            g.strokeRect(x, y, width, height);
+            g.setFill(Color.WHITE);
+            g.fillText("Selected: Edge", x + 10, y + 20);
+            g.fillText("ID: " + edge.getNetworkEdge().id, x + 10, y + 40);
+            g.fillText("Length: " + String.format("%.2f", edge.getEdgeLength()) + " m", x + 10, y + 60);
+            g.fillText("Lanes: " + edge.getNetworkEdge().getNumLanes(), x + 10, y + 80);
+            g.fillText("Vehicles: " + edge.getVehicleCount(), x + 10, y + 100);
+            g.fillText("Density: " + String.format("%.2f", edge.getVehicleDensity()) + " veh/km", x + 10, y + 120);
         } else if (selected instanceof Lane) {
             Lane l = (Lane) selected;
             g.fillText("ID: " + l.getId(), x + 10, y + 40);
@@ -220,6 +249,16 @@ public class TrafficSimulatorApp extends Application {
         data.simTime = runner.getSimulationTime();
         collectVehicleMetrics(data);
         dashboard.update(data);
+    }
+    
+    /**
+     * Updates the congestion monitor panel with current hotspot data.
+     * Called at a reduced frequency to avoid excessive UI updates.
+     */
+    private void updateCongestionMonitor() {
+        java.util.List<CongestionHotspot> topHotspots = scene.getTopCongestionHotspots(5);
+        int totalCount = scene.getCongestionHotspots().size();
+        controlPanel.getCongestionMonitorPanel().updateHotspots(topHotspots, totalCount);
     }
 
     /** Initializes route selection state when user begins selecting a vehicle route. */
@@ -388,28 +427,42 @@ public class TrafficSimulatorApp extends Application {
         canvas.setOnMousePressed(e -> viewManager.startPan(e.getX(), e.getY()));
         canvas.setOnMouseDragged(e -> viewManager.updatePan(e.getX(), e.getY()));
         canvas.setOnMouseMoved(e -> {
-            hoveredElement = routeSelectionMode
-                    ? scene.getEdgeAt(e.getX(), e.getY(), viewManager.getTransform())
-                    : scene.getElementAt(e.getX(), e.getY(), viewManager.getTransform());
-            if (routeSelectionMode)
+            if (routeSelectionMode) {
+                hoveredElement = scene.getEdgeAt(e.getX(), e.getY(), viewManager.getTransform());
                 hoveredEdge = (Edge) hoveredElement;
+            } else if (e.isControlDown()) {
+                // If Ctrl is pressed, hover over edges instead of lanes
+                hoveredElement = scene.getEdgeAt(e.getX(), e.getY(), viewManager.getTransform());
+            } else {
+                // Normal mode: hover over individual elements (vehicles, lanes, etc.)
+                hoveredElement = scene.getElementAt(e.getX(), e.getY(), viewManager.getTransform());
+            }
         });
-        canvas.setOnMouseClicked(e -> handleCanvasClick(e.getX(), e.getY()));
+        canvas.setOnMouseClicked(e -> handleCanvasClick(e.getX(), e.getY(), e.isControlDown()));
     }
 
     /**
      * Handles mouse clicks on the canvas.
      * 
-     * @param x X coordinate in screen space
-     * @param y Y coordinate in screen space
+     * @param x The X coordinate of the click in screen space
+     * @param y The Y coordinate of the click in screen space
+     * @param ctrlPressed Whether the Ctrl key is pressed
      */
-    private void handleCanvasClick(double x, double y) {
+    private void handleCanvasClick(double x, double y, boolean ctrlPressed) {
         if (routeSelectionMode) {
             handleRouteSelectionClick(x, y);
             return;
         }
 
-        Object clicked = scene.getElementAt(x, y, viewManager.getTransform());
+        Object clicked;
+        
+        // If Ctrl is pressed, select edge instead of lane
+        if (ctrlPressed) {
+            clicked = scene.getEdgeAt(x, y, viewManager.getTransform());
+        } else {
+            clicked = scene.getElementAt(x, y, viewManager.getTransform());
+        }
+        
         selectedElement = clicked;
 
         if (clicked instanceof TrafficLight) {
@@ -450,7 +503,10 @@ public class TrafficSimulatorApp extends Application {
         logger.fine("Clicked: " + element.getClass().getSimpleName());
         if (element instanceof Junction) {
             Junction j = (Junction) element;
-            logger.fine("Junction ID: " + j.getId() + ", Type: " + j.getType());
+            System.out.println("Junction ID: " + j.getId() + " Type: " + j.getType());
+        } else if (element instanceof Edge) {
+            Edge edge = (Edge) element;
+            System.out.println("Edge ID: " + edge.getNetworkEdge().id + " Vehicles: " + edge.getVehicleCount());
         } else if (element instanceof Lane) {
             logger.fine("Lane ID: " + ((Lane) element).getId());
         } else if (element instanceof Vehicle) {

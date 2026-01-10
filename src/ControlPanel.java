@@ -9,6 +9,9 @@ import javafx.scene.layout.VBox;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 
+import javafx.stage.FileChooser;
+import java.io.File;
+
 /**
  * Main control panel for simulation control, view manipulation, and dashboard
  * display.
@@ -28,12 +31,13 @@ public class ControlPanel {
     private ViewManager viewManager;
     private TrafficManager trafficManager;
     private VehicleAddPanel vehicleAddPanel;
+    private CongestionMonitorPanel congestionMonitorPanel;
 
     // Callbacks for route selection mode
     private Runnable onStartRouteSelection;
     private Consumer<Boolean> onRouteSelectionModeChange;
     private Runnable onVehicleAdded;
-
+    private StatisticsWindow statsWindow;
     /**
      * Constructs the control panel.
      * 
@@ -63,11 +67,23 @@ public class ControlPanel {
         // Add view controls
         addViewControls();
 
+        // Add statistics controls
+        addStatisticsControl();
         // Add separator
         controlPanel.getChildren().add(new Separator());
 
         // Add dashboard
         controlPanel.getChildren().add(dashboard);
+        
+        // Add separator
+        controlPanel.getChildren().add(new Separator());
+        
+        // Add congestion monitor panel
+        congestionMonitorPanel = new CongestionMonitorPanel();
+        congestionMonitorPanel.setOnToggleOverlay(() -> {
+            trafficManager.setShowCongestionOverlay(!trafficManager.isShowCongestionOverlay());
+        });
+        controlPanel.getChildren().add(congestionMonitorPanel);
 
         // Style the panel
         controlPanel.setPadding(new Insets(10));
@@ -143,6 +159,52 @@ public class ControlPanel {
     }
 
     /**
+     * Adds statistics control buttons (view stats, export csv)
+     * @return The View Statistics section
+     */
+    private void addStatisticsControl() {
+        Label statsLabel = new Label ("---Statistics---");
+        statsLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14");
+
+        Button viewStatsButton = UIStyles.createAccentButton("View Live Statistics");
+        Button exportCSV = UIStyles.createStyledButton("Export to CSV");
+
+        viewStatsButton.setOnAction(e -> showStatisticsWindow());
+        exportCSV.setOnAction(e -> exportCSVData());
+
+        controlPanel.getChildren().addAll(statsLabel, viewStatsButton, exportCSV);
+    }
+    private void exportCSVData() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Export Simulation Data");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
+        fileChooser.setInitialFileName("Simulation_data.csv");
+        
+        File file = fileChooser.showSaveDialog(null);
+        if (file != null) {
+            try {
+                String filePath = file.getAbsolutePath();
+                if (!filePath.toLowerCase().endsWith(".csv")) {
+                    filePath += ".csv";
+                }
+                TrafficDataExporter.exportToCSV(filePath, runner, trafficManager);
+                System.out.println("Simulation data exported to: " + filePath);
+            } catch (java.io.IOException ex) {
+                System.err.println("Error exporting CSV: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+        }
+    }
+    private void showStatisticsWindow() {
+        if (statsWindow == null || !statsWindow.isShowing()) {
+            statsWindow = new StatisticsWindow(runner, trafficManager);
+            statsWindow.show();
+        } else {
+            statsWindow.toFront();  // Bring existing window to front
+        }
+        System.out.println("Statistics window opened");
+    }
+    /**
      * Returns the scroll pane containing the control panel.
      * 
      * @return The scrollable control panel
@@ -200,5 +262,14 @@ public class ControlPanel {
     public void showNormalControls() {
         vehicleAddPanel = null; // Clear reference
         scrollPane.setContent(controlPanel);
+    }
+    
+    /**
+     * Returns the congestion monitor panel for updating hotspot data.
+     * 
+     * @return The congestion monitor panel
+     */
+    public CongestionMonitorPanel getCongestionMonitorPanel() {
+        return congestionMonitorPanel;
     }
 }

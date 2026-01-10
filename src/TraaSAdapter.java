@@ -110,6 +110,17 @@ public class TraaSAdapter {
     public int getVehicleSignals(String id) throws Exception {
         return ((Number) conn.do_job_get(Vehicle.getSignals(id))).intValue();
     }
+    
+    /**
+     * Returns the road (edge) ID where the vehicle is currently located.
+     * 
+     * @param id The vehicle identifier
+     * @return The edge ID where the vehicle is located
+     * @throws Exception if TraCI communication fails or vehicle doesn't exist
+     */
+    public String getVehicleRoadID(String id) throws Exception {
+        return (String) conn.do_job_get(Vehicle.getRoadID(id));
+    }
 
     /**
      * Returns the list of all traffic light junction IDs in the network.
