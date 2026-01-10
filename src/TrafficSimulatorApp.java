@@ -153,8 +153,8 @@ public class TrafficSimulatorApp extends Application {
         scene.updateVehicleSpeeds(runner.getVehicleSpeeds());
         scene.updateEdgeStatistics(runner.getVehicleEdges());
         scene.updateTrafficLights(runner.getTrafficLightData());
-        scene.render(g, viewManager.getTransform());
-        scene.renderHighlight(g, viewManager.getTransform(), selectedElement, hoveredElement);
+        scene.render(g, viewManager.getTransform(), controlPanel.getVehicleFilterPanel());
+        scene.renderHighlight(g, viewManager.getTransform(), selectedElement, hoveredElement, controlPanel.getVehicleFilterPanel());
 
         // Render route selection highlights
         if (routeSelectionMode) {
@@ -478,7 +478,10 @@ public class TrafficSimulatorApp extends Application {
                     ", Signals: " + tl.getSignals().size());
             controlPanel.showTrafficLightControl(tl);
         } else {
-            controlPanel.showNormalControls();
+            // Only return to normal if not showing traffic light panel
+            if (!controlPanel.isShowingTrafficLightPanel()) {
+                // Don't auto-return, user must use back button
+            }
             if (clicked != null)
                 logClickedElement(clicked);
         }

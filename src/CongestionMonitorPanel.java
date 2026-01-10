@@ -34,6 +34,7 @@ public class CongestionMonitorPanel extends VBox {
     private VBox hotspotsContainer;
     private ScrollPane scrollPane;
     private boolean overlayEnabled;
+    private Runnable onBackPressed;
     
     /**
      * Constructs a new congestion monitor panel.
@@ -45,7 +46,20 @@ public class CongestionMonitorPanel extends VBox {
         setAlignment(Pos.TOP_CENTER);
         setMaxWidth(320);
         this.overlayEnabled = false;
+        this.onBackPressed = null;
         
+        initializeComponents();
+    }
+    
+    /**
+     * Sets the back button callback.
+     * 
+     * @param onBackPressed Callback when back button is pressed
+     */
+    public void setOnBackPressed(Runnable onBackPressed) {
+        this.onBackPressed = onBackPressed;
+        // Reinitialize to add back button
+        getChildren().clear();
         initializeComponents();
     }
     
@@ -55,6 +69,23 @@ public class CongestionMonitorPanel extends VBox {
     private void initializeComponents() {
         // Title
         titleLabel = createHeaderLabel("CONGESTION MONITOR");
+        
+        // Back button (if callback is set)
+        if (onBackPressed != null) {
+            Button backBtn = new Button("← Back");
+            backBtn.setStyle(
+                "-fx-background-color: #1B263B; " +
+                "-fx-text-fill: white; " +
+                "-fx-font-family: 'Monospace'; " +
+                "-fx-font-weight: bold; " +
+                "-fx-font-size: 12px; " +
+                "-fx-padding: 8 16; " +
+                "-fx-cursor: hand;"
+            );
+            backBtn.setMaxWidth(Double.MAX_VALUE);
+            backBtn.setOnAction(e -> onBackPressed.run());
+            getChildren().add(backBtn);
+        }
         
         // Total congestions count
         totalCongestionsLabel = createDataLabel("Active Hotspots: 0");

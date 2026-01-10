@@ -383,13 +383,24 @@ public class TrafficManager {
      * @param transform The coordinate transformation
      * @param selected  The currently selected object
      * @param hovered   The currently hovered object
+     * @param vehicleFilter Optional vehicle filter for speed highlighting
      */
-    public void renderHighlight(GraphicsContext g, CoordinateTransform transform, Object selected, Object hovered) {
+    public void renderHighlight(GraphicsContext g, CoordinateTransform transform, Object selected, Object hovered, VehicleFilterPanel vehicleFilter) {
+        // Render speed-based highlights if enabled
+        if (vehicleFilter != null && vehicleFilter.isSpeedFilterEnabled()) {
+            for (Vehicle vehicle : vehicles.values()) {
+                if (vehicleFilter.isTypeVisible(vehicle.getType()) && vehicle.getCurrentSpeed() > 0.5) {
+                    Color speedColor = vehicle.getSpeedGlowColor();
+                    highlightVehicleWithGlow(g, transform, vehicle, speedColor);
+                }
+            }
+        }
+        
         if (selected != null) {
             highlightObject(g, transform, selected, Color.CYAN);
         }
         if (hovered != null && hovered != selected) {
-            highlightObject(g, transform, hovered, Color.YELLOW);
+            highlightObject(g, transform, hovered, Color.WHITE);
         }
     }
 
@@ -399,14 +410,39 @@ public class TrafficManager {
             ((Renderable) obj).highlight(g, transform, color);
         }
     }
+    
+    private void highlightVehicleWithGlow(GraphicsContext g, CoordinateTransform transform, Vehicle vehicle, Color color) {
+        double screenX = transform.worldToScreenX(vehicle.getWorldX());
+        double screenY = transform.worldToScreenY(vehicle.getWorldY());
+        double screenLength = Math.max(transform.worldToScreenSize(vehicle.getLength()), 6);
+        double screenWidth = Math.max(transform.worldToScreenSize(vehicle.getWidth()), 3);
+        double glowRadius = Math.max(screenLength, screenWidth) * 1.8;
+        
+        g.save();
+        
+        // Draw outer glow
+        g.setFill(color.deriveColor(0, 1, 1, 0.2));
+        g.fillOval(screenX - glowRadius / 2, screenY - glowRadius / 2, glowRadius, glowRadius);
+        
+        // Draw inner glow (brighter)
+        double innerGlow = glowRadius * 0.6;
+        g.setFill(color.deriveColor(0, 1, 1, 0.4));
+        g.fillOval(screenX - innerGlow / 2, screenY - innerGlow / 2, innerGlow, innerGlow);
+        
+        // Draw highlight on vehicle
+        vehicle.highlight(g, transform, color);
+        
+        g.restore();
+    }
 
     /**
      * Renders all simulation objects in layered order.
      * 
      * @param g         The graphics context
      * @param transform The coordinate transformation
+     * @param vehicleFilter Optional vehicle filter (null to show all)
      */
-    public void render(GraphicsContext g, CoordinateTransform transform) {
+    public void render(GraphicsContext g, CoordinateTransform transform, VehicleFilterPanel vehicleFilter) {
         // Render edges
         for (Edge edge : edges) {
             edge.render(g, transform);
@@ -429,9 +465,11 @@ public class TrafficManager {
             trafficLight.render(g, transform);
         }
 
-        // Render vehicles
+        // Render vehicles (with filtering)
         for (Vehicle vehicle : vehicles.values()) {
-            vehicle.render(g, transform);
+            if (vehicleFilter == null || vehicleFilter.isTypeVisible(vehicle.getType())) {
+                vehicle.render(g, transform);
+            }
         }
     }
 

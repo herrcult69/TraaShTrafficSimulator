@@ -102,11 +102,11 @@ public class Vehicle extends Renderable implements Updatable {
             width = 1.8;
         } else if (id.startsWith("truck")) {
             type = "truck";
-            length = 8.0;
+            length = 6.0;
             width = 2.5;
         } else if (id.startsWith("bus")) {
             type = "bus";
-            length = 10.0;
+            length = 8.0;
             width = 2.5;
         } else if (id.startsWith("moto")) {
             type = "motorcycle";
@@ -114,12 +114,35 @@ public class Vehicle extends Renderable implements Updatable {
             width = 0.8;
         } else if (id.startsWith("ambu")) {
             type = "emergency";
-            length = 6.0;
+            length = 5.0;
             width = 2.5;
         } else {
             type = "unknown";
             length = 4.5;
             width = 1.8;
+        }
+    }
+    
+    /**
+     * Returns a glow color based on vehicle speed.
+     * Green for slow speeds, transitioning to red for fast speeds.
+     * 
+     * @return Color representing current speed
+     */
+    public Color getSpeedGlowColor() {
+        // Typical max speed in urban traffic: ~15 m/s (54 km/h)
+        // Map 0-15 m/s to green->yellow->red gradient
+        double maxSpeedRange = 15.0;
+        double normalizedSpeed = Math.min(currentSpeed / maxSpeedRange, 1.0);
+        
+        if (normalizedSpeed < 0.5) {
+            // Green to Yellow (0.0 to 0.5)
+            double factor = normalizedSpeed * 2.0;
+            return Color.color(factor, 1.0, 0.0); // Green -> Yellow
+        } else {
+            // Yellow to Red (0.5 to 1.0)
+            double factor = (normalizedSpeed - 0.5) * 2.0;
+            return Color.color(1.0, 1.0 - factor, 0.0); // Yellow -> Red
         }
     }
 
@@ -365,6 +388,16 @@ public class Vehicle extends Renderable implements Updatable {
      */
     public double getCurrentSpeed() {
         return currentSpeed;
+    }
+    
+    /** Returns vehicle length in meters. */
+    public double getLength() {
+        return length;
+    }
+    
+    /** Returns vehicle width in meters. */
+    public double getWidth() {
+        return width;
     }
     
     /**

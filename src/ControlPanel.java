@@ -32,6 +32,8 @@ public class ControlPanel {
     private TrafficManager trafficManager;
     private VehicleAddPanel vehicleAddPanel;
     private CongestionMonitorPanel congestionMonitorPanel;
+    private VehicleFilterPanel vehicleFilterPanel;
+    private TrafficLight currentTrafficLight;
 
     // Callbacks for route selection mode
     private Runnable onStartRouteSelection;
@@ -78,12 +80,16 @@ public class ControlPanel {
         // Add separator
         controlPanel.getChildren().add(new Separator());
         
-        // Add congestion monitor panel
+        // Add filter and congestion buttons
+        addFilterAndCongestionControls();
+        
+        // Initialize panels
         congestionMonitorPanel = new CongestionMonitorPanel();
         congestionMonitorPanel.setOnToggleOverlay(() -> {
             trafficManager.setShowCongestionOverlay(!trafficManager.isShowCongestionOverlay());
         });
-        controlPanel.getChildren().add(congestionMonitorPanel);
+        congestionMonitorPanel.setOnBackPressed(this::showNormalControls);
+        vehicleFilterPanel = new VehicleFilterPanel(this::showNormalControls);
 
         // Style the panel
         controlPanel.setPadding(new Insets(10));
@@ -140,6 +146,22 @@ public class ControlPanel {
         controlPanel.getChildren().addAll(simLabel, playBtn, pauseBtn, stopBtn, addVehicleBtn);
     }
 
+    /**
+     * Adds filter and congestion monitoring buttons.
+     */
+    private void addFilterAndCongestionControls() {
+        Label filterLabel = new Label("―――FILTERS & MONITORING―――");
+        filterLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14;");
+        
+        Button vehicleFilterBtn = UIStyles.createStyledButton("Vehicle Filters");
+        Button congestionBtn = UIStyles.createStyledButton("Congestion Monitor");
+        
+        vehicleFilterBtn.setOnAction(e -> showVehicleFilterPanel());
+        congestionBtn.setOnAction(e -> showCongestionMonitorPanel());
+        
+        controlPanel.getChildren().addAll(filterLabel, vehicleFilterBtn, congestionBtn);
+    }
+    
     /**
      * Adds view control buttons to the panel.
      */
@@ -247,13 +269,29 @@ public class ControlPanel {
 
     /**
      * Displays the traffic light control panel.
+     * If already showing a traffic light panel, just update to the new light.
      * 
      * @param tl The traffic light to control
      */
     public void showTrafficLightControl(TrafficLight tl) {
+        currentTrafficLight = tl;
         TrafficLightControlPanel tlPanel = new TrafficLightControlPanel(tl, runner, trafficManager,
                 this::showNormalControls);
         scrollPane.setContent(tlPanel.getPanel());
+    }
+    
+    /**
+     * Shows the vehicle filter panel.
+     */
+    public void showVehicleFilterPanel() {
+        scrollPane.setContent(vehicleFilterPanel.getPanel());
+    }
+    
+    /**
+     * Shows the congestion monitor panel.
+     */
+    public void showCongestionMonitorPanel() {
+        scrollPane.setContent(congestionMonitorPanel);
     }
 
     /**
@@ -261,7 +299,26 @@ public class ControlPanel {
      */
     public void showNormalControls() {
         vehicleAddPanel = null; // Clear reference
+        currentTrafficLight = null; // Clear traffic light reference
         scrollPane.setContent(controlPanel);
+    }
+    
+    /**
+     * Returns the vehicle filter panel.
+     * 
+     * @return The vehicle filter panel
+     */
+    public VehicleFilterPanel getVehicleFilterPanel() {
+        return vehicleFilterPanel;
+    }
+    
+    /**
+     * Checks if currently showing a traffic light control panel.
+     * 
+     * @return true if traffic light panel is active
+     */
+    public boolean isShowingTrafficLightPanel() {
+        return currentTrafficLight != null;
     }
     
     /**
