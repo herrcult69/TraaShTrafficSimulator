@@ -37,10 +37,11 @@ public class CongestionHotspot {
     private long congestionDuration; // in milliseconds
     
     // Thresholds for congestion detection
-    private static final double HIGH_DENSITY_THRESHOLD = 20.0; // vehicles per km
+    private static final double HIGH_DENSITY_THRESHOLD = 35.0; // vehicles per km
     private static final double MODERATE_DENSITY_THRESHOLD = 10.0;
     private static final double LOW_SPEED_THRESHOLD = 5.0; // m/s (18 km/h)
     private static final double MODERATE_SPEED_THRESHOLD = 10.0; // m/s (36 km/h)
+    private static final int MIN_VEHICLE_COUNT = 3; // Minimum vehicles to flag congestion
     
     /**
      * Constructs a new congestion hotspot for the specified edge.
@@ -65,8 +66,8 @@ public class CongestionHotspot {
         this.avgSpeed = edge.getAverageSpeed();
         this.density = edge.getVehicleDensity();
         
-        // No congestion if there are no vehicles on the edge
-        if (edge.getVehicleCount() == 0) {
+        // No congestion if there are too few vehicles (avoids false positives for small vehicle counts)
+        if (edge.getVehicleCount() < MIN_VEHICLE_COUNT) {
             this.congestionScore = 0.0;
             this.severityLevel = 0;
             return;

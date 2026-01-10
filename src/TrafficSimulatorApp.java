@@ -51,6 +51,7 @@ public class TrafficSimulatorApp extends Application {
     private DashBoard dashboard;
     private long lastDashboardUpdate = System.nanoTime();
     private static final double DASHBOARD_UPDATE_INTERVAL = 0.5; // Update every 0.5 seconds
+    private long lastCongestionUpdate = System.nanoTime();
 
     /**
      * Initializes and starts the application.
@@ -151,7 +152,6 @@ public class TrafficSimulatorApp extends Application {
         scene.updateVehicles(runner.getVehiclePositions(), runner.getSimulationTime());
         scene.updateVehicleSpeeds(runner.getVehicleSpeeds());
         scene.updateEdgeStatistics(runner.getVehicleEdges());
-        scene.updateCongestionHotspots(runner.getVehicleEdges(), runner.getVehicleSpeeds());
         scene.updateTrafficLights(runner.getTrafficLightData());
         scene.render(g, viewManager.getTransform());
         scene.renderHighlight(g, viewManager.getTransform(), selectedElement, hoveredElement);
@@ -178,6 +178,13 @@ public class TrafficSimulatorApp extends Application {
             updateDashboard();
             updateCongestionMonitor();
             lastDashboardUpdate = currentTime;
+        }
+        
+        // Update congestion hotspots at reduced frequency (performance optimization)
+        double timeSinceCongestionUpdate = (currentTime - lastCongestionUpdate) / 1_000_000_000.0;
+        if (timeSinceCongestionUpdate >= DASHBOARD_UPDATE_INTERVAL) {
+            scene.updateCongestionHotspots(runner.getVehicleEdges(), runner.getVehicleSpeeds());
+            lastCongestionUpdate = currentTime;
         }
     }
 
@@ -523,33 +530,18 @@ public class TrafficSimulatorApp extends Application {
     private void collectVehicleMetrics(DashBoard.DashBoardData data) {
         var positions = runner.getVehiclePositions();
         var speeds = runner.getVehicleSpeeds();
+        var counts = runner.getVehicleCountsByType();
 
-        double totalSpeed = 0.0;
-        int[] counts = new int[5]; // car, truck, bus, moto, emergency
-
-        for (var entry : positions.entrySet()) {
-            String id = entry.getKey();
-            if (id.startsWith("car"))
-                counts[0]++;
-            else if (id.startsWith("truck"))
-                counts[1]++;
-            else if (id.startsWith("bus"))
-                counts[2]++;
-            else if (id.startsWith("moto"))
-                counts[3]++;
-            else if (id.startsWith("ambu"))
-                counts[4]++;
-            totalSpeed += speeds.getOrDefault(id, 0.0);
-        }
+        double totalSpeed = speeds.values().stream().mapToDouble(Double::doubleValue).sum();
 
         int total = positions.size();
         data.activeVehicles = total;
         data.avgSpeed = total > 0 ? totalSpeed / total : 0.0;
-        data.carCount = counts[0];
-        data.truckCount = counts[1];
-        data.busCount = counts[2];
-        data.motorcycleCount = counts[3];
-        data.emergencyCount = counts[4];
+        data.carCount = counts.getOrDefault("car", 0);
+        data.truckCount = counts.getOrDefault("truck", 0);
+        data.busCount = counts.getOrDefault("bus", 0);
+        data.motorcycleCount = counts.getOrDefault("moto", 0);
+        data.emergencyCount = counts.getOrDefault("emergency", 0);
     }
 
     /**
