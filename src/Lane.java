@@ -18,13 +18,13 @@ public class Lane extends Renderable {
     private double offsetFromCenter; // Distance from road center line
 
     /**
-     * Constructs a new lane with the specified properties.
+     * Constructs a lane with specified properties.
      * 
-     * @param id               The unique SUMO lane identifier
-     * @param parentEdge       The edge containing this lane
-     * @param width            The lane width in meters
-     * @param index            The 0-based index of this lane
-     * @param offsetFromCenter The perpendicular distance from the edge centerline
+     * @param id Lane identifier
+     * @param parentEdge Containing edge
+     * @param width Lane width in meters
+     * @param index 0-based lane index
+     * @param offsetFromCenter Distance from edge centerline
      */
     public Lane(String id, Edge parentEdge, double width, int index, double offsetFromCenter) {
         this.id = id;
@@ -35,9 +35,6 @@ public class Lane extends Renderable {
         calculateCenterLine();
     }
 
-    /**
-     * Calculates the lane's center line coordinates based on parent edge geometry.
-     */
     private void calculateCenterLine() {
         double dx = parentEdge.getToX() - parentEdge.getFromX();
         double dy = parentEdge.getToY() - parentEdge.getFromY();
@@ -57,11 +54,10 @@ public class Lane extends Renderable {
     /**
      * Checks if a screen point falls within this lane's boundaries.
      * 
-     * @param screenX   The X coordinate in screen space
-     * @param screenY   The Y coordinate in screen space
-     * @param transform The coordinate transformation to convert screen to world
-     *                  coordinates
-     * @return true if the point is within the lane boundaries
+     * @param screenX X coordinate in screen space
+     * @param screenY Y coordinate in screen space
+     * @param transform Coordinate transform
+     * @return True if point is within lane
      */
     @Override
     public boolean contains(double screenX, double screenY, CoordinateTransform transform) {
@@ -205,74 +201,43 @@ public class Lane extends Renderable {
         return parentEdge;
     }
 
-    /**
-     * Returns the lane width in meters.
-     * 
-     * @return The lane width (typically 3.2m)
-     */
+    /** Returns lane width in meters. */
     public double getWidth() {
         return width;
     }
 
-    /**
-     * Returns the 0-based index of this lane within the parent edge.
-     * 
-     * @return The lane index
-     */
+    /** Returns lane index. */
     public int getIndex() {
         return index;
     }
 
-    /**
-     * Returns the perpendicular offset from the edge centerline.
-     * 
-     * @return The offset distance in meters
-     */
+    /** Returns offset from edge centerline. */
     public double getOffsetFromCenter() {
         return offsetFromCenter;
     }
 
-    /**
-     * Returns the starting X coordinate of the lane center line in world space.
-     * 
-     * @return The X coordinate in meters
-     */
+    /** Returns starting X coordinate in meters. */
     public double getCenterX1() {
         return x1;
     }
 
-    /**
-     * Returns the starting Y coordinate of the lane center line in world space.
-     * 
-     * @return The Y coordinate in meters
-     */
+    /** Returns starting Y coordinate in meters. */
     public double getCenterY1() {
         return y1;
     }
 
-    /**
-     * Not used - lanes are rendered by their parent Edge.
-     * Required by Renderable abstract class.
-     */
+    /** Not used - lanes are rendered by Edge. */
     @Override
     public void render(GraphicsContext g, CoordinateTransform transform) {
         // Lanes are rendered by Edge.render(), not individually
     }
 
-    /**
-     * Returns the ending X coordinate of the lane center line in world space.
-     * 
-     * @return The X coordinate in meters
-     */
+    /** Returns ending X coordinate in meters. */
     public double getCenterX2() {
         return x2;
     }
 
-    /**
-     * Returns the ending Y coordinate of the lane center line in world space.
-     * 
-     * @return The Y coordinate in meters
-     */
+    /** Returns ending Y coordinate in meters. */
     public double getCenterY2() {
         return y2;
     }

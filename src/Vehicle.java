@@ -27,13 +27,12 @@ public class Vehicle extends Renderable implements Updatable {
     private int signals;
 
     /**
-     * Creates a vehicle with position and orientation.
-     * Type and dimensions are determined from ID prefix.
+     * Creates a vehicle at the specified position.
      * 
-     * @param id     Vehicle ID (prefix determines type)
+     * @param id Vehicle identifier (prefix determines type)
      * @param worldX X coordinate in meters
      * @param worldY Y coordinate in meters
-     * @param angle  Orientation in degrees
+     * @param angle Orientation in degrees
      */
     public Vehicle(String id, double worldX, double worldY, double angle) {
         this.id = id;
@@ -60,9 +59,6 @@ public class Vehicle extends Renderable implements Updatable {
         COLOR_OVERRIDES.keySet().removeIf(id -> !activeVehicleIds.contains(id));
     }
 
-    /**
-     * Determines the vehicle type and sets appropriate dimensions based on the ID prefix.
-     */
     private void determineTypeFromId() {
         if (id.startsWith("car")) {
             type = "car";

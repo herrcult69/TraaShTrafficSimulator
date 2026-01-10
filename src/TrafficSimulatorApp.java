@@ -53,10 +53,10 @@ public class TrafficSimulatorApp extends Application {
     private static final double DASHBOARD_UPDATE_INTERVAL = 0.5; // Update every 0.5 seconds
 
     /**
-     * Initializes and starts the JavaFX application.
+     * Initializes and starts the application.
      * 
-     * @param stage The primary stage
-     * @throws Exception if setup fails
+     * @param stage Primary stage for the application
+     * @throws Exception If network files cannot be loaded or initialization fails
      */
     @Override
     public void start(Stage stage) throws Exception {
@@ -140,8 +140,7 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /**
-     * Main rendering loop (called ~60fps). Updates and draws all simulation
-     * objects.
+     * Renders the simulation scene. Called approximately 60 times per second.
      */
     private void draw() {
         GraphicsContext g = canvas.getGraphicsContext2D();
@@ -179,10 +178,10 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /**
-     * Draws an info box showing details of the selected object.
+     * Draws an info box for the selected element.
      * 
-     * @param g        Graphics context
-     * @param selected Selected object
+     * @param g Graphics context
+     * @param selected Selected simulation element
      */
     private void drawInfoBox(GraphicsContext g, Object selected) {
         double x = 10;
@@ -214,9 +213,7 @@ public class TrafficSimulatorApp extends Application {
         }
     }
 
-    /**
-     * Collects simulation metrics and updates the dashboard.
-     */
+    /** Updates dashboard with current simulation metrics. */
     private void updateDashboard() {
         DashBoard.DashBoardData data = new DashBoard.DashBoardData();
 
@@ -225,16 +222,16 @@ public class TrafficSimulatorApp extends Application {
         dashboard.update(data);
     }
 
-    /** Callback when route selection starts. Clears selected edges. */
+    /** Initializes route selection state when user begins selecting a vehicle route. */
     private void onStartRouteSelection() {
         selectedRouteEdges.clear();
         logger.info("Route selection mode started");
     }
 
     /**
-     * Callback when route selection mode toggles.
+     * Toggles route selection mode.
      * 
-     * @param active true if entering mode, false if exiting
+     * @param active True when entering route selection mode, false when exiting
      */
     private void onRouteSelectionModeChange(Boolean active) {
         routeSelectionMode = active;
@@ -244,7 +241,7 @@ public class TrafficSimulatorApp extends Application {
         }
     }
 
-    /** Callback when a vehicle is successfully added. */
+    /** Resets route selection state after vehicle is added to simulation. */
     private void onVehicleAdded() {
         selectedRouteEdges.clear();
         routeSelectionMode = false;
@@ -253,8 +250,7 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /**
-     * Renders route selection highlights (green=start, red=end, cyan=route,
-     * yellow=hover).
+     * Highlights edges during route selection mode.
      * 
      * @param g Graphics context
      */
@@ -285,12 +281,12 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /**
-     * Highlights an edge by ID.
+     * Highlights a specific edge with the given color.
      * 
-     * @param edgeId Edge ID
-     * @param color  Highlight color
-     * @param g      Graphics context
-     * @param t      Coordinate transform
+     * @param edgeId Edge identifier
+     * @param color Highlight color
+     * @param g Graphics context
+     * @param t Coordinate transform
      */
     private void highlightEdge(String edgeId, Color color, GraphicsContext g, CoordinateTransform t) {
         if (edgeId == null)
@@ -301,7 +297,7 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /**
-     * Draws route selection instructions overlay.
+     * Displays on-screen instructions for route selection.
      * 
      * @param g Graphics context
      */
@@ -352,9 +348,9 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /**
-     * Sets up canvas bindings and starts the animation loop.
+     * Configures canvas sizing and starts the rendering loop.
      * 
-     * @param root  Root BorderPane
+     * @param root Root layout container
      * @param stage Primary stage
      */
     private void setupCanvas(BorderPane root, Stage stage) {
@@ -386,7 +382,7 @@ public class TrafficSimulatorApp extends Application {
         }.start();
     }
 
-    /** Sets up mouse and scroll event handlers for zoom, pan, and selection. */
+    /** Configures mouse and scroll interactions. */
     private void setupEventHandlers() {
         canvas.setOnScroll(e -> viewManager.zoomToPoint(e.getDeltaY() > 0 ? 1.1 : 0.9, e.getX(), e.getY()));
         canvas.setOnMousePressed(e -> viewManager.startPan(e.getX(), e.getY()));
@@ -402,10 +398,10 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /**
-     * Handles canvas clicks for selection or route building.
+     * Handles mouse clicks on the canvas.
      * 
-     * @param x Screen X coordinate
-     * @param y Screen Y coordinate
+     * @param x X coordinate in screen space
+     * @param y Y coordinate in screen space
      */
     private void handleCanvasClick(double x, double y) {
         if (routeSelectionMode) {
@@ -429,10 +425,10 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /**
-     * Handles clicks during route selection.
+     * Processes clicks while in route selection mode.
      * 
-     * @param x Screen X coordinate
-     * @param y Screen Y coordinate
+     * @param x X coordinate in screen space
+     * @param y Y coordinate in screen space
      */
     private void handleRouteSelectionClick(double x, double y) {
         String edgeId = scene.getEdgeIdAt(x, y, viewManager.getTransform());
@@ -446,9 +442,9 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /**
-     * Logs clicked element info to console.
+     * Logs details about the clicked element.
      * 
-     * @param element Clicked object
+     * @param element Clicked simulation element
      */
     private void logClickedElement(Object element) {
         logger.fine("Clicked: " + element.getClass().getSimpleName());
@@ -464,9 +460,9 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /**
-     * Collects vehicle statistics for the dashboard.
+     * Gathers vehicle statistics from the simulation.
      * 
-     * @param data Dashboard data to populate
+     * @param data Dashboard data structure to populate
      */
     private void collectVehicleMetrics(DashBoard.DashBoardData data) {
         var positions = runner.getVehiclePositions();
@@ -501,29 +497,41 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /**
-     * Application entry point.
+     * Application entry point. Initializes logging configuration and launches the JavaFX application.
+     * Logs are written to both console and a timestamped file in the logs directory.
      * 
      * @param args Command line arguments
      */
     public static void main(String[] args) {
-        // Load logging configuration
+        configureLogging();
+        launch(args);
+    }
+
+    /**
+     * Configures the application logging system with console and file handlers.
+     * Creates a timestamped log file in the logs directory for each application run.
+     */
+    private static void configureLogging() {
         try {
-            // Create logs directory if it doesn't exist
             java.nio.file.Files.createDirectories(java.nio.file.Paths.get("logs"));
             
-            // Set log file pattern with date
-            String dateStr = new java.text.SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date());
-            System.setProperty("java.util.logging.FileHandler.pattern", "logs/traffic-simulator-" + dateStr + ".log");
+            String timestamp = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new java.util.Date());
+            String logFilePath = "logs/traffic-simulator-" + timestamp + ".log";
             
             java.io.FileInputStream configFile = new java.io.FileInputStream("logging.properties");
             java.util.logging.LogManager.getLogManager().readConfiguration(configFile);
             configFile.close();
-            System.out.println("Logging configured - output to console and logs/traffic-simulator-" + dateStr + ".log");
+            
+            java.util.logging.Logger rootLogger = java.util.logging.Logger.getLogger("");
+            java.util.logging.FileHandler fileHandler = new java.util.logging.FileHandler(logFilePath, true);
+            fileHandler.setLevel(java.util.logging.Level.ALL);
+            fileHandler.setFormatter(new java.util.logging.SimpleFormatter());
+            rootLogger.addHandler(fileHandler);
+            
+            System.out.println("Logging configured - output to console and " + logFilePath);
         } catch (Exception e) {
-            System.err.println("WARNING: Could not load logging.properties, using default logging");
+            System.err.println("WARNING: Could not configure logging, using default settings");
             e.printStackTrace();
         }
-        
-        launch(args);
     }
 }

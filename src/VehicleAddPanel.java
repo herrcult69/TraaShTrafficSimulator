@@ -94,14 +94,13 @@ public class VehicleAddPanel extends VBox {
     private static int vehicleCounter = 1;
 
     /**
-     * Constructs a new vehicle addition panel.
+     * Constructs the vehicle addition panel.
      * 
-     * @param runner                     The simulation runner
-     * @param onCancel                   Callback invoked on cancel
-     * @param onStartRouteSelection      Callback invoked when route selection
-     *                                   starts
-     * @param onRouteSelectionModeChange Callback for route selection mode changes
-     * @param onVehicleAdded             Callback invoked when vehicle is added
+     * @param runner Simulation runner
+     * @param onCancel Callback on cancel
+     * @param onStartRouteSelection Callback on route selection start
+     * @param onRouteSelectionModeChange Callback on route mode toggle
+     * @param onVehicleAdded Callback on vehicle added
      */
     public VehicleAddPanel(SimulationRunner runner, Runnable onCancel,
             Runnable onStartRouteSelection, java.util.function.Consumer<Boolean> onRouteSelectionModeChange,
@@ -118,9 +117,6 @@ public class VehicleAddPanel extends VBox {
         createUI();
     }
 
-    /**
-     * Creates the complete UI for the vehicle addition panel.
-     */
     private void createUI() {
         setAlignment(Pos.TOP_CENTER);
         setPadding(new Insets(15));

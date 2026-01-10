@@ -25,9 +25,6 @@ public class TrafficManager {
     private Map<String, NetworkParser.Junction> junctionIndex;
     private Map<String, Junction> visualJunctionIndex;
 
-    /**
-     * Constructs a new TrafficManager with empty collections.
-     */
     public TrafficManager() {
         this.junctions = new ArrayList<>();
         this.edges = new ArrayList<>();
@@ -38,9 +35,9 @@ public class TrafficManager {
     }
 
     /**
-     * Initializes all visual objects from parsed network data.
+     * Initializes visual objects from network data.
      * 
-     * @param network The parsed network data
+     * @param network Parsed network data
      */
     public void initializeFromNetwork(NetworkParser.NetworkData network) {
         // Build junction index and create visual junctions

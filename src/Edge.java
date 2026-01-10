@@ -19,13 +19,13 @@ public class Edge extends Renderable {
     private List<Lane> lanes;
 
     /**
-     * Constructs a new visual Edge from parsed network data.
+     * Constructs an edge from network data.
      * 
-     * @param networkEdge The parsed edge data from SUMO network file
-     * @param from        The source junction network data
-     * @param to          The destination junction network data
-     * @param fromJunc    The visual source junction object
-     * @param toJunc      The visual destination junction object
+     * @param networkEdge Parsed edge data
+     * @param from Source junction data
+     * @param to Destination junction data
+     * @param fromJunc Source junction object
+     * @param toJunc Destination junction object
      */
     public Edge(NetworkParser.Edge networkEdge, NetworkParser.Junction from, NetworkParser.Junction to,
             Junction fromJunc, Junction toJunc) {
@@ -41,9 +41,6 @@ public class Edge extends Renderable {
         createLanes();
     }
 
-    /**
-     * Creates visual Lane objects for all lanes in this edge.
-     */
     private void createLanes() {
         // Create lanes directly from SUMO network data
         // SUMO already handles directionality with positive/negative edge IDs
@@ -275,12 +272,11 @@ public class Edge extends Renderable {
     }
 
     /**
-     * Highlights this edge with a colored overlay.
-     * Used during route selection to show selected edges.
+     * Highlights edge during route selection.
      * 
-     * @param g         The graphics context to draw on
-     * @param transform The coordinate transformation
-     * @param color     The highlight color
+     * @param g Graphics context
+     * @param transform Coordinate transform
+     * @param color Highlight color
      */
     @Override
     public void highlight(GraphicsContext g, CoordinateTransform transform, Color color) {
@@ -338,10 +334,7 @@ public class Edge extends Renderable {
         g.strokeLine(x1, y1, x2, y2);
     }
 
-    /**
-     * Not used - hit detection uses getLaneAt() instead.
-     * Required by Renderable abstract class.
-     */
+    /** Not used - hit detection uses getLaneAt(). */
     @Override
     public boolean contains(double screenX, double screenY, CoordinateTransform transform) {
         return false;

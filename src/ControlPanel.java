@@ -35,12 +35,12 @@ public class ControlPanel {
     private Runnable onVehicleAdded;
 
     /**
-     * Constructs a new control panel.
+     * Constructs the control panel.
      * 
-     * @param runner         The simulation runner
-     * @param viewManager    The view manager
-     * @param dashboard      The dashboard component
-     * @param trafficManager The traffic manager
+     * @param runner Simulation runner
+     * @param viewManager View manager
+     * @param dashboard Dashboard component
+     * @param trafficManager Traffic manager
      */
     public ControlPanel(SimulationRunner runner, ViewManager viewManager, DashBoard dashboard,
             TrafficManager trafficManager) {
@@ -50,11 +50,6 @@ public class ControlPanel {
         createPanel(dashboard);
     }
 
-    /**
-     * Creates the main panel UI.
-     * 
-     * @param dashboard The dashboard component to include
-     */
     private void createPanel(DashBoard dashboard) {
         controlPanel = new VBox(10);
         controlPanel.setAlignment(Pos.TOP_CENTER);
@@ -92,9 +87,6 @@ public class ControlPanel {
                 "-fx-background: " + UIStyles.BG_PRIMARY + "; -fx-background-color: " + UIStyles.BG_PRIMARY + ";");
     }
 
-    /**
-     * Adds simulation control buttons to the panel.
-     */
     private void addSimulationControls() {
         Label simLabel = new Label("―――SIMULATION―――");
         simLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14;");

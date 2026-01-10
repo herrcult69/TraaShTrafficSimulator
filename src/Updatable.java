@@ -9,17 +9,12 @@
 public interface Updatable {
 
     /**
-     * Updates this object's state with new data from SUMO.
+     * Updates state with SUMO data.
      * 
-     * @param data The update data from SUMO
+     * @param data Update data from SUMO
      */
     void updateFromSimulation(Object data);
 
-    /**
-     * Returns the unique identifier for this updatable object.
-     * Used to match simulation data with the correct object instance.
-     * 
-     * @return The object's unique ID
-     */
+    /** Returns unique identifier for simulation updates. */
     String getUpdateId();
 }

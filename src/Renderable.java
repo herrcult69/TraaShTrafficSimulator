@@ -15,28 +15,27 @@ public abstract class Renderable {
     /**
      * Renders this object on the canvas.
      * 
-     * @param g         The graphics context to draw on
-     * @param transform The coordinate transformation
+     * @param g Graphics context
+     * @param transform Coordinate transform
      */
     public abstract void render(GraphicsContext g, CoordinateTransform transform);
 
     /**
      * Draws a visual highlight around this object.
      * 
-     * @param g         The graphics context to draw on
-     * @param transform The coordinate transformation
-     * @param color     The highlight color
+     * @param g Graphics context
+     * @param transform Coordinate transform
+     * @param color Highlight color
      */
     public abstract void highlight(GraphicsContext g, CoordinateTransform transform, Color color);
 
     /**
-     * Checks if the given screen coordinates fall within this object's clickable
-     * area.
+     * Checks if screen coordinates fall within this object.
      * 
-     * @param screenX   The X coordinate in screen space
-     * @param screenY   The Y coordinate in screen space
-     * @param transform The coordinate transformation
-     * @return true if the point is within this object's bounds
+     * @param screenX X coordinate in screen space
+     * @param screenY Y coordinate in screen space
+     * @param transform Coordinate transform
+     * @return True if point is within bounds
      */
     public abstract boolean contains(double screenX, double screenY, CoordinateTransform transform);
 }

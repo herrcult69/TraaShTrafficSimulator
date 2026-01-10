@@ -19,35 +19,14 @@ import java.util.logging.Logger;
 public class NetworkParser {
     private static final Logger logger = Logger.getLogger(NetworkParser.class.getName());
     
-    /**
-     * Data class representing a junction in the road network.
-     */
+    /** Junction data from SUMO network. */
     public static class Junction {
-        /** The unique junction identifier */
         public final String id;
-        /** The X coordinate in meters */
-        public final double x;
-        /** The Y coordinate in meters */
-        public final double y;
-        /**
-         * The junction type (e.g., "priority", "traffic_light", "right_before_left")
-         */
+        public final double x;  // meters
+        public final double y;  // meters
         public final String type;
-        /**
-         * The junction boundary shape as a space-separated list of "x,y" coordinate
-         * pairs
-         */
         public final String shape;
 
-        /**
-         * Constructs a new Junction.
-         * 
-         * @param id    The junction identifier
-         * @param x     The X coordinate
-         * @param y     The Y coordinate
-         * @param type  The junction type
-         * @param shape The boundary shape string
-         */
         public Junction(String id, double x, double y, String type, String shape) {
             this.id = id;
             this.x = x;
@@ -57,30 +36,14 @@ public class NetworkParser {
         }
     }
 
-    /**
-     * Data class representing a lane within an edge.
-     */
+    /** Lane data from SUMO network. */
     public static class Lane {
-        /** The unique lane identifier (e.g., "edge1_0") */
         public final String id;
-        /** The 0-based lane index within the parent edge */
         public final int index;
-        /** Maximum allowed speed in meters per second */
-        public final double speed;
-        /** Lane length in meters */
-        public final double length;
-        /** Lane width in meters (default 3.2m in SUMO) */
-        public final double width;
+        public final double speed;  // m/s
+        public final double length; // meters
+        public final double width;  // meters
 
-        /**
-         * Constructs a new Lane.
-         * 
-         * @param id     The lane identifier
-         * @param index  The lane index
-         * @param speed  Max speed in m/s
-         * @param length Lane length in meters
-         * @param width  Lane width in meters
-         */
         public Lane(String id, int index, double speed, double length, double width) {
             this.id = id;
             this.index = index;
@@ -90,13 +53,9 @@ public class NetworkParser {
         }
     }
 
-    /**
-     * Data class representing a connection between two edges at a junction.
-     */
+    /** Connection between edges at a junction. */
     public static class Connection {
-        /** Source edge ID */
         public final String from;
-        /** Destination edge ID */
         public final String to;
         /** Source lane index */
         public final int fromLane;

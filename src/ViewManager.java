@@ -25,11 +25,11 @@ public class ViewManager {
     private double dragStartX, dragStartY, dragStartPanX, dragStartPanY;
 
     /**
-     * Constructs a new view manager for the specified canvas and network.
+     * Constructs a view manager.
      * 
-     * @param canvas    The canvas to manage the view for
-     * @param transform The coordinate transform to update
-     * @param network   The network data containing bounds information
+     * @param canvas Canvas to manage
+     * @param transform Coordinate transform
+     * @param network Network data with bounds
      */
     public ViewManager(Canvas canvas, CoordinateTransform transform, NetworkParser.NetworkData network) {
         this.canvas = canvas;
@@ -37,9 +37,7 @@ public class ViewManager {
         this.network = network;
     }
 
-    /**
-     * Resets the view to fit the entire network on the canvas.
-     */
+    /** Resets view to fit entire network. */
     public void resetView() {
         double margin = 50;
         double netW = network.maxX - network.minX;

@@ -20,7 +20,7 @@ public class SimulationRunner implements Runnable {
         /**
          * Called when TraCI connection is established.
          * 
-         * @param adapter The TraaSAdapter for SUMO communication
+         * @param adapter TraaSAdapter for SUMO communication
          */
         void onConnected(TraaSAdapter adapter);
     }
@@ -37,10 +37,10 @@ public class SimulationRunner implements Runnable {
     private ConnectionListener connectionListener;
 
     /**
-     * Constructs a new simulation runner.
+     * Constructs a simulation runner.
      * 
-     * @param configFile Path to the SUMO configuration file
-     * @param gui        Whether to launch SUMO with GUI
+     * @param configFile SUMO configuration file path
+     * @param gui Enable SUMO GUI
      */
     public SimulationRunner(String configFile, boolean gui) {
         this.configFile = configFile;
@@ -48,55 +48,35 @@ public class SimulationRunner implements Runnable {
     }
 
     /**
-     * Sets a listener for connection establishment.
+     * Sets connection establishment listener.
      * 
-     * @param listener The connection listener callback
+     * @param listener Connection callback
      */
     public void setConnectionListener(ConnectionListener listener) {
         this.connectionListener = listener;
     }
 
-    /**
-     * Returns a thread-safe map of vehicle speeds.
-     * 
-     * @return Map from vehicle ID to speed in m/s
-     */
+    /** Returns vehicle speeds (thread-safe). */
     public Map<String, Double> getVehicleSpeeds() {
         return vehicleSpeeds;
     }
 
-    /**
-     * Returns a thread-safe map of vehicle positions and states.
-     * 
-     * @return Map from vehicle ID to array [x, y, angle, signals]
-     */
+    /** Returns vehicle positions and states (thread-safe). */
     public Map<String, double[]> getVehiclePositions() {
         return vehiclePositions;
     }
 
-    /**
-     * Returns the current simulation time in seconds.
-     * 
-     * @return Simulation time in seconds
-     */
+    /** Returns current simulation time in seconds. */
     public double getSimulationTime() {
         return simulationTime;
     }
 
-    /**
-     * Returns a thread-safe map of traffic light states.
-     * 
-     * @return Map from junction ID to traffic light data
-     */
+    /** Returns traffic light states (thread-safe). */
     public Map<String, TrafficLight.TrafficLightData> getTrafficLightData() {
         return trafficLightData;
     }
 
-    /**
-     * Returns the TraCI adapter for direct SUMO communication.
-     * 
-     * @return The TraaSAdapter, or null if not yet connected
-     */
+    /** Returns TraCI adapter for SUMO communication. */
     public TraaSAdapter getAdapter() {
         return adapter;
     }

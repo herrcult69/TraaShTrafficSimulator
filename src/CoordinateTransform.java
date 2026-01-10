@@ -12,9 +12,9 @@ public class CoordinateTransform {
     private double canvasHeight;
 
     /**
-     * Constructs a new coordinate transform.
+     * Constructs a coordinate transform.
      * 
-     * @param canvasHeight The height of the canvas in pixels
+     * @param canvasHeight Canvas height in pixels
      */
     public CoordinateTransform(double canvasHeight) {
         this.canvasHeight = canvasHeight;
@@ -23,14 +23,14 @@ public class CoordinateTransform {
     }
 
     /**
-     * Updates all transformation parameters.
+     * Updates transformation parameters.
      * 
-     * @param scale   Base scaling factor
+     * @param scale Base scaling factor
      * @param offsetX Base X offset
      * @param offsetY Base Y offset
-     * @param zoom    User-controlled zoom level
-     * @param panX    Interactive pan offset in X
-     * @param panY    Interactive pan offset in Y
+     * @param zoom User zoom level
+     * @param panX Pan offset in X
+     * @param panY Pan offset in Y
      */
     public void updateTransform(double scale, double offsetX, double offsetY, double zoom, double panX, double panY) {
         this.scale = scale;
@@ -41,62 +41,32 @@ public class CoordinateTransform {
         this.panY = panY;
     }
 
-    /**
-     * Converts a world X coordinate to screen X coordinate.
-     * 
-     * @param worldX The X coordinate in world space
-     * @return The X coordinate in screen space
-     */
+    /** Converts world X to screen X. */
     public double worldToScreenX(double worldX) {
         return (worldX * scale * zoom) + offsetX + panX;
     }
 
-    /**
-     * Converts a world Y coordinate to screen Y coordinate with Y-axis inversion.
-     * 
-     * @param worldY The Y coordinate in world space
-     * @return The Y coordinate in screen space
-     */
+    /** Converts world Y to screen Y (with Y-axis inversion). */
     public double worldToScreenY(double worldY) {
         return canvasHeight - ((worldY * scale * zoom) + offsetY + panY);
     }
 
-    /**
-     * Converts a world size to screen size.
-     * 
-     * @param worldSize The size in world space
-     * @return The size in screen space
-     */
+    /** Converts world size to screen size. */
     public double worldToScreenSize(double worldSize) {
         return worldSize * scale * zoom;
     }
 
-    /**
-     * Converts a screen X coordinate to world X coordinate.
-     * 
-     * @param screenX The X coordinate in screen space
-     * @return The X coordinate in world space
-     */
+    /** Converts screen X to world X. */
     public double screenToWorldX(double screenX) {
         return (screenX - offsetX - panX) / (scale * zoom);
     }
 
-    /**
-     * Converts a screen Y coordinate to world Y coordinate with Y-axis inversion.
-     * 
-     * @param screenY The Y coordinate in screen space
-     * @return The Y coordinate in world space
-     */
+    /** Converts screen Y to world Y (with Y-axis inversion). */
     public double screenToWorldY(double screenY) {
         return ((canvasHeight - screenY) - offsetY - panY) / (scale * zoom);
     }
 
-    /**
-     * Converts a screen size to world size.
-     * 
-     * @param screenSize The size in screen space
-     * @return The size in world space
-     */
+    /** Converts screen size to world size. */
     public double screenToWorldSize(double screenSize) {
         return screenSize / (scale * zoom);
     }

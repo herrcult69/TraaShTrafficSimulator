@@ -108,10 +108,10 @@ public class UIStyles {
             "-fx-background-radius: 5;";
 
     /**
-     * Creates a standard styled button with hover effect.
+     * Creates a standard button with hover effect.
      * 
-     * @param text Button text
-     * @return Configured button
+     * @param text Button label
+     * @return Styled button
      */
     public static Button createStyledButton(String text) {
         Button btn = new Button(text);
@@ -123,10 +123,10 @@ public class UIStyles {
     }
 
     /**
-     * Creates an accent styled button for primary actions.
+     * Creates an accent button for primary actions.
      * 
-     * @param text Button text
-     * @return Configured button
+     * @param text Button label
+     * @return Styled button
      */
     public static Button createAccentButton(String text) {
         Button btn = new Button(text);
@@ -137,22 +137,14 @@ public class UIStyles {
         return btn;
     }
 
-    /**
-     * Applies standard button styling to an existing button.
-     * 
-     * @param btn Button to style
-     */
+    /** Applies standard button styling. */
     public static void applyStandardButtonStyle(Button btn) {
         btn.setStyle(BASE_BUTTON_STYLE);
         btn.setOnMouseEntered(e -> btn.setStyle(BASE_BUTTON_HOVER_STYLE));
         btn.setOnMouseExited(e -> btn.setStyle(BASE_BUTTON_STYLE));
     }
 
-    /**
-     * Applies accent button styling to an existing button.
-     * 
-     * @param btn Button to style
-     */
+    /** Applies accent button styling. */
     public static void applyAccentButtonStyle(Button btn) {
         btn.setStyle(ACCENT_BUTTON_STYLE);
         btn.setOnMouseEntered(e -> btn.setStyle(ACCENT_BUTTON_HOVER_STYLE));

@@ -35,9 +35,6 @@ public class DashBoard extends VBox {
     private XYChart.Series<Number, Number> speedSeries;
     private int maxDataPoints = 120; // 120 points at 2 updates/sec = 60 seconds
 
-    /**
-     * Constructs a new dashboard with all metric labels and chart initialized.
-     */
     public DashBoard() {
         super(12);
         setPadding(new Insets(15, 10, 0, 10));
@@ -48,9 +45,6 @@ public class DashBoard extends VBox {
         initializeComponents();
     }
 
-    /**
-     * Initializes all dashboard UI components.
-     */
     private void initializeComponents() {
         Label title = createHeaderLabel("―――DASHBOARD―――");
         Label simSection = createSectionLabel("Simulation");
@@ -97,12 +91,6 @@ public class DashBoard extends VBox {
                 speedChart);
     }
 
-    /**
-     * Creates a styled header label for the dashboard.
-     * 
-     * @param text The header text
-     * @return A formatted header label
-     */
     private Label createHeaderLabel(String text) {
         Label label = new Label(text);
         label.setFont(Font.font("Monospace", FontWeight.BOLD, 16));
@@ -112,12 +100,6 @@ public class DashBoard extends VBox {
         return label;
     }
 
-    /**
-     * Creates a styled section label for grouping dashboard metrics.
-     * 
-     * @param text The section name
-     * @return A formatted section label
-     */
     private Label createSectionLabel(String text) {
         Label label = new Label(text);
         label.setFont(Font.font("Monospace", FontWeight.BOLD, 13));
