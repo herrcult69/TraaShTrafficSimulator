@@ -68,7 +68,7 @@ public class TrafficSimulatorApp extends Application {
             network = NetworkParser.parse(NETWORK_FILE);
             canvas = new Canvas();
             scene = new TrafficManager();
-            transform = new CoordinateTransform(900);
+            transform = new CoordinateTransform(700);
 
             // Initialize scene from network data
             scene.initializeFromNetwork(network);
@@ -108,7 +108,7 @@ public class TrafficSimulatorApp extends Application {
             root.setCenter(canvas);
             root.setRight(scrollPane);
 
-            Scene mainScene = new Scene(root, 1400, 900);
+            Scene mainScene = new Scene(root, 1400, 700);
             stage.setScene(mainScene);
             stage.setTitle("Traffic Simulator - OOP Architecture");
 

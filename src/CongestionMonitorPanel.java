@@ -58,9 +58,30 @@ public class CongestionMonitorPanel extends VBox {
      */
     public void setOnBackPressed(Runnable onBackPressed) {
         this.onBackPressed = onBackPressed;
-        // Reinitialize to add back button
-        getChildren().clear();
-        initializeComponents();
+        // Ensure a back button exists and is wired without reinitializing the whole panel
+        boolean found = false;
+        for (javafx.scene.Node n : getChildren()) {
+            if (n instanceof Button && "← Back".equals(((Button) n).getText())) {
+                ((Button) n).setOnAction(e -> onBackPressed.run());
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            Button backBtn = new Button("← Back");
+            backBtn.setStyle(
+                "-fx-background-color: #1B263B; " +
+                "-fx-text-fill: white; " +
+                "-fx-font-family: 'Monospace'; " +
+                "-fx-font-weight: bold; " +
+                "-fx-font-size: 12px; " +
+                "-fx-padding: 8 16; " +
+                "-fx-cursor: hand;"
+            );
+            backBtn.setMaxWidth(Double.MAX_VALUE);
+            backBtn.setOnAction(e -> onBackPressed.run());
+            getChildren().add(0, backBtn);
+        }
     }
     
     /**
