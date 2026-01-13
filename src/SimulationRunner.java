@@ -36,6 +36,7 @@ public class SimulationRunner implements Runnable {
     private final Map<String, TrafficLight.TrafficLightData> trafficLightData = new ConcurrentHashMap<>();
     private final Map<String, String> vehicleEdges = new ConcurrentHashMap<>();
     private ConnectionListener connectionListener;
+    private VehicleFilterPanel vehicleFilter;
 
     private final Map<String, Integer> vehicleCountsByType = new ConcurrentHashMap<>();
     /**
@@ -56,6 +57,15 @@ public class SimulationRunner implements Runnable {
      */
     public void setConnectionListener(ConnectionListener listener) {
         this.connectionListener = listener;
+    }
+    
+    /**
+     * Sets the vehicle filter to apply when collecting data from SUMO.
+     * 
+     * @param filter Vehicle filter panel
+     */
+    public void setVehicleFilter(VehicleFilterPanel filter) {
+        this.vehicleFilter = filter;
     }
 
     /** Returns vehicle speeds (thread-safe). */
@@ -177,6 +187,17 @@ public class SimulationRunner implements Runnable {
                     vehicleCountsByType.put("emergency", 0);
 
                     for (String id : ids) {
+                        // Determine vehicle type and apply filter
+                        String type = VehicleTypeHelper.getVehicleType(id);
+                        if (vehicleFilter != null && !vehicleFilter.isTypeVisible(type)) {
+                            // Skip this vehicle - it's filtered out
+                            // Remove from maps if it was previously visible
+                            vehiclePositions.remove(id);
+                            vehicleSpeeds.remove(id);
+                            vehicleEdges.remove(id);
+                            continue;
+                        }
+                        
                         double[] p = adapter.getVehiclePosition(id);
                         double ang = 0.0;
                         double speed = 0.0;
@@ -195,16 +216,16 @@ public class SimulationRunner implements Runnable {
                             vehicleEdges.put(id, edgeId);
                         }
 
-                        //Count by type
-                        if (id.startsWith("car")){
+                        //Count by type (already filtered above)
+                        if (type.equals("car")){
                             vehicleCountsByType.merge("car", 1, Integer::sum);
-                        } else if (id.startsWith("truck")) {
+                        } else if (type.equals("truck")) {
                             vehicleCountsByType.merge("truck", 1, Integer::sum);
-                        } else if (id.startsWith("bus")) {
+                        } else if (type.equals("bus")) {
                             vehicleCountsByType.merge("bus", 1, Integer::sum);
-                        } else if (id.startsWith("moto")) {
+                        } else if (type.equals("moto")) {
                             vehicleCountsByType.merge("moto", 1, Integer::sum);
-                        } else if (id.startsWith("ambu")) {
+                        } else if (type.equals("emergency")) {
                             vehicleCountsByType.merge("emergency", 1, Integer::sum);
                         }
                     }
