@@ -28,6 +28,7 @@ public class StatisticsWindow extends Stage {
     
     private SimulationRunner runner;
     private TrafficManager trafficManager;
+    private VehicleFilterPanel vehicleFilter;
     
     // Chart 1: Average Speed
     private LineChart<Number, Number> speedChart;
@@ -45,9 +46,6 @@ public class StatisticsWindow extends Stage {
     private BarChart<String, Number> distanceTravelChart;
     private XYChart.Series<String, Number> distanceTravelSeries;
     
-    // Stress Level Display
-    private Label stressLevelLabel;
-    
     // Layout container for PDF export
     private VBox root;
     
@@ -57,9 +55,10 @@ public class StatisticsWindow extends Stage {
     /**
      * Creates a new statistics window.
      */
-    public StatisticsWindow(SimulationRunner runner, TrafficManager trafficManager) {
+    public StatisticsWindow(SimulationRunner runner, TrafficManager trafficManager, VehicleFilterPanel vehicleFilter) {
         this.runner = runner;
         this.trafficManager = trafficManager;
+        this.vehicleFilter = vehicleFilter;
         
         setTitle("Live Traffic Statistics");
         createLayout();
@@ -71,12 +70,11 @@ public class StatisticsWindow extends Stage {
         root.setPadding(new Insets(0));
         root.setStyle("-fx-background-color: white;");
         
-        // Create the charts and stress label
+        // Create the charts
         speedChart = createSpeedChart();
         vehicleCountChart = createVehicleCountChart();
         travelTimeChart = createTravelTimeChart();
         distanceTravelChart = createDistanceTravelChart();
-        stressLevelLabel = createStressLevelLabel();
         
         // Make charts grow to fill available space
         VBox.setVgrow(speedChart, javafx.scene.layout.Priority.ALWAYS);
@@ -84,7 +82,7 @@ public class StatisticsWindow extends Stage {
         VBox.setVgrow(travelTimeChart, javafx.scene.layout.Priority.ALWAYS);
         VBox.setVgrow(distanceTravelChart, javafx.scene.layout.Priority.ALWAYS);
         
-        root.getChildren().addAll(speedChart, vehicleCountChart, travelTimeChart, distanceTravelChart, stressLevelLabel);
+        root.getChildren().addAll(speedChart, vehicleCountChart, travelTimeChart, distanceTravelChart);
         
         // Export Button
         Button exportButton = new Button("📄 Export to PDF");
@@ -314,22 +312,6 @@ public class StatisticsWindow extends Stage {
         return distanceBarChart;
     }
     
-    private Label createStressLevelLabel() {
-        Label label = new Label("Current Stress Level: 0");
-        label.setStyle(
-            "-fx-font-size: 24px;" +
-            "-fx-font-weight: bold;" +
-            "-fx-font-family: 'Arial';" +
-            "-fx-text-fill: black;" +
-            "-fx-padding: 20px;" +
-            "-fx-background-color: white;"
-        );
-        label.setPrefHeight(80);
-        label.setAlignment(javafx.geometry.Pos.CENTER);
-        label.setMaxWidth(Double.MAX_VALUE);
-        return label;
-    }
-    
     private void startUpdates() {
         updateTimeline = new Timeline(new KeyFrame(Duration.millis(500), e -> updateCharts()));
         updateTimeline.setCycleCount(Timeline.INDEFINITE);
@@ -339,14 +321,14 @@ public class StatisticsWindow extends Stage {
     private void updateCharts() {
         double simTime = runner.getSimulationTime();
         Map<String, Double> speeds = runner.getVehicleSpeeds();
-        // Update Chart 1: Average Speed
+        // Update Chart 1: Average Speed (data already filtered by runner)
         double avgSpeed = 0;
         if (speeds.isEmpty()) {
             avgSpeed = 0.0;
         } else {
             double sum = 0.0;
             for (Double speed : speeds.values()) {
-                sum += speed.doubleValue();
+                sum += speed;
             }
             avgSpeed = sum / speeds.size();
         }
@@ -363,7 +345,7 @@ public class StatisticsWindow extends Stage {
         speedXAxis.setUpperBound(upperBound);
         speedXAxis.setTickUnit(30);
         
-        // Update Chart 2: Vehicle Counts
+        // Update Chart 2: Vehicle Counts (data already filtered by runner)
         Map<String, Integer> counts = runner.getVehicleCountsByType();
         int cars = counts.getOrDefault("car", 0);
         int trucks = counts.getOrDefault("truck", 0);
@@ -382,48 +364,6 @@ public class StatisticsWindow extends Stage {
         
         // Update Chart 4: Distance Travelled Distribution
         updateDistanceTravelDistribution();
-
-        // Update Stress Level
-        updateStressLevel();
-    }
-    private void updateStressLevel() {
-        int stressLevel = calculateCurrentStress();
-        stressLevelLabel.setText("Current Stress Level: " + stressLevel);   
-        // Change color based on stress level
-        String color;
-        if (stressLevel < 30) {
-            color = "#27AE60"; // Green
-        } else if (stressLevel < 60) {
-            color = "#F39C12"; // Orange
-        } else {
-            color = "#E74C3C"; // Red
-        }
-        stressLevelLabel.setStyle(
-            "-fx-font-size: 24px;" +
-            "-fx-font-weight: bold;" +
-            "-fx-font-family: 'Arial';" +
-            "-fx-text-fill: " + color + ";" +
-            "-fx-padding: 20px;" +
-            "-fx-background-color: white;"
-        );
-    }
-    private int calculateCurrentStress() {
-        Map<String, Double> speeds = runner.getVehicleSpeeds();
-        int totalVehicles = speeds.size();
-        double avgSpeed = speeds.isEmpty() ? 0.0 : 
-            speeds.values().stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
-        // Stress level: 0-100 based on vehicle count and speeds
-        // Base stress from vehicle count (0-50 points)
-        int vehicleStress = Math.min(50, (int)(totalVehicles * 1.25));
-        
-        // Speed stress (0-50 points) - lower speed = higher stress
-        int speedStress = 0;
-        if (avgSpeed < 8.0) {
-            speedStress = (int)((8.0 - avgSpeed) / 8.0 * 50);
-        }
-        
-        int stressLevel = Math.min(100, vehicleStress + speedStress);
-        return stressLevel;
     }
     
     private void updateTravelTimeDistribution() {
