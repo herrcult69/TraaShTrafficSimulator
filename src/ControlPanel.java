@@ -209,17 +209,31 @@ public class ControlPanel {
                 if (!filePath.toLowerCase().endsWith(".csv")) {
                     filePath += ".csv";
                 }
-                TrafficDataExporter.exportToCSV(filePath, runner, trafficManager);
+                TrafficDataExporter.exportToCSV(filePath, runner, trafficManager, vehicleFilterPanel);
                 System.out.println("Simulation data exported to: " + filePath);
+                
+                // Show success alert
+                javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
+                alert.setTitle("Success");
+                alert.setHeaderText(null);
+                alert.setContentText("CSV exported successfully to:\n" + file.getName());
+                alert.showAndWait();
             } catch (java.io.IOException ex) {
                 System.err.println("Error exporting CSV: " + ex.getMessage());
                 ex.printStackTrace();
+                
+                // Show error alert
+                javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.ERROR);
+                alert.setTitle("Export Failed");
+                alert.setHeaderText(null);
+                alert.setContentText("Failed to export CSV:\n" + ex.getMessage());
+                alert.showAndWait();
             }
         }
     }
     private void showStatisticsWindow() {
         if (statsWindow == null || !statsWindow.isShowing()) {
-            statsWindow = new StatisticsWindow(runner, trafficManager);
+            statsWindow = new StatisticsWindow(runner, trafficManager, vehicleFilterPanel);
             statsWindow.show();
         } else {
             statsWindow.toFront();  // Bring existing window to front
