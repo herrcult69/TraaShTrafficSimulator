@@ -26,33 +26,15 @@ import java.io.FileWriter;
  */
 public class TrafficDataExporter {
     /**
-     * Exports current simulation data to a CSV file.
+     * Exports current simulation data to a CSV file with optional filtering.
      * 
      * @param csvPath The file path where CSV should be saved
      * @param runner The simulation runner to get current simulation time
      * @param trafficManager The traffic manager containing vehicle data
+     * @param vehicleFilter Optional filter panel to apply vehicle type filtering (can be null)
      * @throws IOException if file writing fails
      */
-    public static class Snapshot {
-        public double simulationTime;
-        public int totalVehicles;
-        public int cars;
-        public int trucks;
-        public int buses;
-        public int motorcycles;
-        public int emergency;
-        public double avgSpeed;
-
-        public String toCSVRow() {
-            return String.format("%.2f, %d, %d, %d, %d, %d, %d, %.2f\n", simulationTime, totalVehicles, cars, trucks, buses, motorcycles, emergency, avgSpeed);
-        }
-        @Override
-        public String toString() {
-            return String.format("Time: %.2fs - Total: %d (Cars: %d, Trucks: %d, Buses: %d, Motorcycles: %d, Emergency: %d) - Avg Speed: %.2f", simulationTime, totalVehicles, cars, trucks, buses, motorcycles, emergency, avgSpeed);
-        }
-    }
-    
-    public static void exportToCSV(String csvPath, SimulationRunner runner, TrafficManager trafficManager) throws IOException {
+    public static void exportToCSV(String csvPath, SimulationRunner runner, TrafficManager trafficManager, VehicleFilterPanel vehicleFilter) throws IOException {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(csvPath))) {
             writer.write("simulation_time, total_vehicles, cars, trucks, buses, motorcycles, emergency, avg_speed\n ");
             //Get current simulation data 
@@ -69,35 +51,53 @@ public class TrafficDataExporter {
 
         int cars = 0, trucks = 0, buses = 0, motorcycles = 0, emergency = 0;
         double totalSpeed = 0;
+        int filteredVehicleCount = 0;
         
         for (java.util.Map.Entry<String, Double> entry : speeds.entrySet()) {
             String id = entry.getKey();
+            
+            // Determine vehicle type
+            String type = null;
+            if (id.startsWith("car")) type = "car";
+            else if (id.startsWith("truck")) type = "truck";
+            else if (id.startsWith("bus")) type = "bus";
+            else if (id.startsWith("moto")) type = "moto";
+            else if (id.startsWith("ambu")) type = "emergency";
+            
+            // Apply filter if provided
+            if (vehicleFilter != null && type != null && !vehicleFilter.isTypeVisible(type)) {
+                continue; // Skip this vehicle if filtered out
+            }
+            
+            // Count and accumulate speed for filtered vehicles
+            filteredVehicleCount++;
             totalSpeed += entry.getValue();
             
-            // Count by vehicle ID prefix (same as TrafficSimulatorApp)
-            if (id.startsWith("car")) cars++;
-            else if (id.startsWith("truck")) trucks++;
-            else if (id.startsWith("bus")) buses++;
-            else if (id.startsWith("moto")) motorcycles++;
-            else if (id.startsWith("ambu")) emergency++;
+            if (type != null) {
+                if (type.equals("car")) cars++;
+                else if (type.equals("truck")) trucks++;
+                else if (type.equals("bus")) buses++;
+                else if (type.equals("moto")) motorcycles++;
+                else if (type.equals("emergency")) emergency++;
+            }
         }
             double avgSpeed;
-            if (totalVehicles > 0) {
-                avgSpeed = totalSpeed / totalVehicles;
+            if (filteredVehicleCount > 0) {
+                avgSpeed = totalSpeed / filteredVehicleCount;
             }
             else {
                 avgSpeed = 0.0;
             }
             // Write data row
             writer.write(String.format("%.2f,%d,%d,%d,%d,%d,%d,%.2f\n",
-                simTime, totalVehicles, cars, trucks, buses, motorcycles, emergency, avgSpeed));
+                simTime, filteredVehicleCount, cars, trucks, buses, motorcycles, emergency, avgSpeed));
             
             writer.flush();
         }
     }
     
     /**
-     * Exports a BufferedImage to a PDF file.
+     * Exports a BufferedImage to a PDF file with a title.
      * The image is scaled to fit A4 portrait page while maintaining aspect ratio.
      * 
      * @param image The BufferedImage to export (from JavaFX snapshot)
@@ -113,21 +113,30 @@ public class TrafficDataExporter {
             // Get page dimensions
             float pageWidth = page.getMediaBox().getWidth();
             float pageHeight = page.getMediaBox().getHeight();
+            float margin = 50;
+            
+            // Title settings
+            float titleHeight = 60;
+            String titleText = "Statistics Report";
             
             // Calculate scaling to fit image on page while maintaining aspect ratio
+            // Reserve space for title at the top
+            float availableHeight = pageHeight - titleHeight - (margin * 2);
+            float availableWidth = pageWidth - (margin * 2);
+            
             float imageWidth = image.getWidth();
             float imageHeight = image.getHeight();
             
-            float scaleX = pageWidth / imageWidth;
-            float scaleY = pageHeight / imageHeight;
-            float scale = Math.min(scaleX, scaleY) * 0.95f; // 95% to leave small margin
+            float scaleX = availableWidth / imageWidth;
+            float scaleY = availableHeight / imageHeight;
+            float scale = Math.min(scaleX, scaleY);
             
             float scaledWidth = imageWidth * scale;
             float scaledHeight = imageHeight * scale;
             
-            // Center the image on the page
-            float x = (pageWidth - scaledWidth) / 2;
-            float y = (pageHeight - scaledHeight) / 2;
+            // Center the image horizontally, place below title
+            float imageX = (pageWidth - scaledWidth) / 2;
+            float imageY = pageHeight - titleHeight - margin - scaledHeight;
             
             // Create image object and draw it
             PDImageXObject pdImage = PDImageXObject.createFromByteArray(
@@ -137,7 +146,15 @@ public class TrafficDataExporter {
             );
             
             try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
-                contentStream.drawImage(pdImage, x, y, scaledWidth, scaledHeight);
+                // Draw title
+                contentStream.beginText();
+                contentStream.setFont(org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA_BOLD, 24);
+                contentStream.newLineAtOffset(margin, pageHeight - margin - 20);
+                contentStream.showText(titleText);
+                contentStream.endText();
+                
+                // Draw the image
+                contentStream.drawImage(pdImage, imageX, imageY, scaledWidth, scaledHeight);
             }
             
             // Save the document
