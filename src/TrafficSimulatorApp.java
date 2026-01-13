@@ -96,6 +96,9 @@ public class TrafficSimulatorApp extends Application {
             // Create control panel with all UI components
             controlPanel = new ControlPanel(runner, viewManager, dashboard, scene);
 
+            // Set vehicle filter on runner after controlPanel is created
+            runner.setVehicleFilter(controlPanel.getVehicleFilterPanel());
+
             // Set up route selection callbacks
             controlPanel.setRouteSelectionCallbacks(
                     this::onStartRouteSelection,
@@ -535,9 +538,10 @@ public class TrafficSimulatorApp extends Application {
         var speeds = runner.getVehicleSpeeds();
         var counts = runner.getVehicleCountsByType();
 
+        // Data is already filtered by SimulationRunner
         double totalSpeed = speeds.values().stream().mapToDouble(Double::doubleValue).sum();
-
         int total = positions.size();
+        
         data.activeVehicles = total;
         data.avgSpeed = total > 0 ? totalSpeed / total : 0.0;
         data.carCount = counts.getOrDefault("car", 0);
