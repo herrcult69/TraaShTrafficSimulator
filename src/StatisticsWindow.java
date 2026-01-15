@@ -1,7 +1,6 @@
 import javafx.scene.Scene;
 import javafx.scene.chart.*;
 import javafx.scene.control.Button;
-import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -13,12 +12,10 @@ import javafx.animation.KeyFrame;
 import javafx.util.Duration;
 import java.util.Map;
 import java.util.List;
-import javafx.scene.control.Alert;
 import javafx.scene.image.WritableImage;
 import javafx.scene.SnapshotParameters;
 import javafx.embed.swing.SwingFXUtils;
-import javafx.stage.FileChooser;
-import java.io.File;
+
 
 /**
  * Statistics window displaying real-time traffic analysis charts.
@@ -28,7 +25,6 @@ public class StatisticsWindow extends Stage {
     
     private SimulationRunner runner;
     private TrafficManager trafficManager;
-    private VehicleFilterPanel vehicleFilter;
     
     // Chart 1: Average Speed
     private LineChart<Number, Number> speedChart;
@@ -54,11 +50,11 @@ public class StatisticsWindow extends Stage {
     
     /**
      * Creates a new statistics window.
+     * Data is already filtered by SimulationRunner based on VehicleFilterPanel settings.
      */
-    public StatisticsWindow(SimulationRunner runner, TrafficManager trafficManager, VehicleFilterPanel vehicleFilter) {
+    public StatisticsWindow(SimulationRunner runner, TrafficManager trafficManager) {
         this.runner = runner;
         this.trafficManager = trafficManager;
-        this.vehicleFilter = vehicleFilter;
         
         setTitle("Live Traffic Statistics");
         createLayout();
@@ -85,7 +81,7 @@ public class StatisticsWindow extends Stage {
         root.getChildren().addAll(speedChart, vehicleCountChart, travelTimeChart, distanceTravelChart);
         
         // Export Button
-        Button exportButton = new Button("📄 Export to PDF");
+        Button exportButton = new Button("Export to PDF");
         exportButton.setStyle(
             "-fx-font-size: 14px;" +
             "-fx-padding: 10px 20px;" +
@@ -360,102 +356,67 @@ public class StatisticsWindow extends Stage {
         vehicleCountSeries.getData().get(4).setYValue(emergency);
         
         // Update Chart 3: Travel Time Distribution
-        updateTravelTimeDistribution();
-        
-        // Update Chart 4: Distance Travelled Distribution
-        updateDistanceTravelDistribution();
-    }
-    
-    private void updateTravelTimeDistribution() {
         List<Double> travelTimes = trafficManager.getCompletedTravelTimes();
         
         // Count vehicles in each time bin
-        int[] bins = new int[6]; // 0-30, 30-60, 60-90, 90-120, 120-150, 150+
+        int[] timeBins = new int[6]; // 0-30, 30-60, 60-90, 90-120, 120-150, 150+
         
         for (Double time : travelTimes) {
             if (time < 30) {
-                bins[0]++;
+                timeBins[0]++;
             } else if (time < 60) {
-                bins[1]++;
+                timeBins[1]++;
             } else if (time < 90) {
-                bins[2]++;
+                timeBins[2]++;
             } else if (time < 120) {
-                bins[3]++;
+                timeBins[3]++;
             } else if (time < 150) {
-                bins[4]++;
+                timeBins[4]++;
             } else {
-                bins[5]++;
+                timeBins[5]++;
             }
         }
         
         // Update chart data
-        travelTimeSeries.getData().get(0).setYValue(bins[0]);
-        travelTimeSeries.getData().get(1).setYValue(bins[1]);
-        travelTimeSeries.getData().get(2).setYValue(bins[2]);
-        travelTimeSeries.getData().get(3).setYValue(bins[3]);
-        travelTimeSeries.getData().get(4).setYValue(bins[4]);
-        travelTimeSeries.getData().get(5).setYValue(bins[5]);
-    }
-    
-    private void updateDistanceTravelDistribution() {
+        travelTimeSeries.getData().get(0).setYValue(timeBins[0]);
+        travelTimeSeries.getData().get(1).setYValue(timeBins[1]);
+        travelTimeSeries.getData().get(2).setYValue(timeBins[2]);
+        travelTimeSeries.getData().get(3).setYValue(timeBins[3]);
+        travelTimeSeries.getData().get(4).setYValue(timeBins[4]);
+        travelTimeSeries.getData().get(5).setYValue(timeBins[5]);
+        
+        // Update Chart 4: Distance Travelled Distribution
         List<Double> distances = trafficManager.getCompletedTravelDistances();
         
         // Count vehicles in each distance bin (0-200, 200-400, 400-600, 600-800, 800-1000, 1000+)
-        int[] bins = new int[6];
+        int[] distanceBins = new int[6];
         
         for (Double distance : distances) {
             if (distance < 200) {
-                bins[0]++;
+                distanceBins[0]++;
             } else if (distance < 400) {
-                bins[1]++;
+                distanceBins[1]++;
             } else if (distance < 600) {
-                bins[2]++;
+                distanceBins[2]++;
             } else if (distance < 800) {
-                bins[3]++;
+                distanceBins[3]++;
             } else if (distance < 1000) {
-                bins[4]++;
+                distanceBins[4]++;
             } else {
-                bins[5]++;
+                distanceBins[5]++;
             }
         }
-        
         // Update chart data
-        distanceTravelSeries.getData().get(0).setYValue(bins[0]);
-        distanceTravelSeries.getData().get(1).setYValue(bins[1]);
-        distanceTravelSeries.getData().get(2).setYValue(bins[2]);
-        distanceTravelSeries.getData().get(3).setYValue(bins[3]);
-        distanceTravelSeries.getData().get(4).setYValue(bins[4]);
-        distanceTravelSeries.getData().get(5).setYValue(bins[5]);
+        distanceTravelSeries.getData().get(0).setYValue(distanceBins[0]);
+        distanceTravelSeries.getData().get(1).setYValue(distanceBins[1]);
+        distanceTravelSeries.getData().get(2).setYValue(distanceBins[2]);
+        distanceTravelSeries.getData().get(3).setYValue(distanceBins[3]);
+        distanceTravelSeries.getData().get(4).setYValue(distanceBins[4]);
+        distanceTravelSeries.getData().get(5).setYValue(distanceBins[5]);
     }
-    
     private void exportToPDF() {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Save Statistics as PDF");
-        fileChooser.getExtensionFilters().add(
-            new FileChooser.ExtensionFilter("PDF Files", "*.pdf")
-        );
-        fileChooser.setInitialFileName("traffic_statistics.pdf");
-        
-        File file = fileChooser.showSaveDialog(this);
-        
-        if (file != null) {
-            try {
-                WritableImage snapshot = root.snapshot(new SnapshotParameters(), null);
-                java.awt.image.BufferedImage bufferedImage = SwingFXUtils.fromFXImage(snapshot, null);
-                TrafficDataExporter.exportPDF(bufferedImage, file.getAbsolutePath());
-                
-                Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                alert.setTitle("Success");
-                alert.setHeaderText(null);
-                alert.setContentText("PDF exported successfully!");
-                alert.showAndWait();
-            } catch (Exception e) {
-                Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setTitle("Export Failed");
-                alert.setHeaderText(null);
-                alert.setContentText("Error: " + e.getMessage());
-                alert.showAndWait();
-            }
-        }
+        WritableImage snapshot = root.snapshot(new SnapshotParameters(), null);
+        java.awt.image.BufferedImage bufferedImage = SwingFXUtils.fromFXImage(snapshot, null);
+        TrafficDataExporter.exportToPDF(bufferedImage, this);
     }
 }
