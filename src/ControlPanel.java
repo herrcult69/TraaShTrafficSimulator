@@ -209,7 +209,7 @@ public class ControlPanel {
                 if (!filePath.toLowerCase().endsWith(".csv")) {
                     filePath += ".csv";
                 }
-                TrafficDataExporter.exportToCSV(filePath, runner, trafficManager, vehicleFilterPanel);
+                TrafficDataExporter.exportToCSV(filePath, runner);
                 System.out.println("Simulation data exported to: " + filePath);
                 
                 // Show success alert
@@ -233,7 +233,7 @@ public class ControlPanel {
     }
     private void showStatisticsWindow() {
         if (statsWindow == null || !statsWindow.isShowing()) {
-            statsWindow = new StatisticsWindow(runner, trafficManager, vehicleFilterPanel);
+            statsWindow = new StatisticsWindow(runner, trafficManager);
             statsWindow.show();
         } else {
             statsWindow.toFront();  // Bring existing window to front
