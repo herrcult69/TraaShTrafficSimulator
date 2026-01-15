@@ -8,6 +8,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
+import javafx.scene.control.Alert;
 
 
 /**
@@ -26,15 +29,14 @@ import java.io.FileWriter;
  */
 public class TrafficDataExporter {
     /**
-     * Exports current simulation data to a CSV file with optional filtering.
+     * Exports current simulation data to a CSV file.
+     * Data is already filtered by SimulationRunner based on VehicleFilterPanel settings.
      * 
      * @param csvPath The file path where CSV should be saved
      * @param runner The simulation runner to get current simulation time
-     * @param trafficManager The traffic manager containing vehicle data
-     * @param vehicleFilter Optional filter panel to apply vehicle type filtering (can be null)
      * @throws IOException if file writing fails
      */
-    public static void exportToCSV(String csvPath, SimulationRunner runner, TrafficManager trafficManager, VehicleFilterPanel vehicleFilter) throws IOException {
+    public static void exportToCSV(String csvPath, SimulationRunner runner) throws IOException {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(csvPath))) {
             writer.write("simulation_time, total_vehicles, cars, trucks, buses, motorcycles, emergency, avg_speed\n ");
             //Get current simulation data 
@@ -46,51 +48,24 @@ public class TrafficDataExporter {
 
             //Get vehicle speeds from runner
 
+            // Get vehicle data (already filtered by SimulationRunner)
             java.util.Map<String, Double> speeds = runner.getVehicleSpeeds();
-        int totalVehicles = speeds.size();
-
-        int cars = 0, trucks = 0, buses = 0, motorcycles = 0, emergency = 0;
-        double totalSpeed = 0;
-        int filteredVehicleCount = 0;
-        
-        for (java.util.Map.Entry<String, Double> entry : speeds.entrySet()) {
-            String id = entry.getKey();
+            java.util.Map<String, Integer> counts = runner.getVehicleCountsByType();
             
-            // Determine vehicle type
-            String type = null;
-            if (id.startsWith("car")) type = "car";
-            else if (id.startsWith("truck")) type = "truck";
-            else if (id.startsWith("bus")) type = "bus";
-            else if (id.startsWith("moto")) type = "moto";
-            else if (id.startsWith("ambu")) type = "emergency";
+            int totalVehicles = speeds.size();
+            int cars = counts.getOrDefault("car", 0);
+            int trucks = counts.getOrDefault("truck", 0);
+            int buses = counts.getOrDefault("bus", 0);
+            int motorcycles = counts.getOrDefault("moto", 0);
+            int emergency = counts.getOrDefault("emergency", 0);
             
-            // Apply filter if provided
-            if (vehicleFilter != null && type != null && !vehicleFilter.isTypeVisible(type)) {
-                continue; // Skip this vehicle if filtered out
-            }
+            // Calculate average speed
+            double totalSpeed = speeds.values().stream().mapToDouble(Double::doubleValue).sum();
+            double avgSpeed = totalVehicles > 0 ? totalSpeed / totalVehicles : 0.0;
             
-            // Count and accumulate speed for filtered vehicles
-            filteredVehicleCount++;
-            totalSpeed += entry.getValue();
-            
-            if (type != null) {
-                if (type.equals("car")) cars++;
-                else if (type.equals("truck")) trucks++;
-                else if (type.equals("bus")) buses++;
-                else if (type.equals("moto")) motorcycles++;
-                else if (type.equals("emergency")) emergency++;
-            }
-        }
-            double avgSpeed;
-            if (filteredVehicleCount > 0) {
-                avgSpeed = totalSpeed / filteredVehicleCount;
-            }
-            else {
-                avgSpeed = 0.0;
-            }
             // Write data row
             writer.write(String.format("%.2f,%d,%d,%d,%d,%d,%d,%.2f\n",
-                simTime, filteredVehicleCount, cars, trucks, buses, motorcycles, emergency, avgSpeed));
+                simTime, totalVehicles, cars, trucks, buses, motorcycles, emergency, avgSpeed));
             
             writer.flush();
         }
@@ -159,6 +134,42 @@ public class TrafficDataExporter {
             
             // Save the document
             document.save(new File(filePath));
+        }
+    }
+    
+    /**
+     * Exports statistics window snapshot to PDF with file chooser dialog.
+     * Shows success or error alert after export attempt.
+     * 
+     * @param bufferedImage The BufferedImage from the statistics window snapshot
+     * @param owner The parent stage for the file chooser dialog
+     */
+    public static void exportToPDF(BufferedImage bufferedImage, Stage owner) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Save Statistics as PDF");
+        fileChooser.getExtensionFilters().add(
+            new FileChooser.ExtensionFilter("PDF Files", "*.pdf")
+        );
+        fileChooser.setInitialFileName("traffic_statistics.pdf");
+        
+        File file = fileChooser.showSaveDialog(owner);
+        
+        if (file != null) {
+            try {
+                exportPDF(bufferedImage, file.getAbsolutePath());
+                
+                Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                alert.setTitle("Success");
+                alert.setHeaderText(null);
+                alert.setContentText("PDF exported successfully!");
+                alert.showAndWait();
+            } catch (Exception e) {
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("Export Failed");
+                alert.setHeaderText(null);
+                alert.setContentText("Error: " + e.getMessage());
+                alert.showAndWait();
+            }
         }
     }
     
