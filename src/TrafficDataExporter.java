@@ -47,7 +47,7 @@ public class TrafficDataExporter {
             //Get vehicle speeds from runner
 
             java.util.Map<String, Double> speeds = runner.getVehicleSpeeds();
-        int totalVehicles = speeds.size();
+        // int totalVehicles = speeds.size();
 
         int cars = 0, trucks = 0, buses = 0, motorcycles = 0, emergency = 0;
         double totalSpeed = 0;

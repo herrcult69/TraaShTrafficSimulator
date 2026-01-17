@@ -29,6 +29,9 @@ public class UIStyles {
 
     /** Accent button background color on hover */
     public static final String BG_BUTTON_ACCENT_HOVER = "#778DA9";
+    
+    /** Accent color for highlights and interactive elements */
+    public static final String ACCENT_COLOR = "#415A77";
 
     /** Primary text color (white) */
     public static final String TEXT_PRIMARY = "white";

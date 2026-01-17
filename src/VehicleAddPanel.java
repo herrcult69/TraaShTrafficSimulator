@@ -2,6 +2,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Separator;
@@ -40,6 +41,7 @@ public class VehicleAddPanel extends VBox {
     private TextField vehicleBatchField;
     private TextField vehicleSpeedField;
     private TextField vehicleColorField;
+    private ColorPicker vehicleColorPicker;
     private ListView<String> routeListView;
     private Label statusLabel;
     private Label instructionLabel;
@@ -170,7 +172,7 @@ public class VehicleAddPanel extends VBox {
         Label batchLabel = new Label("Batch count:");
         batchLabel.setStyle(UIStyles.LABEL_STYLE);
         vehicleBatchField = new TextField("1");
-        vehicleBatchField.setPrefWidth(80);
+        vehicleBatchField.setPrefWidth(120);
         vehicleBatchField.setStyle(UIStyles.INPUT_FIELD_STYLE + " -fx-font-family: monospace;");
         vehicleBatchField.textProperty().addListener((obs, oldVal, newVal) -> {
             if (!newVal.matches("\\d*")) {
@@ -181,7 +183,7 @@ public class VehicleAddPanel extends VBox {
         Label speedLabel = new Label("Depart speed (m/s):");
         speedLabel.setStyle(UIStyles.LABEL_STYLE);
         vehicleSpeedField = new TextField("0");
-        vehicleSpeedField.setPrefWidth(80);
+        vehicleSpeedField.setPrefWidth(120);
         vehicleSpeedField.setStyle(UIStyles.INPUT_FIELD_STYLE + " -fx-font-family: monospace;");
         vehicleSpeedField.textProperty().addListener((obs, oldVal, newVal) -> {
             if (!newVal.matches("[0-9]*([.]?[0-9]*)?")) {
@@ -189,15 +191,35 @@ public class VehicleAddPanel extends VBox {
             }
         });
 
-        HBox paramsRow = new HBox(10);
-        paramsRow.setAlignment(Pos.CENTER_LEFT);
-        paramsRow.getChildren().addAll(batchLabel, vehicleBatchField, speedLabel, vehicleSpeedField);
+        HBox batchRow = new HBox(10);
+        batchRow.setAlignment(Pos.CENTER_LEFT);
+        batchRow.getChildren().addAll(batchLabel, vehicleBatchField);
+
+        HBox speedRow = new HBox(10);
+        speedRow.setAlignment(Pos.CENTER_LEFT);
+        speedRow.getChildren().addAll(speedLabel, vehicleSpeedField);
 
         Label colorLabel = new Label("Color (hex #RRGGBB, optional):");
         colorLabel.setStyle(UIStyles.LABEL_STYLE);
         vehicleColorField = new TextField("");
-        vehicleColorField.setPrefWidth(250);
+        vehicleColorField.setPrefWidth(160);
         vehicleColorField.setStyle(UIStyles.INPUT_FIELD_STYLE + " -fx-font-family: monospace;");
+
+        vehicleColorPicker = new ColorPicker();
+        vehicleColorPicker.setStyle("-fx-background-color: " + UIStyles.BG_SECONDARY + ";");
+        vehicleColorPicker.setOnAction(e -> {
+            Color c = vehicleColorPicker.getValue();
+            if (c != null) {
+                int r = (int) Math.round(c.getRed() * 255);
+                int g = (int) Math.round(c.getGreen() * 255);
+                int b = (int) Math.round(c.getBlue() * 255);
+                vehicleColorField.setText(String.format("#%02X%02X%02X", r, g, b));
+            }
+        });
+
+        HBox colorRow = new HBox(10);
+        colorRow.setAlignment(Pos.CENTER_LEFT);
+        colorRow.getChildren().addAll(vehicleColorField, vehicleColorPicker);
 
         // Route Section
         Label routeLabel = new Label("Route Selection:");
@@ -331,8 +353,9 @@ public class VehicleAddPanel extends VBox {
                 backBtn, titleLabel, new Separator(),
                 typeLabel, vehicleTypeCombo,
                 idLabel, vehicleIdField,
-                paramsRow,
-                colorLabel, vehicleColorField,
+                batchRow,
+                speedRow,
+                colorLabel, colorRow,
                 new Separator(),
                 routeLabel, instructionLabel,
                 startEdgeLabel, endEdgeLabel,

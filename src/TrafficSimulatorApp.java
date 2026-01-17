@@ -4,9 +4,10 @@ import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
-import javafx.scene.control.ScrollPane;
+// import javafx.scene.control.ScrollPane;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -105,17 +106,19 @@ public class TrafficSimulatorApp extends Application {
                     this::onRouteSelectionModeChange,
                     this::onVehicleAdded);
 
-            ScrollPane scrollPane = controlPanel.getScrollPane();
+            // Use the content wrapper instead of scroll pane for proper expand/minimize
+            VBox controlPanelWrapper = controlPanel.getContentWrapper();
 
             BorderPane root = new BorderPane();
             root.setCenter(canvas);
-            root.setRight(scrollPane);
+            root.setRight(controlPanelWrapper);
 
             Scene mainScene = new Scene(root, 1400, 700);
             stage.setScene(mainScene);
             stage.setTitle("Traffic Simulator - OOP Architecture");
 
-            setupCanvas(root, stage);
+            // Pass the control panel width property for dynamic canvas sizing
+            setupCanvas(root, stage, controlPanel);
             setupEventHandlers();
 
             logger.info("Application initialization complete");
@@ -398,17 +401,25 @@ public class TrafficSimulatorApp extends Application {
 
     /**
      * Configures canvas sizing and starts the rendering loop.
+     * Binds canvas width to root width minus dynamic control panel width.
      * 
      * @param root Root layout container
      * @param stage Primary stage
+     * @param controlPanelRef Control panel reference for width binding
      */
-    private void setupCanvas(BorderPane root, Stage stage) {
-        canvas.widthProperty().bind(root.widthProperty().subtract(300));
+    private void setupCanvas(BorderPane root, Stage stage, ControlPanel controlPanelRef) {
+        // Bind canvas width to root width minus the dynamic control panel width
+        canvas.widthProperty().bind(root.widthProperty().subtract(controlPanelRef.panelWidthProperty()));
         canvas.heightProperty().bind(root.heightProperty());
 
+        // Add listener to reset view when canvas size changes significantly
         canvas.widthProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal.doubleValue() > 0 && canvas.getHeight() > 0)
-                viewManager.resetView();
+            if (newVal.doubleValue() > 0 && canvas.getHeight() > 0) {
+                // Only reset view if the change is significant (to avoid constant resets during animation)
+                if (Math.abs(newVal.doubleValue() - oldVal.doubleValue()) > 50) {
+                    viewManager.resetView();
+                }
+            }
         });
         canvas.heightProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal.doubleValue() > 0 && canvas.getWidth() > 0) {
