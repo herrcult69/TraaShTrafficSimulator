@@ -57,6 +57,9 @@ public class TrafficLightControlPanel {
     private TextField phaseDurationField;
     private Button editTimingBtn;
 
+    // Phase switching buttons
+    private Button nextPhaseBtn;
+
     // ========== Performance Metrics Tracking ==========
     private MetricsSnapshot beforeSnapshot;
     private MetricsSnapshot afterSnapshot;
@@ -273,6 +276,21 @@ public class TrafficLightControlPanel {
         // Update phase display when panel opens
         updatePhaseDisplay();
 
+        // Phase switching section
+        Label phaseSwitchLabel = new Label("Manual Phase Switching:");
+        phaseSwitchLabel.setStyle(UIStyles.LABEL_STYLE + " -fx-font-weight: bold;");
+
+        Label phaseSwitchInfo = new Label("Jump to next phase immediately");
+        phaseSwitchInfo.setStyle("-fx-text-fill: #FFA726; -fx-font-size: 10;");
+        phaseSwitchInfo.setWrapText(true);
+
+        nextPhaseBtn = new Button("Next Phase");
+        nextPhaseBtn.setPrefWidth(BUTTON_WIDTH);
+        nextPhaseBtn.setStyle(TEAL_STYLE);
+        nextPhaseBtn.setOnMouseEntered(e -> nextPhaseBtn.setStyle(TEAL_HOVER));
+        nextPhaseBtn.setOnMouseExited(e -> nextPhaseBtn.setStyle(TEAL_STYLE));
+        nextPhaseBtn.setOnAction(e -> jumpToNextPhase());
+
         // Add all elements
         panel.getChildren().addAll(
                 backBtn,
@@ -289,6 +307,10 @@ public class TrafficLightControlPanel {
                 new javafx.scene.control.Separator(),
                 createPhaseTimingButton(),
                 createMetricsButton(),
+                new javafx.scene.control.Separator(),
+                phaseSwitchLabel,
+                phaseSwitchInfo,
+                nextPhaseBtn,
                 new javafx.scene.control.Separator(),
                 quickControlLabel,
                 infoText,
@@ -822,7 +844,7 @@ public class TrafficLightControlPanel {
      * @param message The success message to display
      */
     private void showSuccess(String message) {
-        showAlert(javafx.scene.control.Alert.AlertType.INFORMATION, "Success", message, true);
+        showAlert(javafx.scene.control.Alert.AlertType.INFORMATION, "Success", message, false);
     }
 
     /**
@@ -1210,4 +1232,38 @@ public class TrafficLightControlPanel {
             this.timestamp = timestamp;
         }
     }
+
+    /**
+     * Advances to the next phase by setting the current phase duration to 0.
+     * This allows SUMO to naturally progress to the next phase in its program.
+     */
+    private void jumpToNextPhase() {
+        try {
+            TraaSAdapter adapter = runner.getAdapter();
+            if (adapter == null) {
+                showError("SUMO not connected");
+                return;
+            }
+
+            String junctionId = selectedLight.getJunctionId();
+            int currentPhase = adapter.getCurrentPhase(junctionId);
+
+            // Set current phase duration to near-zero to immediately advance to next phase
+            // SUMO will automatically progress to the next phase in its program
+            adapter.setPhaseDuration(junctionId, 0.1);
+
+            logger.info(String.format("Jumping to next phase - Junction: %s, Current Phase: %d",
+                    junctionId, currentPhase));
+
+            // Update display
+            updatePhaseDisplay();
+            
+            showInfo("Jumping to next phase...");
+
+        } catch (Exception e) {
+            showError("Failed to switch phase: " + e.getMessage());
+            logger.warning("Phase switching error: " + e.getMessage());
+        }
+    }
+
 }
