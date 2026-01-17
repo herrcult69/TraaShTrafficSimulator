@@ -152,8 +152,22 @@ public class TrafficSimulatorApp extends Application {
     private void draw() {
         GraphicsContext g = canvas.getGraphicsContext2D();
 
+        // Clear entire canvas first (before any rotation)
         g.setFill(Color.rgb(26, 36, 47));
         g.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
+
+        // Save graphics state before applying rotation
+        g.save();
+        
+        // Apply rotation around canvas center
+        double rotationDegrees = viewManager.getRotationDegrees();
+        if (rotationDegrees != 0.0) {
+            double centerX = canvas.getWidth() / 2.0;
+            double centerY = canvas.getHeight() / 2.0;
+            g.translate(centerX, centerY);
+            g.rotate(rotationDegrees);
+            g.translate(-centerX, -centerY);
+        }
 
         scene.updateVehicles(runner.getVehiclePositions(), runner.getSimulationTime());
         scene.updateVehicleSpeeds(runner.getVehicleSpeeds());
@@ -162,19 +176,28 @@ public class TrafficSimulatorApp extends Application {
         scene.render(g, viewManager.getTransform(), controlPanel.getVehicleFilterPanel());
         scene.renderHighlight(g, viewManager.getTransform(), selectedElement, hoveredElement, controlPanel.getVehicleFilterPanel());
 
-        // Render route selection highlights
+        // Render route selection highlights (still under rotation)
         if (routeSelectionMode) {
             renderRouteSelection(g);
         }
+        
+        // Restore graphics state to remove rotation for UI overlays
+        g.restore();
 
-        // Draw info box
+        // Draw info box (not rotated - stays fixed on screen)
         if (selectedElement != null && !routeSelectionMode) {
             drawInfoBox(g, selectedElement);
         }
 
-        // Draw route selection instructions when in route mode
+        // Draw route selection instructions when in route mode (not rotated)
         if (routeSelectionMode) {
             drawRouteSelectionOverlay(g);
+        }
+        
+        // Draw rotation indicator if rotated
+        double rotationAngle = viewManager.getRotationDegrees();
+        if (rotationAngle != 0.0) {
+            drawRotationIndicator(g, rotationAngle);
         }
 
         // Update dashboard and congestion monitor at reduced frequency
@@ -253,6 +276,53 @@ public class TrafficSimulatorApp extends Application {
             g.fillText("ID: " + j.getId(), x + 10, y + 40);
             g.fillText("Type: " + j.getType(), x + 10, y + 60);
         }
+    }
+
+    /**
+     * Draws a rotation indicator showing the current map rotation angle.
+     * Displays a compass-like indicator in the top-right corner.
+     * 
+     * @param g Graphics context
+     * @param angleDegrees Current rotation angle in degrees
+     */
+    private void drawRotationIndicator(GraphicsContext g, double angleDegrees) {
+        double x = canvas.getWidth() - 80;
+        double y = 50;
+        double radius = 25;
+        
+        // Background circle
+        g.setFill(Color.rgb(0, 0, 0, 0.6));
+        g.fillOval(x - radius - 5, y - radius - 5, (radius + 5) * 2, (radius + 5) * 2);
+        g.setStroke(Color.WHITE);
+        g.setLineWidth(1.5);
+        g.strokeOval(x - radius - 5, y - radius - 5, (radius + 5) * 2, (radius + 5) * 2);
+        
+        // Draw compass directions
+        g.setFill(Color.WHITE);
+        g.fillText("N", x - 4, y - radius + 8);
+        
+        // Draw north arrow (rotated by current angle)
+        g.save();
+        g.translate(x, y);
+        g.rotate(-angleDegrees); // Negative because we want north to appear to rotate
+        
+        // Arrow pointing up (north)
+        g.setStroke(Color.rgb(255, 100, 100));
+        g.setLineWidth(2);
+        g.strokeLine(0, 0, 0, -radius + 10);
+        g.setFill(Color.rgb(255, 100, 100));
+        g.fillPolygon(new double[]{0, -5, 5}, new double[]{-radius + 5, -radius + 15, -radius + 15}, 3);
+        
+        // Arrow pointing down (south)
+        g.setStroke(Color.WHITE);
+        g.strokeLine(0, 0, 0, radius - 10);
+        
+        g.restore();
+        
+        // Display angle text
+        g.setFill(Color.WHITE);
+        String angleText = String.format("%.0f°", angleDegrees);
+        g.fillText(angleText, x - 10, y + radius + 18);
     }
 
     /** Updates dashboard with current simulation metrics. */
@@ -442,24 +512,62 @@ public class TrafficSimulatorApp extends Application {
         }.start();
     }
 
+    /**
+     * Transforms screen coordinates to account for map rotation.
+     * This is needed because the map is rotated in the GraphicsContext,
+     * but mouse events still use unrotated screen coordinates.
+     * 
+     * @param screenX The X coordinate in screen space
+     * @param screenY The Y coordinate in screen space
+     * @return Array containing [transformedX, transformedY]
+     */
+    private double[] transformForRotation(double screenX, double screenY) {
+        double rotationRadians = Math.toRadians(viewManager.getRotationDegrees());
+        if (rotationRadians == 0.0) {
+            return new double[] { screenX, screenY };
+        }
+        
+        double centerX = canvas.getWidth() / 2.0;
+        double centerY = canvas.getHeight() / 2.0;
+        
+        // Translate to center, apply inverse rotation, translate back
+        double translatedX = screenX - centerX;
+        double translatedY = screenY - centerY;
+        
+        double cos = Math.cos(-rotationRadians);
+        double sin = Math.sin(-rotationRadians);
+        
+        double rotatedX = translatedX * cos - translatedY * sin;
+        double rotatedY = translatedX * sin + translatedY * cos;
+        
+        return new double[] { rotatedX + centerX, rotatedY + centerY };
+    }
+
     /** Configures mouse and scroll interactions. */
     private void setupEventHandlers() {
-        canvas.setOnScroll(e -> viewManager.zoomToPoint(e.getDeltaY() > 0 ? 1.1 : 0.9, e.getX(), e.getY()));
+        canvas.setOnScroll(e -> {
+            double[] transformed = transformForRotation(e.getX(), e.getY());
+            viewManager.zoomToPoint(e.getDeltaY() > 0 ? 1.1 : 0.9, transformed[0], transformed[1]);
+        });
         canvas.setOnMousePressed(e -> viewManager.startPan(e.getX(), e.getY()));
         canvas.setOnMouseDragged(e -> viewManager.updatePan(e.getX(), e.getY()));
         canvas.setOnMouseMoved(e -> {
+            double[] transformed = transformForRotation(e.getX(), e.getY());
             if (routeSelectionMode) {
-                hoveredElement = scene.getEdgeAt(e.getX(), e.getY(), viewManager.getTransform());
+                hoveredElement = scene.getEdgeAt(transformed[0], transformed[1], viewManager.getTransform());
                 hoveredEdge = (Edge) hoveredElement;
             } else if (e.isControlDown()) {
                 // If Ctrl is pressed, hover over edges instead of lanes
-                hoveredElement = scene.getEdgeAt(e.getX(), e.getY(), viewManager.getTransform());
+                hoveredElement = scene.getEdgeAt(transformed[0], transformed[1], viewManager.getTransform());
             } else {
                 // Normal mode: hover over individual elements (vehicles, lanes, etc.)
-                hoveredElement = scene.getElementAt(e.getX(), e.getY(), viewManager.getTransform());
+                hoveredElement = scene.getElementAt(transformed[0], transformed[1], viewManager.getTransform());
             }
         });
-        canvas.setOnMouseClicked(e -> handleCanvasClick(e.getX(), e.getY(), e.isControlDown()));
+        canvas.setOnMouseClicked(e -> {
+            double[] transformed = transformForRotation(e.getX(), e.getY());
+            handleCanvasClick(transformed[0], transformed[1], e.isControlDown());
+        });
     }
 
     /**

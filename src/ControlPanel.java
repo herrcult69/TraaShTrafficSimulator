@@ -214,8 +214,10 @@ public class ControlPanel {
         Button zoomInBtn = createIconButton("+", "Zoom In", () -> viewManager.zoomToCenter(1.2));
         Button zoomOutBtn = createIconButton("-", "Zoom Out", () -> viewManager.zoomToCenter(0.8));
         Button resetBtn = createIconButton("⟲", "Reset View", () -> viewManager.resetView());
+        Button rotateLeftBtn = createIconButton("↺", "Rotate Left", () -> viewManager.rotate(-15));
+        Button rotateRightBtn = createIconButton("↻", "Rotate Right", () -> viewManager.rotate(15));
         
-        panel.getChildren().addAll(expandBtn, new Separator(), playBtn, pauseBtn, new Separator(), zoomInBtn, zoomOutBtn, resetBtn);
+        panel.getChildren().addAll(expandBtn, new Separator(), playBtn, pauseBtn, new Separator(), zoomInBtn, zoomOutBtn, resetBtn, new Separator(), rotateLeftBtn, rotateRightBtn);
         
         return panel;
     }
@@ -346,12 +348,22 @@ public class ControlPanel {
         Button zoomIn = UIStyles.createStyledButton("+ Zoom In");
         Button zoomOut = UIStyles.createStyledButton("- Zoom Out");
         Button reset = UIStyles.createStyledButton("⟲ Reset View");
+        
+        // Rotation controls
+        Button rotateLeft = UIStyles.createStyledButton("↺ Rotate Left");
+        Button rotateRight = UIStyles.createStyledButton("↻ Rotate Right");
+        Button resetRotation = UIStyles.createStyledButton("⊙ Reset Rotation");
 
         zoomIn.setOnAction(e -> viewManager.zoomToCenter(1.2));
         zoomOut.setOnAction(e -> viewManager.zoomToCenter(0.8));
         reset.setOnAction(e -> viewManager.resetView());
+        
+        // Rotation button actions (15 degrees per click)
+        rotateLeft.setOnAction(e -> viewManager.rotate(-15));
+        rotateRight.setOnAction(e -> viewManager.rotate(15));
+        resetRotation.setOnAction(e -> viewManager.resetRotation());
 
-        controlPanel.getChildren().addAll(viewLabel, zoomIn, zoomOut, reset);
+        controlPanel.getChildren().addAll(viewLabel, zoomIn, zoomOut, reset, rotateLeft, rotateRight, resetRotation);
     }
 
     /**

@@ -1,7 +1,7 @@
 import javafx.scene.canvas.Canvas;
 
 /**
- * Manages view transformations including zoom, pan, and coordinate scaling.
+ * Manages view transformations including zoom, pan, rotation, and coordinate scaling.
  * Handles automatic network fitting and interactive view manipulation.
  * 
  * @author M A T^2 H Team
@@ -20,6 +20,7 @@ public class ViewManager {
     private double zoom = 1.0;
     private double panX = 0.0;
     private double panY = 0.0;
+    private double rotationAngle = 0.0; // Rotation angle in radians
 
     // Mouse drag state
     private double dragStartX, dragStartY, dragStartPanX, dragStartPanY;
@@ -61,6 +62,7 @@ public class ViewManager {
         // Reset user modifications
         zoom = 1.0;
         panX = panY = 0.0;
+        rotationAngle = 0.0;
         updateTransform();
     }
 
@@ -130,7 +132,48 @@ public class ViewManager {
      * Updates the coordinate transform with the current view state.
      */
     public void updateTransform() {
-        transform.updateTransform(scale, offsetX, offsetY, zoom, panX, panY);
+        transform.setCanvasDimensions(canvas.getWidth(), canvas.getHeight());
+        transform.updateTransform(scale, offsetX, offsetY, zoom, panX, panY, rotationAngle);
+    }
+
+    /**
+     * Rotates the view by a specified angle.
+     * 
+     * @param angleDegrees The angle to rotate by in degrees (positive = clockwise)
+     */
+    public void rotate(double angleDegrees) {
+        rotationAngle += Math.toRadians(angleDegrees);
+        // Normalize angle to [-2π, 2π] range
+        while (rotationAngle > 2 * Math.PI) rotationAngle -= 2 * Math.PI;
+        while (rotationAngle < -2 * Math.PI) rotationAngle += 2 * Math.PI;
+        updateTransform();
+    }
+
+    /**
+     * Sets the rotation angle to a specific value.
+     * 
+     * @param angleDegrees The absolute rotation angle in degrees
+     */
+    public void setRotation(double angleDegrees) {
+        rotationAngle = Math.toRadians(angleDegrees);
+        updateTransform();
+    }
+
+    /**
+     * Gets the current rotation angle in degrees.
+     * 
+     * @return The rotation angle in degrees
+     */
+    public double getRotationDegrees() {
+        return Math.toDegrees(rotationAngle);
+    }
+
+    /**
+     * Resets only the rotation to 0 degrees.
+     */
+    public void resetRotation() {
+        rotationAngle = 0.0;
+        updateTransform();
     }
 
     /**
