@@ -118,13 +118,29 @@ public class ViewManager {
 
     /**
      * Updates the pan offsets during a drag operation.
+     * Accounts for rotation so that panning always follows the mouse direction.
      * 
      * @param screenX The current X coordinate
      * @param screenY The current Y coordinate
      */
     public void updatePan(double screenX, double screenY) {
-        panX = dragStartPanX + screenX - dragStartX;
-        panY = dragStartPanY - (screenY - dragStartY);
+        // Calculate the raw delta in screen coordinates
+        double deltaX = screenX - dragStartX;
+        double deltaY = screenY - dragStartY;
+        
+        // When the map is rotated, we need to rotate the pan delta by the inverse
+        // of the rotation angle so that panning follows the mouse direction
+        if (rotationAngle != 0.0) {
+            double cos = Math.cos(-rotationAngle);
+            double sin = Math.sin(-rotationAngle);
+            double rotatedDeltaX = deltaX * cos - deltaY * sin;
+            double rotatedDeltaY = deltaX * sin + deltaY * cos;
+            deltaX = rotatedDeltaX;
+            deltaY = rotatedDeltaY;
+        }
+        
+        panX = dragStartPanX + deltaX;
+        panY = dragStartPanY - deltaY;
         updateTransform();
     }
 
