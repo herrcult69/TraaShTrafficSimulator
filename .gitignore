@@ -46,3 +46,6 @@ dependency-reduced-pom.xml
 *.iml
 .vscode/
 *.launch
+__azurite_db_*
+__blobstorage__/
+__queuestorage__/
