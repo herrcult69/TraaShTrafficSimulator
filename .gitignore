@@ -49,3 +49,8 @@ dependency-reduced-pom.xml
 *.iml
 .vscode/
 *.launch
+
+# Azurite storage emulator files
+__azurite_db_*
+__blobstorage__/
+__queuestorage__/
