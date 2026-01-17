@@ -56,6 +56,7 @@ public class TrafficLightControlPanel {
     // Phase timing editor
     private TextField phaseDurationField;
     private Button editTimingBtn;
+    private Button nextPhaseBtn;
 
     // ========== Performance Metrics Tracking ==========
     private MetricsSnapshot beforeSnapshot;
@@ -270,6 +271,18 @@ public class TrafficLightControlPanel {
         remainingTimeLabel = new Label("Remaining Time: -");
         remainingTimeLabel.setStyle("-fx-text-fill: #FFA726; -fx-font-size: 12;");
 
+        // Phase switching control
+        Label phaseSwitchInfo = new Label("⚡ Skip to next phase in traffic light program");
+        phaseSwitchInfo.setStyle("-fx-text-fill: #00BCD4; -fx-font-size: 10;");
+        phaseSwitchInfo.setWrapText(true);
+
+        nextPhaseBtn = new Button("Next Phase");
+        nextPhaseBtn.setPrefWidth(BUTTON_WIDTH);
+        nextPhaseBtn.setStyle(TEAL_STYLE);
+        nextPhaseBtn.setOnMouseEntered(e -> nextPhaseBtn.setStyle(TEAL_HOVER));
+        nextPhaseBtn.setOnMouseExited(e -> nextPhaseBtn.setStyle(TEAL_STYLE));
+        nextPhaseBtn.setOnAction(e -> jumpToNextPhase());
+
         // Update phase display when panel opens
         updatePhaseDisplay();
 
@@ -286,6 +299,9 @@ public class TrafficLightControlPanel {
                 currentPhaseLabel,
                 phaseDurationLabel,
                 remainingTimeLabel,
+                new javafx.scene.control.Separator(),
+                phaseSwitchInfo,
+                nextPhaseBtn,
                 new javafx.scene.control.Separator(),
                 createPhaseTimingButton(),
                 createMetricsButton(),
@@ -1208,6 +1224,40 @@ public class TrafficLightControlPanel {
             this.queueLength = queueLength;
             this.waitTime = waitTime;
             this.timestamp = timestamp;
+        }
+    }
+
+    /**
+     * Immediately jumps to the next phase in the traffic light program.
+     * Sets the current phase duration to near-zero, causing SUMO to automatically
+     * advance to the next phase in its program sequence.
+     */
+    private void jumpToNextPhase() {
+        try {
+            TraaSAdapter adapter = runner.getAdapter();
+            if (adapter == null) {
+                showError("SUMO not connected");
+                return;
+            }
+
+            String junctionId = selectedLight.getJunctionId();
+            int currentPhase = adapter.getCurrentPhase(junctionId);
+
+            // Set current phase duration to near-zero to immediately advance to next phase
+            // SUMO will automatically progress to the next phase in its program
+            adapter.setPhaseDuration(junctionId, 0.1);
+
+            logger.info(String.format("Jumping to next phase - Junction: %s, Current Phase: %d",
+                    junctionId, currentPhase));
+
+            // Update display
+            updatePhaseDisplay();
+            
+            showInfo("Jumping to next phase...");
+
+        } catch (Exception e) {
+            showError("Failed to switch phase: " + e.getMessage());
+            logger.warning("Phase switching error: " + e.getMessage());
         }
     }
 }
