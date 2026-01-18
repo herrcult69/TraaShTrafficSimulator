@@ -3,6 +3,7 @@
 
 # Log file
 *.log
+logs/
 
 # BlueJ files
 *.ctxt
@@ -33,9 +34,11 @@ replay_pid*
 lib/javafx/
 
 # SUMO simulation files
-resource/*.rou.xml
-resource/*.net.xml
-resource/*.sumocfg
+# resource/*.rou.xml
+# resource/*.net.xml
+# resource/*.sumocfg
+# SumoConfig/*.xml
+# SumoConfig/*.sumocfg
 
 # Maven
 target/
@@ -46,3 +49,8 @@ dependency-reduced-pom.xml
 *.iml
 .vscode/
 *.launch
+
+# Azurite storage emulator files
+__azurite_db_*
+__blobstorage__/
+__queuestorage__/

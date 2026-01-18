@@ -1,33 +1,23 @@
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.geometry.Rectangle2D;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Represents a single vehicle in the traffic simulation.
- * 
- * <p>Each vehicle has:
- * <ul>
- *   <li>Unique identifier determining its type (car, truck, bus, motorcycle, emergency)</li>
- *   <li>Position and orientation in world coordinates</li>
- *   <li>Type-specific dimensions and visual appearance</li>
- *   <li>Signal state (turn signals, brake lights, emergency flashers)</li>
- * </ul>
- * 
- * <p>The vehicle type is automatically determined from its ID prefix:
- * <ul>
- *   <li>"car" → Passenger car (4.5m × 1.8m)</li>
- *   <li>"truck" → Truck (8.0m × 2.5m)</li>
- *   <li>"bus" → Bus (10.0m × 2.5m)</li>
- *   <li>"moto" → Motorcycle (2.0m × 0.8m)</li>
- *   <li>"ambu" → Emergency vehicle (6.0m × 2.5m)</li>
- * </ul>
+ * Represents a vehicle in the traffic simulation.
+ * Type is determined from ID prefix (car, truck, bus, moto, ambu).
+ * Extends Renderable and implements Updatable for SUMO updates.
  *
  * @author M A T^2 H Team
- * @version 2.0 
- * @see TrafficManager
- * @see SimulationRunner
+ * @version 2.0
+ * @see Renderable
+ * @see Updatable
  */
-public class Vehicle {
+public class Vehicle extends Renderable implements Updatable {
+    private static final Map<String, Color> COLOR_OVERRIDES = new ConcurrentHashMap<>();
+
     private String id;
     private String type;
     private double worldX, worldY;
@@ -35,30 +25,76 @@ public class Vehicle {
     private double length, width;
     private Rectangle2D bounds;
     private int signals;
+    
+    // Speed statistics
+    private double currentSpeed;
+    private double maxSpeed;
+    private double totalSpeed;
+    private int speedSampleCount;
+    
+    // Travel time tracking
+    private double entryTime;
+    private double exitTime;
+    private boolean hasExited;
+    private double currentTime;
 
     /**
-     * Constructs a new vehicle with the specified position and orientation.
-     * The vehicle type and dimensions are automatically determined from the ID prefix.
+     * Creates a vehicle at the specified position.
+     * 
+     * @param id Vehicle identifier (prefix determines type)
+     * @param worldX X coordinate in meters
+     * @param worldY Y coordinate in meters
+     * @param angle Orientation in degrees
+     */
+    public Vehicle(String id, double worldX, double worldY, double angle) {
+        this(id, worldX, worldY, angle, 0.0);
+    }
+    
+    /**
+     * Constructs a new vehicle with the specified position, orientation, and entry time.
      * 
      * @param id The unique vehicle identifier (prefix determines type)
      * @param worldX The X coordinate in world space (meters)
      * @param worldY The Y coordinate in world space (meters)
      * @param angle The orientation angle in degrees (0 = east, 90 = north)
+     * @param entryTime The simulation time when this vehicle entered (seconds)
      */
-    public Vehicle(String id, double worldX, double worldY, double angle) {
+    public Vehicle(String id, double worldX, double worldY, double angle, double entryTime) {
         this.id = id;
         this.worldX = worldX;
         this.worldY = worldY;
         this.angle = angle;
-
+        
+        // Initialize speed statistics
+        this.currentSpeed = 0.0;
+        this.maxSpeed = 0.0;
+        this.totalSpeed = 0.0;
+        this.speedSampleCount = 0;
+        
+        // Initialize travel time tracking
+        this.entryTime = entryTime;
+        this.currentTime = 0.0;
+        this.hasExited = false;        
+        this.currentTime = entryTime;
         // Determine vehicle type and dimensions from ID
         determineTypeFromId();
         updateBounds();
     }
 
-    /**
-     * Determines the vehicle type and sets appropriate dimensions based on the ID prefix.
-     */
+    public static void setColorOverride(String vehicleId, Color color) {
+        if (vehicleId == null || vehicleId.isBlank()) return;
+        if (color == null) {
+            COLOR_OVERRIDES.remove(vehicleId);
+        } else {
+            COLOR_OVERRIDES.put(vehicleId, color);
+        }
+    }
+
+    public static void pruneColorOverrides(Set<String> activeVehicleIds) {
+        if (activeVehicleIds == null) return;
+        COLOR_OVERRIDES.keySet().removeIf(id -> !activeVehicleIds.contains(id));
+    }
+
     private void determineTypeFromId() {
         if (id.startsWith("car")) {
             type = "car";
@@ -66,11 +102,11 @@ public class Vehicle {
             width = 1.8;
         } else if (id.startsWith("truck")) {
             type = "truck";
-            length = 8.0;
+            length = 6.0;
             width = 2.5;
         } else if (id.startsWith("bus")) {
             type = "bus";
-            length = 10.0;
+            length = 8.0;
             width = 2.5;
         } else if (id.startsWith("moto")) {
             type = "motorcycle";
@@ -78,7 +114,7 @@ public class Vehicle {
             width = 0.8;
         } else if (id.startsWith("ambu")) {
             type = "emergency";
-            length = 6.0;
+            length = 5.0;
             width = 2.5;
         } else {
             type = "unknown";
@@ -86,14 +122,34 @@ public class Vehicle {
             width = 1.8;
         }
     }
+    
+    /**
+     * Returns a glow color based on vehicle speed.
+     * Green for slow speeds, transitioning to red for fast speeds.
+     * 
+     * @return Color representing current speed
+     */
+    public Color getSpeedGlowColor() {
+        // Typical max speed in urban traffic: ~15 m/s (54 km/h)
+        // Map 0-15 m/s to green->yellow->red gradient
+        double maxSpeedRange = 15.0;
+        double normalizedSpeed = Math.min(currentSpeed / maxSpeedRange, 1.0);
+        
+        if (normalizedSpeed < 0.5) {
+            // Green to Yellow (0.0 to 0.5)
+            double factor = normalizedSpeed * 2.0;
+            return Color.color(factor, 1.0, 0.0); // Green -> Yellow
+        } else {
+            // Yellow to Red (0.5 to 1.0)
+            double factor = (normalizedSpeed - 0.5) * 2.0;
+            return Color.color(1.0, 1.0 - factor, 0.0); // Yellow -> Red
+        }
+    }
 
     /**
-     * Updates the vehicle's position, angle, and signal state from SUMO data.
+     * Updates position, angle, and signals from SUMO data.
      * 
-     * @param sumoData Array containing [x, y, angle, signals] where:
-     *                 x, y are world coordinates in meters,
-     *                 angle is in degrees (SUMO format),
-     *                 signals is a bit field for turn signals and brake lights
+     * @param sumoData Array [x, y, angle, signals]
      */
     public void updatePosition(double[] sumoData) {
         this.worldX = sumoData[0];
@@ -107,9 +163,31 @@ public class Vehicle {
         updateBounds();
     }
 
+    // ========== Updatable Interface Implementation ==========
+
     /**
-     * Updates the vehicle's bounding rectangle based on current position and dimensions.
+     * Updates vehicle state from simulation data (Updatable interface).
+     * 
+     * @param data Double array from SUMO
      */
+    @Override
+    public void updateFromSimulation(Object data) {
+        if (data instanceof double[]) {
+            updatePosition((double[]) data);
+        }
+    }
+
+    /**
+     * Returns vehicle ID for simulation matching.
+     * 
+     * @return Vehicle ID
+     */
+    @Override
+    public String getUpdateId() {
+        return id;
+    }
+
+    /** Updates the bounding rectangle. */
     private void updateBounds() {
         double halfWidth = width / 2;
         // Bounds with head at (worldX, worldY) extending backward
@@ -119,14 +197,14 @@ public class Vehicle {
     }
 
     /**
-     * Checks if a screen point falls within the vehicle's clickable area.
-     * Uses circular hit detection for better user interaction.
+     * Checks if screen point is within vehicle (circular hit detection).
      * 
-     * @param screenX The X coordinate in screen space
-     * @param screenY The Y coordinate in screen space
-     * @param transform The coordinate transformation
-     * @return true if the point is within the vehicle's clickable radius
+     * @param screenX   Screen X coordinate
+     * @param screenY   Screen Y coordinate
+     * @param transform Coordinate transform
+     * @return true if point hits vehicle
      */
+    @Override
     public boolean contains(double screenX, double screenY, CoordinateTransform transform) {
         double clickWorldX = transform.screenToWorldX(screenX);
         double clickWorldY = transform.screenToWorldY(screenY);
@@ -136,17 +214,18 @@ public class Vehicle {
         double distance = Math.sqrt(dx * dx + dy * dy);
 
         // The circle should be a little bit smaller than the width
-        double radius = width * .90 ;
+        double radius = width * .90;
         return distance <= radius;
     }
 
     /**
-     * Draws a dashed rectangle outline around the vehicle when selected or hovered.
+     * Draws dashed outline when selected/hovered.
      * 
-     * @param g The graphics context to draw on
-     * @param transform The coordinate transformation
-     * @param color The highlight color
+     * @param g         Graphics context
+     * @param transform Coordinate transform
+     * @param color     Highlight color
      */
+    @Override
     public void highlight(GraphicsContext g, CoordinateTransform transform, Color color) {
         double screenX = transform.worldToScreenX(worldX);
         double screenY = transform.worldToScreenY(worldY);
@@ -156,7 +235,6 @@ public class Vehicle {
         g.save();
         g.translate(screenX, screenY);
         g.rotate(angle);
-
 
         // Dashed outline
         g.setStroke(color);
@@ -169,12 +247,12 @@ public class Vehicle {
     }
 
     /**
-     * Renders the vehicle with proper body, windshield, headlights, and signal indicators.
-     * The vehicle is drawn with its front at (worldX, worldY) extending backward.
+     * Renders vehicle with body, windshield, headlights, and signals.
      * 
-     * @param g The graphics context to draw on
-     * @param transform The coordinate transformation
+     * @param g         Graphics context
+     * @param transform Coordinate transform
      */
+    @Override
     public void render(GraphicsContext g, CoordinateTransform transform) {
         double screenX = transform.worldToScreenX(worldX);
         double screenY = transform.worldToScreenY(worldY);
@@ -242,12 +320,10 @@ public class Vehicle {
         g.restore();
     }
 
-    /**
-     * Returns the color associated with this vehicle type.
-     * 
-     * @return The vehicle's color based on its type
-     */
+    /** Returns color for this vehicle type. */
     private Color getVehicleColor() {
+        Color override = COLOR_OVERRIDES.get(id);
+        if (override != null) return override;
         return switch (type) {
             case "car" -> Color.rgb(220, 60, 115);
             case "truck" -> Color.rgb(50, 120, 230);
@@ -259,57 +335,165 @@ public class Vehicle {
     }
 
     // Getters
-    /**
-     * Returns the unique vehicle identifier.
-     * 
-     * @return The vehicle ID
-     */
+    /** Returns vehicle ID. */
     public String getId() {
         return id;
     }
 
-    /**
-     * Returns the vehicle type (car, truck, bus, motorcycle, emergency, or unknown).
-     * 
-     * @return The vehicle type as a string
-     */
+    /** Returns vehicle type. */
     public String getType() {
         return type;
     }
 
-    /**
-     * Returns the vehicle's current X coordinate in world space.
-     * 
-     * @return The X coordinate in meters
-     */
+    /** Returns X coordinate in meters. */
     public double getWorldX() {
         return worldX;
     }
 
-    /**
-     * Returns the vehicle's current Y coordinate in world space.
-     * 
-     * @return The Y coordinate in meters
-     */
+    /** Returns Y coordinate in meters. */
     public double getWorldY() {
         return worldY;
     }
 
-    /**
-     * Returns the vehicle's current orientation angle.
-     * 
-     * @return The angle in degrees
-     */
+    /** Returns orientation angle in degrees. */
     public double getAngle() {
         return angle;
     }
 
-    /**
-     * Returns the vehicle's bounding rectangle in world coordinates.
-     * 
-     * @return The bounding rectangle
-     */
+    /** Returns bounding rectangle. */
     public Rectangle2D getBounds() {
         return bounds;
+    }
+    
+    /**
+     * Updates the vehicle's current speed and statistics.
+     * Automatically tracks maximum speed and calculates running average.
+     * 
+     * @param speed The current speed in m/s
+     */
+    public void updateSpeed(double speed) {
+        this.currentSpeed = speed;
+        this.totalSpeed += speed;
+        this.speedSampleCount++;
+        
+        if (speed > this.maxSpeed) {
+            this.maxSpeed = speed;
+        }
+    }
+    
+    /**
+     * Returns the vehicle's current speed.
+     * 
+     * @return The current speed in m/s
+     */
+    public double getCurrentSpeed() {
+        return currentSpeed;
+    }
+    
+    /** Returns vehicle length in meters. */
+    public double getLength() {
+        return length;
+    }
+    
+    /** Returns vehicle width in meters. */
+    public double getWidth() {
+        return width;
+    }
+    
+    /**
+     * Returns the vehicle's maximum recorded speed.
+     * 
+     * @return The maximum speed in m/s
+     */
+    public double getMaxSpeed() {
+        return maxSpeed;
+    }
+    
+    /**
+     * Returns the vehicle's average speed since it entered the simulation.
+     * 
+     * @return The average speed in m/s, or 0.0 if no samples
+     */
+    public double getAverageSpeed() {
+        if (speedSampleCount == 0) {
+            return 0.0;
+        }
+        else {
+            return totalSpeed / speedSampleCount;
+        }
+    }
+
+    /**
+     * Returns the estimated total distance traveled by this vehicle in the simulation.
+     * Calculated as average speed multiplied by time in simulation.
+     * 
+     * @return The estimated total distance in meters
+     */
+    public double getTotalDistance() {
+        if (speedSampleCount == 0) {
+            return 0.0;
+        } else {
+            return getAverageSpeed() * getTravelTime();
+        }
+    }
+    
+    /**
+     * Returns the simulation time when this vehicle entered.
+     * 
+     * @return The entry time in seconds
+     */
+    public double getEntryTime() {
+        return entryTime;
+    }
+    
+    /**
+     * Updates the current simulation time for this vehicle.
+     * 
+     * @param currentTime The current simulation time (seconds)
+     */
+    public void setCurrentTime(double currentTime) {
+        this.currentTime = currentTime;
+    }
+    
+    /**
+     * Marks the vehicle as having exited the simulation.
+     * 
+     * @param exitTime The simulation time when the vehicle exited (seconds)
+     */
+    public void markAsExited(double exitTime) {
+        this.exitTime = exitTime;
+        this.hasExited = true;
+    }
+    
+    /**
+     * Returns whether this vehicle has exited the simulation.
+     * 
+     * @return true if the vehicle has exited, false otherwise
+     */
+    public boolean hasExited() {
+        return hasExited;
+    }
+    
+    /**
+     * Returns the simulation time when this vehicle exited.
+     * 
+     * @return The exit time in seconds, or 0.0 if not yet exited
+     */
+    public double getExitTime() {
+        return exitTime;
+    }
+    
+    /**
+     * Returns the total travel time of this vehicle in the simulation.
+     * For active vehicles, returns (currentTime - entryTime).
+     * For exited vehicles, returns (exitTime - entryTime).
+     * 
+     * @return The travel time in seconds
+     */
+    public double getTravelTime() {
+        if (hasExited) {
+            return exitTime - entryTime;
+        }
+        return currentTime - entryTime;
     }
 }

@@ -4,35 +4,23 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Runs the SUMO traffic simulation in a background thread and provides real-time updates.
- * 
- * <p>This class:
- * <ul>
- *   <li>Establishes and maintains a TraCI connection to SUMO</li>
- *   <li>Executes simulation time steps at ~10 Hz (100ms intervals)</li>
- *   <li>Periodically queries SUMO for vehicle positions, speeds, and traffic light states</li>
- *   <li>Provides thread-safe access to simulation data via concurrent maps</li>
- *   <li>Supports pause/resume and graceful shutdown</li>
- * </ul>
- * 
- * <p>The simulation runs independently in its own thread while the JavaFX rendering thread
- * reads from the shared concurrent maps at ~60 FPS for smooth visualization.</p>
+ * Runs the SUMO simulation in a background thread.
+ * Executes simulation steps and provides real-time updates via concurrent maps.
  *
  * @author M A T^2 H Team
- * @version 2.0 
+ * @version 2.0
  * @see TraaSAdapter
- * @see TrafficLight
  */
 public class SimulationRunner implements Runnable {
 
     /**
-     * Callback interface for notification when the SUMO connection is established.
+     * Callback interface for SUMO connection establishment.
      */
     public interface ConnectionListener {
         /**
-         * Called when the TraCI connection to SUMO is successfully established.
+         * Called when TraCI connection is established.
          * 
-         * @param adapter The TraaSAdapter for communicating with SUMO
+         * @param adapter TraaSAdapter for SUMO communication
          */
         void onConnected(TraaSAdapter adapter);
     }
@@ -46,13 +34,16 @@ public class SimulationRunner implements Runnable {
     private final Map<String, Double> vehicleSpeeds = new ConcurrentHashMap<>();
     private volatile double simulationTime = 0.0;
     private final Map<String, TrafficLight.TrafficLightData> trafficLightData = new ConcurrentHashMap<>();
+    private final Map<String, String> vehicleEdges = new ConcurrentHashMap<>();
     private ConnectionListener connectionListener;
+    private VehicleFilterPanel vehicleFilter;
 
+    private final Map<String, Integer> vehicleCountsByType = new ConcurrentHashMap<>();
     /**
-     * Constructs a new simulation runner.
+     * Constructs a simulation runner.
      * 
-     * @param configFile Path to the SUMO configuration file (.sumocfg)
-     * @param gui Whether to launch SUMO with GUI (true) or headless (false)
+     * @param configFile SUMO configuration file path
+     * @param gui Enable SUMO GUI
      */
     public SimulationRunner(String configFile, boolean gui) {
         this.configFile = configFile;
@@ -60,55 +51,61 @@ public class SimulationRunner implements Runnable {
     }
 
     /**
-     * Sets a listener to be notified when the SUMO connection is established.
+     * Sets connection establishment listener.
      * 
-     * @param listener The connection listener callback
+     * @param listener Connection callback
      */
     public void setConnectionListener(ConnectionListener listener) {
         this.connectionListener = listener;
     }
-
+    
     /**
-     * Returns a thread-safe map of vehicle speeds.
+     * Sets the vehicle filter to apply when collecting data from SUMO.
      * 
-     * @return Map from vehicle ID to speed in m/s
+     * @param filter Vehicle filter panel
      */
+    public void setVehicleFilter(VehicleFilterPanel filter) {
+        this.vehicleFilter = filter;
+    }
+
+    /** Returns vehicle speeds (thread-safe). */
     public Map<String, Double> getVehicleSpeeds() {
         return vehicleSpeeds;
     }
 
-    /**
-     * Returns a thread-safe map of vehicle positions and states.
-     * 
-     * @return Map from vehicle ID to array [x, y, angle, signals]
-     */
+    /** Returns vehicle positions and states (thread-safe). */
     public Map<String, double[]> getVehiclePositions() {
         return vehiclePositions;
     }
 
-    /**
-     * Returns the current simulation time in seconds.
-     * 
-     * @return Simulation time in seconds
-     */
+    /** Returns current simulation time in seconds. */
     public double getSimulationTime() {
         return simulationTime;
     }
 
-    /**
-     * Returns a thread-safe map of traffic light states.
-     * 
-     * @return Map from junction ID to traffic light data
-     */
+    /** Returns traffic light states (thread-safe). */
     public Map<String, TrafficLight.TrafficLightData> getTrafficLightData() {
         return trafficLightData;
     }
-
+    
     /**
-     * Returns the TraCI adapter for direct SUMO communication.
+     * Returns a thread-safe map of vehicle road IDs.
      * 
-     * @return The TraaSAdapter, or null if not yet connected
+     * @return Map from vehicle ID to edge ID
      */
+    public Map<String, String> getVehicleEdges() {
+        return vehicleEdges;
+    }
+    
+    /**
+     * Returns a thread-safe map of vehicle counts by type
+     * @return Map from vehicle type to count
+     */
+    public Map<String, Integer> getVehicleCountsByType() {
+        return vehicleCountsByType;
+    }
+
+    /** Returns TraCI adapter for SUMO communication. */
     public TraaSAdapter getAdapter() {
         return adapter;
     }
@@ -154,15 +151,7 @@ public class SimulationRunner implements Runnable {
 
     /**
      * Main simulation loop that runs in a background thread.
-     * <p>
-     * This method:
-     * <ol>
-     *   <li>Establishes TraCI connection to SUMO</li>
-     *   <li>Notifies the connection listener</li>
-     *   <li>Executes simulation time steps at 100ms intervals</li>
-     *   <li>Updates vehicle positions, speeds, and traffic light states</li>
-     *   <li>Continues until stop() is called</li>
-     * </ol>
+     * Establishes TraCI connection and executes simulation steps.
      */
     @Override
     public void run() {
@@ -187,19 +176,58 @@ public class SimulationRunner implements Runnable {
                     List<String> ids = adapter.getVehicleIds();
                     vehiclePositions.keySet().removeIf(id -> !ids.contains(id));
                     vehicleSpeeds.keySet().removeIf(id -> !ids.contains(id));
+                    vehicleEdges.keySet().removeIf(id -> !ids.contains(id));
+
+                    // Reset counts
+                    vehicleCountsByType.clear();
+                    vehicleCountsByType.put("car", 0);
+                    vehicleCountsByType.put("truck", 0);
+                    vehicleCountsByType.put("bus", 0);
+                    vehicleCountsByType.put("moto", 0);
+                    vehicleCountsByType.put("emergency", 0);
+
                     for (String id : ids) {
+                        // Determine vehicle type and apply filter
+                        String type = VehicleTypeHelper.getVehicleType(id);
+                        if (vehicleFilter != null && !vehicleFilter.isTypeVisible(type)) {
+                            // Skip this vehicle - it's filtered out
+                            // Remove from maps if it was previously visible
+                            vehiclePositions.remove(id);
+                            vehicleSpeeds.remove(id);
+                            vehicleEdges.remove(id);
+                            continue;
+                        }
+                        
                         double[] p = adapter.getVehiclePosition(id);
                         double ang = 0.0;
                         double speed = 0.0;
                         int signals = 0;
+                        String edgeId = "";
                         try {
                             ang = adapter.getVehicleAngle(id);
                             speed = adapter.getVehicleSpeed(id);
                             signals = adapter.getVehicleSignals(id);
+                            edgeId = adapter.getVehicleRoadID(id);
                         } catch (Exception ignore) {
                         }
                         vehiclePositions.put(id, new double[] { p[0], p[1], ang, (double) signals });
                         vehicleSpeeds.put(id, speed);
+                        if (!edgeId.isEmpty()) {
+                            vehicleEdges.put(id, edgeId);
+                        }
+
+                        //Count by type (already filtered above)
+                        if (type.equals("car")){
+                            vehicleCountsByType.merge("car", 1, Integer::sum);
+                        } else if (type.equals("truck")) {
+                            vehicleCountsByType.merge("truck", 1, Integer::sum);
+                        } else if (type.equals("bus")) {
+                            vehicleCountsByType.merge("bus", 1, Integer::sum);
+                        } else if (type.equals("moto")) {
+                            vehicleCountsByType.merge("moto", 1, Integer::sum);
+                        } else if (type.equals("emergency")) {
+                            vehicleCountsByType.merge("emergency", 1, Integer::sum);
+                        }
                     }
 
                     // Update traffic lights (only if not in manual mode)
@@ -209,7 +237,7 @@ public class SimulationRunner implements Runnable {
                         trafficLightData.put(tlId, new TrafficLight.TrafficLightData(state, null, 0));
                     }
                 }
-                Thread.sleep(100);
+                Thread.sleep(80);
             }
             conn.close();
         } catch (Exception e) {

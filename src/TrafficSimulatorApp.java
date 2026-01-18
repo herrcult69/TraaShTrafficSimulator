@@ -4,43 +4,31 @@ import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
-import javafx.scene.control.ScrollPane;
+// import javafx.scene.control.ScrollPane;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
+import java.util.logging.Logger;
+import java.util.logging.Level;
 
 /**
- * Main application class for the real-time SUMO traffic visualization system.
- * 
- * <p>This JavaFX application provides an interactive visualization of SUMO traffic simulations
- * with the following key features:</p>
- * <ul>
- *   <li>Coordinate transformation between SUMO (Y-up) and JavaFX (Y-down) coordinate systems</li>
- *   <li>Multi-level view management: base scale, user zoom, and pan offset</li>
- *   <li>Object-oriented rendering with hit detection for vehicles, junctions, edges, and traffic lights</li>
- *   <li>60fps animation loop with background simulation thread</li>
- *   <li>Interactive vehicle injection with visual route selection mode</li>
- *   <li>Manual traffic light control with junction-wide synchronization</li>
- *   <li>Real-time dashboard displaying traffic metrics and statistics</li>
- * </ul>
- * 
- * <p>The application follows an MVC-like architecture where {@link TrafficManager} manages
- * all simulation objects, {@link ViewManager} handles view transformations, and UI panels
- * provide user interaction.</p>
+ * Main JavaFX application for visualizing SUMO traffic simulations.
+ * Handles coordinate transformation, rendering, user interaction, and real-time
+ * updates.
  *
  * @author M A T^2 H Team
- * @version 2.0 
+ * @version 2.0
  * @see TrafficManager
  * @see ViewManager
- * @see SimulationRunner
- * @see ControlPanel
- * @see DashBoard
  */
 public class TrafficSimulatorApp extends Application {
+    private static final Logger logger = Logger.getLogger(TrafficSimulatorApp.class.getName());
+    
     private static final String NETWORK_FILE = "SumoConfig/network.net.xml";
     private static final String CONFIG_FILE = "SumoConfig/simulation.sumocfg";
 
@@ -64,66 +52,92 @@ public class TrafficSimulatorApp extends Application {
     private DashBoard dashboard;
     private long lastDashboardUpdate = System.nanoTime();
     private static final double DASHBOARD_UPDATE_INTERVAL = 0.5; // Update every 0.5 seconds
+    private long lastCongestionUpdate = System.nanoTime();
 
     /**
-     * Initializes and starts the JavaFX application.
-     * Sets up the network, canvas, simulation runner, view manager, control panel, and event handlers.
+     * Initializes and starts the application.
      * 
-     * @param stage The primary stage for this application
-     * @throws Exception if network file cannot be parsed or simulation cannot start
+     * @param stage Primary stage for the application
+     * @throws Exception If network files cannot be loaded or initialization fails
      */
     @Override
     public void start(Stage stage) throws Exception {
-        // Initialize components
-        network = NetworkParser.parse(NETWORK_FILE);
-        canvas = new Canvas();
-        scene = new TrafficManager();
-        transform = new CoordinateTransform(900);
+        logger.info("=== Traffic Simulator Starting ===");
+        try {
+            // Initialize components
+            logger.info("Loading network file: " + NETWORK_FILE);
+            network = NetworkParser.parse(NETWORK_FILE);
+            canvas = new Canvas();
+            scene = new TrafficManager();
+            transform = new CoordinateTransform(700);
 
-        // Initialize scene from network data
-        scene.initializeFromNetwork(network);
+            // Initialize scene from network data
+            scene.initializeFromNetwork(network);
 
-        // Create view manager
-        viewManager = new ViewManager(canvas, transform, network);
+            // Create view manager
+            viewManager = new ViewManager(canvas, transform, network);
 
-        // Create dashboard
-        dashboard = new DashBoard();
+            // Create dashboard
+            dashboard = new DashBoard();
 
-        // Start simulation
-        runner = new SimulationRunner(CONFIG_FILE, false);
+            // Start simulation
+            runner = new SimulationRunner(CONFIG_FILE, false);
 
-        // Traffic lights are now initialized from network connections in initializeFromNetwork()
-        // No need for separate SUMO initialization
-        runner.setConnectionListener(adapter -> {
-            Platform.runLater(() -> {
-                System.out.println("SUMO connected - traffic lights already initialized from network");
+            // Traffic lights are now initialized from network connections in initializeFromNetwork()
+            // No need for separate SUMO initialization
+            runner.setConnectionListener(adapter -> {
+                Platform.runLater(() -> {
+                    logger.info("SUMO connection established - traffic lights initialized from network");
+                });
             });
-        });
 
-        exec = Executors.newSingleThreadExecutor();
-        exec.submit(runner);
+            exec = Executors.newSingleThreadExecutor();
+            exec.submit(runner);
 
-        // Create control panel with all UI components
-        controlPanel = new ControlPanel(runner, viewManager, dashboard, scene);
+            // Create control panel with all UI components
+            controlPanel = new ControlPanel(runner, viewManager, dashboard, scene);
 
-        // Set up route selection callbacks
-        controlPanel.setRouteSelectionCallbacks(
-                this::onStartRouteSelection,
-                this::onRouteSelectionModeChange,
-                this::onVehicleAdded);
+            // Set vehicle filter on runner after controlPanel is created
+            runner.setVehicleFilter(controlPanel.getVehicleFilterPanel());
 
-        ScrollPane scrollPane = controlPanel.getScrollPane();
+            // Set up route selection callbacks
+            controlPanel.setRouteSelectionCallbacks(
+                    this::onStartRouteSelection,
+                    this::onRouteSelectionModeChange,
+                    this::onVehicleAdded);
 
-        BorderPane root = new BorderPane();
-        root.setCenter(canvas);
-        root.setRight(scrollPane);
+            // Use the content wrapper instead of scroll pane for proper expand/minimize
+            VBox controlPanelWrapper = controlPanel.getContentWrapper();
 
-        Scene mainScene = new Scene(root, 1400, 900);
-        stage.setScene(mainScene);
-        stage.setTitle("Traffic Simulator - OOP Architecture");
+            BorderPane root = new BorderPane();
+            root.setCenter(canvas);
+            root.setRight(controlPanelWrapper);
 
-        setupCanvas(root, stage);
-        setupEventHandlers();
+            Scene mainScene = new Scene(root, 1400, 700);
+            stage.setScene(mainScene);
+            stage.setTitle("Traffic Simulator - OOP Architecture");
+
+            // Pass the control panel width property for dynamic canvas sizing
+            setupCanvas(root, stage, controlPanel);
+            setupEventHandlers();
+
+            logger.info("Application initialization complete");
+
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, "FATAL: Failed to initialize application", e);
+            
+            // Show error dialog to user
+            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
+                    javafx.scene.control.Alert.AlertType.ERROR);
+            alert.setTitle("Initialization Error");
+            alert.setHeaderText("Failed to start Traffic Simulator");
+            alert.setContentText("Error: " + e.getMessage() +
+                    "\n\nPlease check that network files exist in SumoConfig/ directory.");
+            alert.showAndWait();
+
+            Platform.exit();
+            throw e;
+        }
 
         stage.setOnCloseRequest(e -> {
             runner.stop();
@@ -133,56 +147,92 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /**
-     * Main rendering loop called approximately 60 times per second by the AnimationTimer.
-     * Updates vehicle positions, traffic light states, renders all objects, highlights selections,
-     * and updates the dashboard at a reduced frequency.
+     * Renders the simulation scene. Called approximately 60 times per second.
      */
     private void draw() {
         GraphicsContext g = canvas.getGraphicsContext2D();
 
+        // Clear entire canvas first (before any rotation)
         g.setFill(Color.rgb(26, 36, 47));
         g.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
-        scene.updateVehicles(runner.getVehiclePositions());
-        scene.updateTrafficLights(runner.getTrafficLightData());
-        scene.render(g, viewManager.getTransform());
-        scene.renderHighlight(g, viewManager.getTransform(), selectedElement, hoveredElement);
+        // Save graphics state before applying rotation
+        g.save();
+        
+        // Apply rotation around canvas center
+        double rotationDegrees = viewManager.getRotationDegrees();
+        if (rotationDegrees != 0.0) {
+            double centerX = canvas.getWidth() / 2.0;
+            double centerY = canvas.getHeight() / 2.0;
+            g.translate(centerX, centerY);
+            g.rotate(rotationDegrees);
+            g.translate(-centerX, -centerY);
+        }
 
-        // Render route selection highlights
+        scene.updateVehicles(runner.getVehiclePositions(), runner.getSimulationTime());
+        scene.updateVehicleSpeeds(runner.getVehicleSpeeds());
+        scene.updateEdgeStatistics(runner.getVehicleEdges());
+        scene.updateTrafficLights(runner.getTrafficLightData());
+        scene.render(g, viewManager.getTransform(), controlPanel.getVehicleFilterPanel());
+        scene.renderHighlight(g, viewManager.getTransform(), selectedElement, hoveredElement, controlPanel.getVehicleFilterPanel());
+
+        // Render route selection highlights (still under rotation)
         if (routeSelectionMode) {
             renderRouteSelection(g);
         }
+        
+        // Restore graphics state to remove rotation for UI overlays
+        g.restore();
 
-        // Draw info box
+        // Draw info box (not rotated - stays fixed on screen)
         if (selectedElement != null && !routeSelectionMode) {
             drawInfoBox(g, selectedElement);
         }
 
-        // Draw route selection instructions when in route mode
+        // Draw route selection instructions when in route mode (not rotated)
         if (routeSelectionMode) {
             drawRouteSelectionOverlay(g);
         }
+        
+        // Draw rotation indicator if rotated
+        double rotationAngle = viewManager.getRotationDegrees();
+        if (rotationAngle != 0.0) {
+            drawRotationIndicator(g, rotationAngle);
+        }
 
-        // Update dashboard at reduced frequency
+        // Update dashboard and congestion monitor at reduced frequency
         long currentTime = System.nanoTime();
         double timeSinceLastUpdate = (currentTime - lastDashboardUpdate) / 1_000_000_000.0;
         if (timeSinceLastUpdate >= DASHBOARD_UPDATE_INTERVAL) {
             updateDashboard();
+            updateCongestionMonitor();
             lastDashboardUpdate = currentTime;
+        }
+        
+        // Update congestion hotspots at reduced frequency (performance optimization)
+        double timeSinceCongestionUpdate = (currentTime - lastCongestionUpdate) / 1_000_000_000.0;
+        if (timeSinceCongestionUpdate >= DASHBOARD_UPDATE_INTERVAL) {
+            scene.updateCongestionHotspots(runner.getVehicleEdges(), runner.getVehicleSpeeds());
+            lastCongestionUpdate = currentTime;
         }
     }
 
     /**
-     * Draws an information box overlay showing details of the selected object.
+     * Draws an info box for the selected element.
      * 
-     * @param g The graphics context for rendering
-     * @param selected The selected object (Vehicle, Lane, or Junction)
+     * @param g Graphics context
+     * @param selected Selected simulation element
      */
     private void drawInfoBox(GraphicsContext g, Object selected) {
         double x = 10;
         double y = 10;
         double width = 250;
         double height = 100;
+        
+        // Increase height for vehicle to accommodate speed stats
+        if (selected instanceof Vehicle) {
+            height = 180;
+        }
 
         g.setFill(Color.rgb(0, 0, 0, 0.7));
         g.fillRect(x, y, width, height);
@@ -197,6 +247,26 @@ public class TrafficSimulatorApp extends Application {
             Vehicle v = (Vehicle) selected;
             g.fillText("ID: " + v.getId(), x + 10, y + 40);
             g.fillText("Type: " + v.getType(), x + 10, y + 60);
+            g.fillText("Current Speed: " + String.format("%.2f", v.getCurrentSpeed() * 3.6) + " km/h", x + 10, y + 80);
+            g.fillText("Average Speed: " + String.format("%.2f", v.getAverageSpeed() * 3.6) + " km/h", x + 10, y + 100);
+            g.fillText("Max Speed: " + String.format("%.2f", v.getMaxSpeed() * 3.6) + " km/h", x + 10, y + 120);
+            g.fillText("Travel Time: " + String.format("%.2f", v.getTravelTime()) + " s", x + 10, y + 140);
+            g.fillText("Total Distance: " + String.format("%.2f", v.getTotalDistance()) + " m", x + 10, y + 160);
+        } else if (selected instanceof Edge) {
+            Edge edge = (Edge) selected;
+            height = 140;
+            g.setFill(Color.rgb(0, 0, 0, 0.7));
+            g.fillRect(x, y, width, height);
+            g.setStroke(Color.WHITE);
+            g.setLineWidth(1.0);
+            g.strokeRect(x, y, width, height);
+            g.setFill(Color.WHITE);
+            g.fillText("Selected: Edge", x + 10, y + 20);
+            g.fillText("ID: " + edge.getNetworkEdge().id, x + 10, y + 40);
+            g.fillText("Length: " + String.format("%.2f", edge.getEdgeLength()) + " m", x + 10, y + 60);
+            g.fillText("Lanes: " + edge.getNetworkEdge().getNumLanes(), x + 10, y + 80);
+            g.fillText("Vehicles: " + edge.getVehicleCount(), x + 10, y + 100);
+            g.fillText("Density: " + String.format("%.2f", edge.getVehicleDensity()) + " veh/km", x + 10, y + 120);
         } else if (selected instanceof Lane) {
             Lane l = (Lane) selected;
             g.fillText("ID: " + l.getId(), x + 10, y + 40);
@@ -209,9 +279,53 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /**
-     * Collects current simulation metrics and updates the dashboard.
-     * Called at a reduced frequency to avoid excessive UI updates.
+     * Draws a rotation indicator showing the current map rotation angle.
+     * Displays a compass-like indicator in the top-right corner.
+     * 
+     * @param g Graphics context
+     * @param angleDegrees Current rotation angle in degrees
      */
+    private void drawRotationIndicator(GraphicsContext g, double angleDegrees) {
+        double x = canvas.getWidth() - 80;
+        double y = 50;
+        double radius = 25;
+        
+        // Background circle
+        g.setFill(Color.rgb(0, 0, 0, 0.6));
+        g.fillOval(x - radius - 5, y - radius - 5, (radius + 5) * 2, (radius + 5) * 2);
+        g.setStroke(Color.WHITE);
+        g.setLineWidth(1.5);
+        g.strokeOval(x - radius - 5, y - radius - 5, (radius + 5) * 2, (radius + 5) * 2);
+        
+        // Draw compass directions
+        g.setFill(Color.WHITE);
+        g.fillText("N", x - 4, y - radius + 8);
+        
+        // Draw north arrow (rotated by current angle)
+        g.save();
+        g.translate(x, y);
+        g.rotate(-angleDegrees); // Negative because we want north to appear to rotate
+        
+        // Arrow pointing up (north)
+        g.setStroke(Color.rgb(255, 100, 100));
+        g.setLineWidth(2);
+        g.strokeLine(0, 0, 0, -radius + 10);
+        g.setFill(Color.rgb(255, 100, 100));
+        g.fillPolygon(new double[]{0, -5, 5}, new double[]{-radius + 5, -radius + 15, -radius + 15}, 3);
+        
+        // Arrow pointing down (south)
+        g.setStroke(Color.WHITE);
+        g.strokeLine(0, 0, 0, radius - 10);
+        
+        g.restore();
+        
+        // Display angle text
+        g.setFill(Color.WHITE);
+        String angleText = String.format("%.0f°", angleDegrees);
+        g.fillText(angleText, x - 10, y + radius + 18);
+    }
+
+    /** Updates dashboard with current simulation metrics. */
     private void updateDashboard() {
         DashBoard.DashBoardData data = new DashBoard.DashBoardData();
 
@@ -219,54 +333,58 @@ public class TrafficSimulatorApp extends Application {
         collectVehicleMetrics(data);
         dashboard.update(data);
     }
-
+    
     /**
-     * Callback invoked when route selection mode starts.
-     * Clears the selected route edges list.
+     * Updates the congestion monitor panel with current hotspot data.
+     * Called at a reduced frequency to avoid excessive UI updates.
      */
+    private void updateCongestionMonitor() {
+        java.util.List<CongestionHotspot> topHotspots = scene.getTopCongestionHotspots(5);
+        int totalCount = scene.getCongestionHotspots().size();
+        controlPanel.getCongestionMonitorPanel().updateHotspots(topHotspots, totalCount);
+    }
+
+    /** Initializes route selection state when user begins selecting a vehicle route. */
     private void onStartRouteSelection() {
         selectedRouteEdges.clear();
-        System.out.println("Route selection mode started");
+        logger.info("Route selection mode started");
     }
 
     /**
-     * Callback invoked when route selection mode changes state.
+     * Toggles route selection mode.
      * 
-     * @param active true if entering route selection mode, false if exiting
+     * @param active True when entering route selection mode, false when exiting
      */
     private void onRouteSelectionModeChange(Boolean active) {
         routeSelectionMode = active;
         if (!active) {
             hoveredEdge = null;
-            System.out.println("Route selection mode ended. Selected " + selectedRouteEdges.size() + " edges.");
+            logger.info("Route selection ended. Selected " + selectedRouteEdges.size() + " edges");
         }
     }
 
-    /**
-     * Callback invoked when a vehicle is successfully added to the simulation.
-     * Clears the route selection state and exits route selection mode.
-     */
+    /** Resets route selection state after vehicle is added to simulation. */
     private void onVehicleAdded() {
         selectedRouteEdges.clear();
         routeSelectionMode = false;
         hoveredEdge = null;
-        System.out.println("Vehicle added successfully!");
+        logger.info("Vehicle added successfully");
     }
 
     /**
-     * Renders route selection highlights on the canvas.
-     * Start edge is shown in green, end edge in red, computed route in cyan, and hovered edge in yellow.
+     * Highlights edges during route selection mode.
      * 
-     * @param g The graphics context for rendering
+     * @param g Graphics context
      */
     private void renderRouteSelection(GraphicsContext g) {
         VehicleAddPanel panel = controlPanel.getVehicleAddPanel();
-        if (panel == null) return;
+        if (panel == null)
+            return;
 
         CoordinateTransform t = viewManager.getTransform();
         highlightEdge(panel.getStartEdge(), Color.LIMEGREEN, g, t);
         highlightEdge(panel.getEndEdge(), Color.ORANGERED, g, t);
-        
+
         String start = panel.getStartEdge();
         String end = panel.getEndEdge();
         for (String edgeId : panel.getSelectedRoute()) {
@@ -277,7 +395,7 @@ public class TrafficSimulatorApp extends Application {
 
         if (hoveredEdge != null) {
             String hoveredId = hoveredEdge.getNetworkEdge().id;
-            if (!hoveredId.equals(start) && !hoveredId.equals(end) 
+            if (!hoveredId.equals(start) && !hoveredId.equals(end)
                     && !panel.getSelectedRoute().contains(hoveredId)) {
                 hoveredEdge.highlight(g, t, Color.YELLOW);
             }
@@ -285,24 +403,25 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /**
-     * Highlights a specific edge by its ID with the given color.
+     * Highlights a specific edge with the given color.
      * 
-     * @param edgeId The edge identifier to highlight
-     * @param color The highlight color
-     * @param g The graphics context for rendering
-     * @param t The coordinate transformation
+     * @param edgeId Edge identifier
+     * @param color Highlight color
+     * @param g Graphics context
+     * @param t Coordinate transform
      */
     private void highlightEdge(String edgeId, Color color, GraphicsContext g, CoordinateTransform t) {
-        if (edgeId == null) return;
+        if (edgeId == null)
+            return;
         Edge edge = scene.getEdgeById(edgeId);
-        if (edge != null) edge.highlight(g, t, color);
+        if (edge != null)
+            edge.highlight(g, t, color);
     }
 
     /**
-     * Draws an overlay box with route selection instructions and status.
-     * Shows current selection state (start edge, end edge, computed route).
+     * Displays on-screen instructions for route selection.
      * 
-     * @param g The graphics context for rendering
+     * @param g Graphics context
      */
     private void drawRouteSelectionOverlay(GraphicsContext g) {
         VehicleAddPanel vehicleAddPanel = controlPanel.getVehicleAddPanel();
@@ -333,14 +452,14 @@ public class TrafficSimulatorApp extends Application {
                 g.setFill(Color.LIMEGREEN);
                 g.fillText("[>] Click START edge (shown in GREEN)", x + 10, y + 45);
             } else if (endEdge == null) {
-                g.fillText("✓ Start: " + startEdge, x + 10, y + 40);
+                g.fillText("Start: " + startEdge, x + 10, y + 40);
                 g.setFill(Color.ORANGERED);
                 g.fillText("[>] Click END edge (shown in RED)", x + 10, y + 60);
             } else {
                 g.setFill(Color.LIMEGREEN);
-                g.fillText("✓ Start: " + startEdge, x + 10, y + 40);
+                g.fillText("Start: " + startEdge, x + 10, y + 40);
                 g.setFill(Color.ORANGERED);
-                g.fillText("✓ End: " + endEdge, x + 10, y + 55);
+                g.fillText("End: " + endEdge, x + 10, y + 55);
                 g.setFill(Color.CYAN);
                 g.fillText("Route: " + vehicleAddPanel.getSelectedRoute().size() + " edges",
                         x + 10, y + 75);
@@ -351,17 +470,26 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /**
-     * Sets up the canvas with size bindings, resize listeners, and starts the animation timer.
+     * Configures canvas sizing and starts the rendering loop.
+     * Binds canvas width to root width minus dynamic control panel width.
      * 
-     * @param root The root BorderPane containing the canvas
-     * @param stage The primary stage
+     * @param root Root layout container
+     * @param stage Primary stage
+     * @param controlPanelRef Control panel reference for width binding
      */
-    private void setupCanvas(BorderPane root, Stage stage) {
-        canvas.widthProperty().bind(root.widthProperty().subtract(300));
+    private void setupCanvas(BorderPane root, Stage stage, ControlPanel controlPanelRef) {
+        // Bind canvas width to root width minus the dynamic control panel width
+        canvas.widthProperty().bind(root.widthProperty().subtract(controlPanelRef.panelWidthProperty()));
         canvas.heightProperty().bind(root.heightProperty());
 
+        // Add listener to reset view when canvas size changes significantly
         canvas.widthProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal.doubleValue() > 0 && canvas.getHeight() > 0) viewManager.resetView();
+            if (newVal.doubleValue() > 0 && canvas.getHeight() > 0) {
+                // Only reset view if the change is significant (to avoid constant resets during animation)
+                if (Math.abs(newVal.doubleValue() - oldVal.doubleValue()) > 50) {
+                    viewManager.resetView();
+                }
+            }
         });
         canvas.heightProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal.doubleValue() > 0 && canvas.getWidth() > 0) {
@@ -373,63 +501,119 @@ public class TrafficSimulatorApp extends Application {
 
         stage.show();
         Platform.runLater(() -> {
-            if (canvas.getWidth() > 0 && canvas.getHeight() > 0) viewManager.resetView();
+            if (canvas.getWidth() > 0 && canvas.getHeight() > 0)
+                viewManager.resetView();
         });
 
         new javafx.animation.AnimationTimer() {
-            public void handle(long now) { draw(); }
+            public void handle(long now) {
+                draw();
+            }
         }.start();
     }
 
     /**
-     * Sets up mouse and scroll event handlers for canvas interaction.
-     * Handles zoom, pan, hover detection, and click handling.
+     * Transforms screen coordinates to account for map rotation.
+     * This is needed because the map is rotated in the GraphicsContext,
+     * but mouse events still use unrotated screen coordinates.
+     * 
+     * @param screenX The X coordinate in screen space
+     * @param screenY The Y coordinate in screen space
+     * @return Array containing [transformedX, transformedY]
      */
+    private double[] transformForRotation(double screenX, double screenY) {
+        double rotationRadians = Math.toRadians(viewManager.getRotationDegrees());
+        if (rotationRadians == 0.0) {
+            return new double[] { screenX, screenY };
+        }
+        
+        double centerX = canvas.getWidth() / 2.0;
+        double centerY = canvas.getHeight() / 2.0;
+        
+        // Translate to center, apply inverse rotation, translate back
+        double translatedX = screenX - centerX;
+        double translatedY = screenY - centerY;
+        
+        double cos = Math.cos(-rotationRadians);
+        double sin = Math.sin(-rotationRadians);
+        
+        double rotatedX = translatedX * cos - translatedY * sin;
+        double rotatedY = translatedX * sin + translatedY * cos;
+        
+        return new double[] { rotatedX + centerX, rotatedY + centerY };
+    }
+
+    /** Configures mouse and scroll interactions. */
     private void setupEventHandlers() {
-        canvas.setOnScroll(e -> viewManager.zoomToPoint(e.getDeltaY() > 0 ? 1.1 : 0.9, e.getX(), e.getY()));
+        canvas.setOnScroll(e -> {
+            double[] transformed = transformForRotation(e.getX(), e.getY());
+            viewManager.zoomToPoint(e.getDeltaY() > 0 ? 1.1 : 0.9, transformed[0], transformed[1]);
+        });
         canvas.setOnMousePressed(e -> viewManager.startPan(e.getX(), e.getY()));
         canvas.setOnMouseDragged(e -> viewManager.updatePan(e.getX(), e.getY()));
         canvas.setOnMouseMoved(e -> {
-            hoveredElement = routeSelectionMode 
-                ? scene.getEdgeAt(e.getX(), e.getY(), viewManager.getTransform())
-                : scene.getElementAt(e.getX(), e.getY(), viewManager.getTransform());
-            if (routeSelectionMode) hoveredEdge = (Edge) hoveredElement;
+            double[] transformed = transformForRotation(e.getX(), e.getY());
+            if (routeSelectionMode) {
+                hoveredElement = scene.getEdgeAt(transformed[0], transformed[1], viewManager.getTransform());
+                hoveredEdge = (Edge) hoveredElement;
+            } else if (e.isControlDown()) {
+                // If Ctrl is pressed, hover over edges instead of lanes
+                hoveredElement = scene.getEdgeAt(transformed[0], transformed[1], viewManager.getTransform());
+            } else {
+                // Normal mode: hover over individual elements (vehicles, lanes, etc.)
+                hoveredElement = scene.getElementAt(transformed[0], transformed[1], viewManager.getTransform());
+            }
         });
-        canvas.setOnMouseClicked(e -> handleCanvasClick(e.getX(), e.getY()));
+        canvas.setOnMouseClicked(e -> {
+            double[] transformed = transformForRotation(e.getX(), e.getY());
+            handleCanvasClick(transformed[0], transformed[1], e.isControlDown());
+        });
     }
 
     /**
-     * Handles canvas click events for object selection or route selection.
+     * Handles mouse clicks on the canvas.
      * 
      * @param x The X coordinate of the click in screen space
      * @param y The Y coordinate of the click in screen space
+     * @param ctrlPressed Whether the Ctrl key is pressed
      */
-    private void handleCanvasClick(double x, double y) {
+    private void handleCanvasClick(double x, double y, boolean ctrlPressed) {
         if (routeSelectionMode) {
             handleRouteSelectionClick(x, y);
             return;
         }
 
-        Object clicked = scene.getElementAt(x, y, viewManager.getTransform());
+        Object clicked;
+        
+        // If Ctrl is pressed, select edge instead of lane
+        if (ctrlPressed) {
+            clicked = scene.getEdgeAt(x, y, viewManager.getTransform());
+        } else {
+            clicked = scene.getElementAt(x, y, viewManager.getTransform());
+        }
+        
         selectedElement = clicked;
 
         if (clicked instanceof TrafficLight) {
             TrafficLight tl = (TrafficLight) clicked;
-            System.out.println("Clicked: Traffic Light - Junction: " + tl.getJunctionId() + 
-                    " Signals: " + tl.getSignals().size());
+            logger.fine("Traffic Light clicked - Junction: " + tl.getJunctionId() + 
+                    ", Signals: " + tl.getSignals().size());
             controlPanel.showTrafficLightControl(tl);
         } else {
-            controlPanel.showNormalControls();
-            if (clicked != null) logClickedElement(clicked);
+            // Only return to normal if not showing traffic light panel
+            if (!controlPanel.isShowingTrafficLightPanel()) {
+                // Don't auto-return, user must use back button
+            }
+            if (clicked != null)
+                logClickedElement(clicked);
         }
     }
 
     /**
-     * Handles click events during route selection mode.
-     * Passes the clicked edge ID to the vehicle add panel.
+     * Processes clicks while in route selection mode.
      * 
-     * @param x The X coordinate of the click in screen space
-     * @param y The Y coordinate of the click in screen space
+     * @param x X coordinate in screen space
+     * @param y Y coordinate in screen space
      */
     private void handleRouteSelectionClick(double x, double y) {
         String edgeId = scene.getEdgeIdAt(x, y, viewManager.getTransform());
@@ -443,62 +627,85 @@ public class TrafficSimulatorApp extends Application {
     }
 
     /**
-     * Logs information about the clicked element to the console.
+     * Logs details about the clicked element.
      * 
-     * @param element The clicked object (Vehicle, Lane, or Junction)
+     * @param element Clicked simulation element
      */
     private void logClickedElement(Object element) {
-        System.out.println("Clicked: " + element.getClass().getSimpleName());
+        logger.fine("Clicked: " + element.getClass().getSimpleName());
         if (element instanceof Junction) {
             Junction j = (Junction) element;
             System.out.println("Junction ID: " + j.getId() + " Type: " + j.getType());
+        } else if (element instanceof Edge) {
+            Edge edge = (Edge) element;
+            System.out.println("Edge ID: " + edge.getNetworkEdge().id + " Vehicles: " + edge.getVehicleCount());
         } else if (element instanceof Lane) {
-            System.out.println("Lane ID: " + ((Lane) element).getId());
+            logger.fine("Lane ID: " + ((Lane) element).getId());
         } else if (element instanceof Vehicle) {
             Vehicle v = (Vehicle) element;
-            System.out.println("Vehicle ID: " + v.getId() + " Type: " + v.getType());
+            logger.fine("Vehicle ID: " + v.getId() + ", Type: " + v.getType());
         }
     }
 
     /**
-     * Collects vehicle metrics including counts by type and average speed.
-     * Populates the dashboard data object with current statistics.
+     * Gathers vehicle statistics from the simulation.
      * 
-     * @param data The dashboard data object to populate
+     * @param data Dashboard data structure to populate
      */
     private void collectVehicleMetrics(DashBoard.DashBoardData data) {
         var positions = runner.getVehiclePositions();
         var speeds = runner.getVehicleSpeeds();
-        
-        double totalSpeed = 0.0;
-        int[] counts = new int[5]; // car, truck, bus, moto, emergency
-        
-        for (var entry : positions.entrySet()) {
-            String id = entry.getKey();
-            if (id.startsWith("car")) counts[0]++;
-            else if (id.startsWith("truck")) counts[1]++;
-            else if (id.startsWith("bus")) counts[2]++;
-            else if (id.startsWith("moto")) counts[3]++;
-            else if (id.startsWith("ambu")) counts[4]++;
-            totalSpeed += speeds.getOrDefault(id, 0.0);
-        }
-        
+        var counts = runner.getVehicleCountsByType();
+
+        // Data is already filtered by SimulationRunner
+        double totalSpeed = speeds.values().stream().mapToDouble(Double::doubleValue).sum();
         int total = positions.size();
+        
         data.activeVehicles = total;
         data.avgSpeed = total > 0 ? totalSpeed / total : 0.0;
-        data.carCount = counts[0];
-        data.truckCount = counts[1];
-        data.busCount = counts[2];
-        data.motorcycleCount = counts[3];
-        data.emergencyCount = counts[4];
+        data.carCount = counts.getOrDefault("car", 0);
+        data.truckCount = counts.getOrDefault("truck", 0);
+        data.busCount = counts.getOrDefault("bus", 0);
+        data.motorcycleCount = counts.getOrDefault("moto", 0);
+        data.emergencyCount = counts.getOrDefault("emergency", 0);
     }
 
     /**
-     * Application entry point.
+     * Application entry point. Initializes logging configuration and launches the JavaFX application.
+     * Logs are written to both console and a timestamped file in the logs directory.
      * 
-     * @param args Command line arguments (not used)
+     * @param args Command line arguments
      */
     public static void main(String[] args) {
+        configureLogging();
         launch(args);
+    }
+
+    /**
+     * Configures the application logging system with console and file handlers.
+     * Creates a timestamped log file in the logs directory for each application run.
+     */
+    private static void configureLogging() {
+        try {
+            java.nio.file.Files.createDirectories(java.nio.file.Paths.get("logs"));
+            
+            String timestamp = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new java.util.Date());
+            String logFilePath = "logs/traffic-simulator-" + timestamp + ".log";
+            
+            java.io.FileInputStream configFile = new java.io.FileInputStream("logging.properties");
+            java.util.logging.LogManager.getLogManager().readConfiguration(configFile);
+            configFile.close();
+            
+            java.util.logging.Logger rootLogger = java.util.logging.Logger.getLogger("");
+            java.util.logging.FileHandler fileHandler = new java.util.logging.FileHandler(logFilePath, true);
+            fileHandler.setLevel(java.util.logging.Level.ALL);
+            fileHandler.setFormatter(new java.util.logging.SimpleFormatter());
+            rootLogger.addHandler(fileHandler);
+            
+            System.out.println("Logging configured - output to console and " + logFilePath);
+        } catch (Exception e) {
+            System.err.println("WARNING: Could not configure logging, using default settings");
+            e.printStackTrace();
+        }
     }
 }

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2025-12-14 12:43:14.715695 by randomTrips.py UNKNOWN
+<!-- generated on 2026-01-18 15:37:22.330629 by randomTrips.py UNKNOWN
 <configuration>
     <net-file value="SumoConfig/network.net.xml"/>
     <route-file value="SumoConfig/emergency.rou.xml"/>
@@ -9,13 +9,12 @@
     <vehicle-class value="emergency"/>
     <fringe-factor value="5"/>
     <min-distance value="600.0"/>
-    <validate value="True"/>
     <period value="60.0"/>
 </configuration>
 -->
 
-<!-- generated on 2025-12-14 12:43:14 by Eclipse SUMO duarouter Version 1.20.0
-<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/duarouterConfiguration.xsd">
+<!-- generated on 2026-01-18 15:37:22 by Eclipse SUMO duarouter Version 1.24.0
+<duarouterConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/duarouterConfiguration.xsd">
 
     <input>
         <net-file value="SumoConfig/network.net.xml"/>
@@ -38,120 +37,8 @@
         <no-step-log value="true"/>
     </report>
 
-</configuration>
+</duarouterConfiguration>
 -->
 
 <routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
-    <vType id="ambulance_emergency" vClass="emergency" color="yellow"/>
-    <vehicle id="ambulance0" type="ambulance_emergency" depart="0.00" departLane="best" departSpeed="max">
-        <route edges="-1904 -1900 -143 -29 -9 11 63 257 1552"/>
-    </vehicle>
-    <vehicle id="ambulance1" type="ambulance_emergency" depart="120.00" departLane="best" departSpeed="max">
-        <route edges="-1899 -895 -125 -26 16 41 186 1234 1910"/>
-    </vehicle>
-    <vehicle id="ambulance2" type="ambulance_emergency" depart="180.00" departLane="best" departSpeed="max">
-        <route edges="-1242 -186 -41 -16 26 125 895 1899"/>
-    </vehicle>
-    <vehicle id="ambulance3" type="ambulance_emergency" depart="240.00" departLane="best" departSpeed="max">
-        <route edges="-1906 -1207 -181 -29 -9 11 41 186 1234 1910"/>
-    </vehicle>
-    <vehicle id="ambulance4" type="ambulance_emergency" depart="480.00" departLane="best" departSpeed="max">
-        <route edges="-1899 -895 -125 -26 16 41 186 1234 1942"/>
-    </vehicle>
-    <vehicle id="ambulance5" type="ambulance_emergency" depart="720.00" departLane="best" departSpeed="max">
-        <route edges="-1910 -1234 -186 -41 -16 26 125 895 1899"/>
-    </vehicle>
-    <vehicle id="ambulance6" type="ambulance_emergency" depart="840.00" departLane="best" departSpeed="max">
-        <route edges="-1899 -895 -125 -26 16 41 186 1234 1910"/>
-    </vehicle>
-    <vehicle id="ambulance7" type="ambulance_emergency" depart="1080.00" departLane="best" departSpeed="max">
-        <route edges="-1910 -1234 -186 -41 -16 26 125 895 1899"/>
-    </vehicle>
-    <vehicle id="ambulance8" type="ambulance_emergency" depart="1140.00" departLane="best" departSpeed="max">
-        <route edges="-1910 -1234 -186 -41 -16 26 125 895 1899"/>
-    </vehicle>
-    <vehicle id="ambulance9" type="ambulance_emergency" depart="1260.00" departLane="best" departSpeed="max">
-        <route edges="-1910 -1234 -186 -41 -16 26 125 895 1899"/>
-    </vehicle>
-    <vehicle id="ambulance10" type="ambulance_emergency" depart="1380.00" departLane="best" departSpeed="max">
-        <route edges="-1242 -186 -41 -16 26 125 895 1899"/>
-    </vehicle>
-    <vehicle id="ambulance11" type="ambulance_emergency" depart="1500.00" departLane="best" departSpeed="max">
-        <route edges="-1899 -895 -125 -26 16 41 186 1242"/>
-    </vehicle>
-    <vehicle id="ambulance12" type="ambulance_emergency" depart="1680.00" departLane="best" departSpeed="max">
-        <route edges="-1899 -895 -125 -26 16 41 186 1242"/>
-    </vehicle>
-    <vehicle id="ambulance13" type="ambulance_emergency" depart="1800.00" departLane="best" departSpeed="max">
-        <route edges="-1899 -895 -125 -26 16 41 186 1234 1910"/>
-    </vehicle>
-    <vehicle id="ambulance14" type="ambulance_emergency" depart="1860.00" departLane="best" departSpeed="max">
-        <route edges="-1552 -257 -63 -11 9 29 143 1900 1904"/>
-    </vehicle>
-    <vehicle id="ambulance15" type="ambulance_emergency" depart="1920.00" departLane="best" departSpeed="max">
-        <route edges="-1942 -1234 -186 -41 -16 26 125 895 1899"/>
-    </vehicle>
-    <vehicle id="ambulance16" type="ambulance_emergency" depart="1980.00" departLane="best" departSpeed="max">
-        <route edges="-1899 -895 -125 -26 16 41 186 1234 1910"/>
-    </vehicle>
-    <vehicle id="ambulance17" type="ambulance_emergency" depart="2100.00" departLane="best" departSpeed="max">
-        <route edges="-1942 -1234 -186 -41 -16 26 125 895 1899"/>
-    </vehicle>
-    <vehicle id="ambulance18" type="ambulance_emergency" depart="2160.00" departLane="best" departSpeed="max">
-        <route edges="-1552 -257 -63 -11 9 29 143 1900 1904"/>
-    </vehicle>
-    <vehicle id="ambulance19" type="ambulance_emergency" depart="2220.00" departLane="best" departSpeed="max">
-        <route edges="-1552 -257 -63 -11 9 29 143 1900 1904"/>
-    </vehicle>
-    <vehicle id="ambulance20" type="ambulance_emergency" depart="2400.00" departLane="best" departSpeed="max">
-        <route edges="-1910 -1234 -186 -41 -11 9 29 143 1900 1906"/>
-    </vehicle>
-    <vehicle id="ambulance21" type="ambulance_emergency" depart="2460.00" departLane="best" departSpeed="max">
-        <route edges="-1552 -257 -63 -11 9 29 143 1900 1904"/>
-    </vehicle>
-    <vehicle id="ambulance22" type="ambulance_emergency" depart="2520.00" departLane="best" departSpeed="max">
-        <route edges="-1904 -1900 -143 -29 -9 11 63 257 1552"/>
-    </vehicle>
-    <vehicle id="ambulance23" type="ambulance_emergency" depart="2580.00" departLane="best" departSpeed="max">
-        <route edges="-1899 -895 -125 -26 16 41 186 1242"/>
-    </vehicle>
-    <vehicle id="ambulance24" type="ambulance_emergency" depart="2640.00" departLane="best" departSpeed="max">
-        <route edges="-1552 -257 -63 -11 9 29 143 1900 1904"/>
-    </vehicle>
-    <vehicle id="ambulance25" type="ambulance_emergency" depart="2700.00" departLane="best" departSpeed="max">
-        <route edges="-1552 -257 -63 -11 9 29 143 1900 1904"/>
-    </vehicle>
-    <vehicle id="ambulance26" type="ambulance_emergency" depart="2760.00" departLane="best" departSpeed="max">
-        <route edges="-1242 -186 -41 -16 26 125 895 1899"/>
-    </vehicle>
-    <vehicle id="ambulance27" type="ambulance_emergency" depart="2820.00" departLane="best" departSpeed="max">
-        <route edges="-1899 -895 -125 -26 16 41 186 1234 1910"/>
-    </vehicle>
-    <vehicle id="ambulance28" type="ambulance_emergency" depart="2940.00" departLane="best" departSpeed="max">
-        <route edges="-1910 -1234 -186 -41 -11 9 29 143 1900 1906"/>
-    </vehicle>
-    <vehicle id="ambulance29" type="ambulance_emergency" depart="3060.00" departLane="best" departSpeed="max">
-        <route edges="-1942 -1234 -186 -41 -16 26 125 895 1899"/>
-    </vehicle>
-    <vehicle id="ambulance30" type="ambulance_emergency" depart="3120.00" departLane="best" departSpeed="max">
-        <route edges="-1552 -257 -63 -11 9 29 143 1900 1904"/>
-    </vehicle>
-    <vehicle id="ambulance31" type="ambulance_emergency" depart="3240.00" departLane="best" departSpeed="max">
-        <route edges="-1552 -257 -63 -11 9 29 143 1900 1904"/>
-    </vehicle>
-    <vehicle id="ambulance32" type="ambulance_emergency" depart="3300.00" departLane="best" departSpeed="max">
-        <route edges="-1910 -1234 -186 -41 -11 9 29 143 1900 1904"/>
-    </vehicle>
-    <vehicle id="ambulance33" type="ambulance_emergency" depart="3360.00" departLane="best" departSpeed="max">
-        <route edges="-1899 -895 -125 -26 16 41 186 1234 1942"/>
-    </vehicle>
-    <vehicle id="ambulance34" type="ambulance_emergency" depart="3420.00" departLane="best" departSpeed="max">
-        <route edges="-1552 -257 -63 -11 9 29 143 1900 1904"/>
-    </vehicle>
-    <vehicle id="ambulance35" type="ambulance_emergency" depart="3480.00" departLane="best" departSpeed="max">
-        <route edges="-1910 -1234 -186 -41 -11 9 29 143 1900 1906"/>
-    </vehicle>
-    <vehicle id="ambulance36" type="ambulance_emergency" depart="3540.00" departLane="best" departSpeed="max">
-        <route edges="-1910 -1234 -186 -41 -11 9 29 143 1900 1906"/>
-    </vehicle>
 </routes>

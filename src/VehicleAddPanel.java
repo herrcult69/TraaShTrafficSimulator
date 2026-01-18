@@ -2,6 +2,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Separator;
@@ -10,26 +11,25 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.application.Platform;
 import javafx.animation.AnimationTimer;
+import javafx.scene.paint.Color;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.logging.Logger;
 
 /**
- * Panel for adding new vehicles to the simulation interactively.
- * Allows selection of vehicle type and route building by clicking start and end edges on the map.
- * SUMO automatically computes a valid path between the selected edges using its routing algorithm.
- * Supports auto-generated vehicle IDs and provides visual feedback during route selection.
+ * Panel for adding vehicles to the simulation interactively.
+ * Supports route selection, auto-generated IDs, and stress testing.
  *
  * @author M A T^2 H Team
- * @version 2.0 
+ * @version 2.0
  * @see SimulationRunner
  * @see TraaSAdapter
- * @see Edge
- * @see ControlPanel
  */
 public class VehicleAddPanel extends VBox {
+    private static final Logger logger = Logger.getLogger(VehicleAddPanel.class.getName());
 
     // Vehicle type options
     private static final String[] VEHICLE_TYPES = { "car", "truck", "bus", "motorcycle", "emergency" };
@@ -38,6 +38,10 @@ public class VehicleAddPanel extends VBox {
     // UI components
     private ComboBox<String> vehicleTypeCombo;
     private TextField vehicleIdField;
+    private TextField vehicleBatchField;
+    private TextField vehicleSpeedField;
+    private TextField vehicleColorField;
+    private ColorPicker vehicleColorPicker;
     private ListView<String> routeListView;
     private Label statusLabel;
     private Label instructionLabel;
@@ -47,14 +51,16 @@ public class VehicleAddPanel extends VBox {
     private Button clearRouteBtn;
     private Button confirmBtn;
     private Button cancelBtn;
-    
+
     // Stress test components
-    /**Adjusting the value RAND_ITERATIONS and RAND_MAX_DISTANCE in createMap.sh
+    /**
+     * Adjusting the value RAND_ITERATIONS and RAND_MAX_DISTANCE in createMap.sh
      * to recommended values is advised for better stress test.
      * Rerun the createMap.sh script after changing those values.
      */
     private Button stressTestBtn;
     private TextField stressIntervalField;
+    private TextField stressBatchField;
     private Label stressStatusLabel;
     private Label stressStatsLabel;
     private Label fpsLabel;
@@ -65,7 +71,7 @@ public class VehicleAddPanel extends VBox {
     private long stressTestStartTime = 0;
     private Random random = new Random();
     private List<String> availableEdges = null;
-    
+
     // FPS counter
     private AnimationTimer fpsTimer;
     private long[] frameTimes = new long[100];
@@ -90,13 +96,13 @@ public class VehicleAddPanel extends VBox {
     private static int vehicleCounter = 1;
 
     /**
-     * Constructs a new vehicle addition panel with necessary callbacks.
+     * Constructs the vehicle addition panel.
      * 
-     * @param runner The simulation runner for SUMO communication
-     * @param onCancel Callback invoked when user cancels vehicle addition
-     * @param onStartRouteSelection Callback invoked when route selection starts
-     * @param onRouteSelectionModeChange Callback for route selection mode changes (true = active)
-     * @param onVehicleAdded Callback invoked when vehicle is successfully added
+     * @param runner Simulation runner
+     * @param onCancel Callback on cancel
+     * @param onStartRouteSelection Callback on route selection start
+     * @param onRouteSelectionModeChange Callback on route mode toggle
+     * @param onVehicleAdded Callback on vehicle added
      */
     public VehicleAddPanel(SimulationRunner runner, Runnable onCancel,
             Runnable onStartRouteSelection, java.util.function.Consumer<Boolean> onRouteSelectionModeChange,
@@ -113,10 +119,6 @@ public class VehicleAddPanel extends VBox {
         createUI();
     }
 
-    /**
-     * Creates the complete UI for the vehicle addition panel.
-     * Includes vehicle type selector, ID field, route selection controls, and action buttons.
-     */
     private void createUI() {
         setAlignment(Pos.TOP_CENTER);
         setPadding(new Insets(15));
@@ -166,6 +168,59 @@ public class VehicleAddPanel extends VBox {
         vehicleIdField.setStyle(UIStyles.INPUT_FIELD_STYLE + " -fx-font-family: monospace;");
         updateVehicleId();
 
+        // Vehicle Parameters
+        Label batchLabel = new Label("Batch count:");
+        batchLabel.setStyle(UIStyles.LABEL_STYLE);
+        vehicleBatchField = new TextField("1");
+        vehicleBatchField.setPrefWidth(120);
+        vehicleBatchField.setStyle(UIStyles.INPUT_FIELD_STYLE + " -fx-font-family: monospace;");
+        vehicleBatchField.textProperty().addListener((obs, oldVal, newVal) -> {
+            if (!newVal.matches("\\d*")) {
+                vehicleBatchField.setText(newVal.replaceAll("[^\\d]", ""));
+            }
+        });
+
+        Label speedLabel = new Label("Depart speed (m/s):");
+        speedLabel.setStyle(UIStyles.LABEL_STYLE);
+        vehicleSpeedField = new TextField("0");
+        vehicleSpeedField.setPrefWidth(120);
+        vehicleSpeedField.setStyle(UIStyles.INPUT_FIELD_STYLE + " -fx-font-family: monospace;");
+        vehicleSpeedField.textProperty().addListener((obs, oldVal, newVal) -> {
+            if (!newVal.matches("[0-9]*([.]?[0-9]*)?")) {
+                vehicleSpeedField.setText(oldVal);
+            }
+        });
+
+        HBox batchRow = new HBox(10);
+        batchRow.setAlignment(Pos.CENTER_LEFT);
+        batchRow.getChildren().addAll(batchLabel, vehicleBatchField);
+
+        HBox speedRow = new HBox(10);
+        speedRow.setAlignment(Pos.CENTER_LEFT);
+        speedRow.getChildren().addAll(speedLabel, vehicleSpeedField);
+
+        Label colorLabel = new Label("Color (hex #RRGGBB, optional):");
+        colorLabel.setStyle(UIStyles.LABEL_STYLE);
+        vehicleColorField = new TextField("");
+        vehicleColorField.setPrefWidth(160);
+        vehicleColorField.setStyle(UIStyles.INPUT_FIELD_STYLE + " -fx-font-family: monospace;");
+
+        vehicleColorPicker = new ColorPicker();
+        vehicleColorPicker.setStyle("-fx-background-color: " + UIStyles.BG_SECONDARY + ";");
+        vehicleColorPicker.setOnAction(e -> {
+            Color c = vehicleColorPicker.getValue();
+            if (c != null) {
+                int r = (int) Math.round(c.getRed() * 255);
+                int g = (int) Math.round(c.getGreen() * 255);
+                int b = (int) Math.round(c.getBlue() * 255);
+                vehicleColorField.setText(String.format("#%02X%02X%02X", r, g, b));
+            }
+        });
+
+        HBox colorRow = new HBox(10);
+        colorRow.setAlignment(Pos.CENTER_LEFT);
+        colorRow.getChildren().addAll(vehicleColorField, vehicleColorPicker);
+
         // Route Section
         Label routeLabel = new Label("Route Selection:");
         routeLabel.setStyle(UIStyles.LABEL_STYLE + " -fx-font-weight: bold;");
@@ -187,7 +242,8 @@ public class VehicleAddPanel extends VBox {
 
         routeListView = new ListView<>();
         routeListView.setPrefHeight(100);
-        routeListView.setStyle("-fx-background-color: " + UIStyles.BG_SECONDARY + "; -fx-control-inner-background: " + UIStyles.BG_SECONDARY + ";");
+        routeListView.setStyle("-fx-background-color: " + UIStyles.BG_SECONDARY + "; -fx-control-inner-background: "
+                + UIStyles.BG_SECONDARY + ";");
 
         // Route action buttons
         HBox routeButtons = new HBox(8);
@@ -210,7 +266,7 @@ public class VehicleAddPanel extends VBox {
         statusLabel.setWrapText(true);
 
         // Confirm/Cancel buttons
-        confirmBtn = UIStyles.createAccentButton("✓ Add Vehicle");
+        confirmBtn = UIStyles.createAccentButton("Add Vehicle");
         confirmBtn.setOnAction(e -> addVehicle());
 
         cancelBtn = UIStyles.createStyledButton("✕ Cancel");
@@ -247,14 +303,33 @@ public class VehicleAddPanel extends VBox {
         intervalBox.setAlignment(Pos.CENTER_LEFT);
         intervalBox.getChildren().addAll(intervalLabel, stressIntervalField);
 
+        Label stressBatchLabel = new Label("Batch (veh/interval):");
+        stressBatchLabel.setStyle(UIStyles.LABEL_STYLE);
+        stressBatchField = new TextField("1");
+        stressBatchField.setPrefWidth(80);
+        stressBatchField.setStyle(UIStyles.INPUT_FIELD_STYLE + " -fx-font-family: monospace;");
+        stressBatchField.textProperty().addListener((obs, oldVal, newVal) -> {
+            if (!newVal.matches("\\d*")) {
+                stressBatchField.setText(newVal.replaceAll("[^\\d]", ""));
+            }
+        });
+        HBox stressBatchBox = new HBox(10);
+        stressBatchBox.setAlignment(Pos.CENTER_LEFT);
+        stressBatchBox.getChildren().addAll(stressBatchLabel, stressBatchField);
+
         stressTestBtn = UIStyles.createStyledButton("Start Stress Test");
         stressTestBtn.setPrefWidth(200);
-        stressTestBtn.setStyle("-fx-background-color: #E53935; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;");
+        stressTestBtn.setStyle(
+                "-fx-background-color: #E53935; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;");
         stressTestBtn.setOnMouseEntered(e -> {
-            if (!stressTestRunning) stressTestBtn.setStyle("-fx-background-color: #FF5252; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;");
+            if (!stressTestRunning)
+                stressTestBtn.setStyle(
+                        "-fx-background-color: #FF5252; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;");
         });
         stressTestBtn.setOnMouseExited(e -> {
-            if (!stressTestRunning) stressTestBtn.setStyle("-fx-background-color: #E53935; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;");
+            if (!stressTestRunning)
+                stressTestBtn.setStyle(
+                        "-fx-background-color: #E53935; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;");
         });
         stressTestBtn.setOnAction(e -> toggleStressTest());
 
@@ -262,11 +337,13 @@ public class VehicleAddPanel extends VBox {
         stressStatusLabel.setStyle("-fx-text-fill: " + UIStyles.TEXT_SECONDARY + "; -fx-font-size: 11;");
 
         stressStatsLabel = new Label("");
-        stressStatsLabel.setStyle("-fx-text-fill: " + UIStyles.TEXT_WARNING + "; -fx-font-size: 11; -fx-font-family: monospace;");
+        stressStatsLabel.setStyle(
+                "-fx-text-fill: " + UIStyles.TEXT_WARNING + "; -fx-font-size: 11; -fx-font-family: monospace;");
         stressStatsLabel.setWrapText(true);
 
         fpsLabel = new Label("");
-        fpsLabel.setStyle("-fx-text-fill: #00E676; -fx-font-size: 14; -fx-font-weight: bold; -fx-font-family: monospace;");
+        fpsLabel.setStyle(
+                "-fx-text-fill: #00E676; -fx-font-size: 14; -fx-font-weight: bold; -fx-font-family: monospace;");
 
         // Info box with instructions
         VBox infoBox = createInfoBox();
@@ -275,19 +352,36 @@ public class VehicleAddPanel extends VBox {
         getChildren().addAll(
                 backBtn, titleLabel, new Separator(),
                 typeLabel, vehicleTypeCombo,
-                idLabel, vehicleIdField, new Separator(),
+                idLabel, vehicleIdField,
+                batchRow,
+                speedRow,
+                colorLabel, colorRow,
+                new Separator(),
                 routeLabel, instructionLabel,
                 startEdgeLabel, endEdgeLabel,
                 computedRouteLabel, routeListView,
                 routeButtons, statusLabel, new Separator(),
                 confirmBtn, cancelBtn,
                 stressSeparator, stressTestTitle, stressDescLabel,
-                intervalBox, stressTestBtn, stressStatusLabel, stressStatsLabel, fpsLabel,
+                intervalBox, stressBatchBox, stressTestBtn, stressStatusLabel, stressStatsLabel, fpsLabel,
                 infoBox);
     }
 
+    private Color parseHexColor(String text) {
+        if (text == null) return null;
+        String s = text.trim();
+        if (s.isEmpty()) return null;
+        if (!s.startsWith("#") || s.length() != 7) {
+            throw new IllegalArgumentException("Color must be in format #RRGGBB");
+        }
+        int r = Integer.parseInt(s.substring(1, 3), 16);
+        int g = Integer.parseInt(s.substring(3, 5), 16);
+        int b = Integer.parseInt(s.substring(5, 7), 16);
+        return Color.rgb(r, g, b);
+    }
+
     /**
-     * Creates an informational box with step-by-step instructions for adding a vehicle.
+     * Creates an informational box with step-by-step instructions.
      * 
      * @return A VBox containing the help instructions
      */
@@ -318,8 +412,7 @@ public class VehicleAddPanel extends VBox {
     }
 
     /**
-     * Updates the vehicle ID field based on the selected vehicle type and counter.
-     * Generates IDs like "car_new_1", "truck_new_2", etc.
+     * Updates the vehicle ID field based on selected type.
      */
     private void updateVehicleId() {
         String type = vehicleTypeCombo.getValue();
@@ -348,7 +441,7 @@ public class VehicleAddPanel extends VBox {
     }
 
     /**
-     * Enters route selection mode, pauses simulation, and updates UI for edge selection.
+     * Enters route selection mode and updates UI.
      */
     private void enterRouteSelectionMode() {
         // Pause simulation when entering route selection mode
@@ -357,7 +450,7 @@ public class VehicleAddPanel extends VBox {
             updateStatusLabel("Simulation paused for route selection", UIStyles.TEXT_WARNING);
         }
 
-        addEdgeBtn.setText("✓ Done Selecting");
+        addEdgeBtn.setText("Done Selecting");
         addEdgeBtn.setStyle("-fx-background-color: #415A77; -fx-text-fill: white; -fx-font-size: 11; -fx-padding: 8;");
 
         if (startEdge == null) {
@@ -366,12 +459,14 @@ public class VehicleAddPanel extends VBox {
             updateInstructionLabel("Click on the END edge (destination)", UIStyles.TEXT_ERROR);
         }
 
-        if (onRouteSelectionModeChange != null) onRouteSelectionModeChange.accept(true);
-        if (onStartRouteSelection != null) onStartRouteSelection.run();
+        if (onRouteSelectionModeChange != null)
+            onRouteSelectionModeChange.accept(true);
+        if (onStartRouteSelection != null)
+            onStartRouteSelection.run();
     }
 
     /**
-     * Exits route selection mode and updates UI to show route status or instructions.
+     * Exits route selection mode and updates UI.
      */
     private void exitRouteSelectionModeUI() {
         addEdgeBtn.setText("📍 Select Route");
@@ -385,22 +480,23 @@ public class VehicleAddPanel extends VBox {
             updateInstructionLabel("Select start and end edges", UIStyles.TEXT_SECONDARY);
         }
 
-        if (onRouteSelectionModeChange != null) onRouteSelectionModeChange.accept(false);
+        if (onRouteSelectionModeChange != null)
+            onRouteSelectionModeChange.accept(false);
     }
 
     /**
-     * Cleanly exits route selection mode by disabling it and notifying callbacks.
+     * Cleanly exits route selection mode.
      */
     private void exitRouteSelectionMode() {
         if (routeSelectionMode) {
             routeSelectionMode = false;
-            if (onRouteSelectionModeChange != null) onRouteSelectionModeChange.accept(false);
+            if (onRouteSelectionModeChange != null)
+                onRouteSelectionModeChange.accept(false);
         }
     }
 
     /**
      * Adds an edge to the route during route selection mode.
-     * First click sets start edge (green), second click sets end edge (red) and computes route.
      * 
      * @param edgeId The ID of the clicked edge
      */
@@ -438,8 +534,7 @@ public class VehicleAddPanel extends VBox {
     }
 
     /**
-     * Computes a route using SUMO's routing algorithm between the selected start and end edges.
-     * Displays the computed route in the route list view.
+     * Computes a route using SUMO's routing algorithm.
      */
     private void computeRoute() {
         if (startEdge == null || endEdge == null)
@@ -448,7 +543,8 @@ public class VehicleAddPanel extends VBox {
         try {
             TraaSAdapter adapter = runner.getAdapter();
             if (adapter == null) {
-                showError("SUMO not connected!"); //This might happened if trying to add vehicle before starting simulation
+                showError("SUMO not connected!"); // This might happened if trying to add vehicle before starting
+                                                  // simulation
                 return;
             }
 
@@ -465,8 +561,9 @@ public class VehicleAddPanel extends VBox {
                 routeListView.getItems().clear();
                 routeListView.getItems().addAll(route);
 
-                statusLabel.setText("✓ Route found: " + route.size() + " edges");
-                statusLabel.setStyle("-fx-text-fill: " + UIStyles.TEXT_SUCCESS + "; -fx-font-weight: bold; -fx-font-size: 11;");
+                statusLabel.setText("Route found: " + route.size() + " edges");
+                statusLabel.setStyle(
+                        "-fx-text-fill: " + UIStyles.TEXT_SUCCESS + "; -fx-font-weight: bold; -fx-font-size: 11;");
                 updateInstructionLabel("Route ready! Click 'Add Vehicle' or change edges.", UIStyles.TEXT_SUCCESS);
             } else {
                 selectedRoute.clear();
@@ -475,37 +572,37 @@ public class VehicleAddPanel extends VBox {
             }
 
         } catch (Exception e) {
-            showError("Route computation failed: " + e.getMessage()); // Only happen if SUMO connection issue or invalid edges
+            showError("Route computation failed: " + e.getMessage()); // Only happen if SUMO connection issue or invalid
+                                                                      // edges
             e.printStackTrace();
         }
     }
 
-/**
- * An exaplaination of how the program's FPS works:
- * 1 Frame = 1 complete redraw of the canvas (not 1 step of the simulation)
- * Basically the FPS here is how many times per second the canvas is redrawn
- * The JavaFX UI rendering usually runs at 60FPS on thread 1
- * The SUMO Simulation runs at a fixed tick rate on thread 2
- * The stress test adds vehicles continuously will applying load on both threads
- * 1. More vehicles = more rendering required per frame 
- * 5000 vehicle means 5000 drawings per frame
- * Making the draw() method take longer to complete 1 total redraw
- * Lower FPS as the draw() takes longer
- * 2. More vehicles = more processing per simulation step
- * Hard to notice unless extreme stress test
- * Making each simulation step take longer to complete
- * The simulation thread cannot complete a tick in desired time.
- * The simulation lags behind real time.
- * 3. Desynchronization between rendering and simulation:
- * + Simulation faster than render
- *   Rarely happens, require high vehicle count and low interval
- *   The vehicles teleport of skip positions between frames
- * + Render faster than simulation
- *   Common when stress testing
- *   The redraws show same vehicle positions multiple times
- *   The FPS counter shows high FPS but simulation lags behind real time
- */
-
+    /**
+     * An exaplaination of how the program's FPS works:
+     * 1 Frame = 1 complete redraw of the canvas (not 1 step of the simulation)
+     * Basically the FPS here is how many times per second the canvas is redrawn
+     * The JavaFX UI rendering usually runs at 60FPS on thread 1
+     * The SUMO Simulation runs at a fixed tick rate on thread 2
+     * The stress test adds vehicles continuously will applying load on both threads
+     * 1. More vehicles = more rendering required per frame
+     * 5000 vehicle means 5000 drawings per frame
+     * Making the draw() method take longer to complete 1 total redraw
+     * Lower FPS as the draw() takes longer
+     * 2. More vehicles = more processing per simulation step
+     * Hard to notice unless extreme stress test
+     * Making each simulation step take longer to complete
+     * The simulation thread cannot complete a tick in desired time.
+     * The simulation lags behind real time.
+     * 3. Desynchronization between rendering and simulation:
+     * + Simulation faster than render
+     * Rarely happens, require high vehicle count and low interval
+     * The vehicles teleport of skip positions between frames
+     * + Render faster than simulation
+     * Common when stress testing
+     * The redraws show same vehicle positions multiple times
+     * The FPS counter shows high FPS but simulation lags behind real time
+     */
 
     /**
      * Toggles the stress test on or off.
@@ -530,7 +627,8 @@ public class VehicleAddPanel extends VBox {
 
         // Get interval
         String intervalText = stressIntervalField.getText().trim();
-        if (intervalText.isEmpty()) intervalText = "500";
+        if (intervalText.isEmpty())
+            intervalText = "500";
         int interval;
         try {
             interval = Integer.parseInt(intervalText);
@@ -539,14 +637,33 @@ public class VehicleAddPanel extends VBox {
             return;
         }
 
+        // Get batch size
+        String batchText = stressBatchField.getText().trim();
+        if (batchText.isEmpty()) batchText = "1";
+        int batch;
+        try {
+            batch = Integer.parseInt(batchText);
+        } catch (NumberFormatException e) {
+            updateStressStatus("Invalid batch size!", UIStyles.TEXT_ERROR);
+            return;
+        }
+        if (batch < 1) {
+            updateStressStatus("Batch size must be >= 1", UIStyles.TEXT_ERROR);
+            return;
+        }
+        if (batch > 1000) {
+            updateStressStatus("Batch size too large (max 1000)", UIStyles.TEXT_ERROR);
+            return;
+        }
+
         // Load available edges for random routing
         try {
             availableEdges = adapter.getEdgeIds();
             // Filter out internal edges (those starting with ':')
             availableEdges = availableEdges.stream()
-                .filter(edge -> !edge.startsWith(":"))
-                .collect(java.util.stream.Collectors.toList());
-            
+                    .filter(edge -> !edge.startsWith(":"))
+                    .collect(java.util.stream.Collectors.toList());
+
             if (availableEdges.size() < 2) {
                 updateStressStatus("Not enough edges for routing!", UIStyles.TEXT_ERROR);
                 return;
@@ -569,15 +686,19 @@ public class VehicleAddPanel extends VBox {
 
         // Update UI
         stressTestBtn.setText("Stop Stress Test");
-        stressTestBtn.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;");
-        stressTestBtn.setOnMouseEntered(e -> stressTestBtn.setStyle("-fx-background-color: #66BB6A; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;"));
-        stressTestBtn.setOnMouseExited(e -> stressTestBtn.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;"));
+        stressTestBtn.setStyle(
+                "-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;");
+        stressTestBtn.setOnMouseEntered(e -> stressTestBtn.setStyle(
+                "-fx-background-color: #66BB6A; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;"));
+        stressTestBtn.setOnMouseExited(e -> stressTestBtn.setStyle(
+                "-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;"));
         updateStressStatus("Stress test running...", UIStyles.TEXT_SUCCESS);
 
         // Disable other controls during stress test
         confirmBtn.setDisable(true);
         addEdgeBtn.setDisable(true);
         stressIntervalField.setDisable(true);
+        stressBatchField.setDisable(true);
 
         // Start FPS counter
         startFpsCounter();
@@ -588,19 +709,22 @@ public class VehicleAddPanel extends VBox {
             @Override
             public void run() {
                 if (stressTestRunning) {
-                    injectRandomVehicle();
+                    for (int i = 0; i < batch && stressTestRunning; i++) {
+                        injectRandomVehicle();
+                    }
                 }
             }
         }, 0, interval);
 
-        System.out.println("Stress test started with interval: " + interval + "ms");
+        logger.info("Stress test started with interval: " + interval + "ms");
     }
 
     /**
-     * Stops the stress test and displays final statistics.
+     * Stops the stress test and displays statistics.
      */
     private void stopStressTest() {
-        if (!stressTestRunning) return;
+        if (!stressTestRunning)
+            return;
 
         stressTestRunning = false;
 
@@ -621,29 +745,34 @@ public class VehicleAddPanel extends VBox {
         // Update UI on JavaFX thread
         Platform.runLater(() -> {
             stressTestBtn.setText("Start Stress Test");
-            stressTestBtn.setStyle("-fx-background-color: #E53935; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;");
-            stressTestBtn.setOnMouseEntered(e -> stressTestBtn.setStyle("-fx-background-color: #FF5252; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;"));
-            stressTestBtn.setOnMouseExited(e -> stressTestBtn.setStyle("-fx-background-color: #E53935; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;"));
+            stressTestBtn.setStyle(
+                    "-fx-background-color: #E53935; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;");
+            stressTestBtn.setOnMouseEntered(e -> stressTestBtn.setStyle(
+                    "-fx-background-color: #FF5252; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;"));
+            stressTestBtn.setOnMouseExited(e -> stressTestBtn.setStyle(
+                    "-fx-background-color: #E53935; -fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold; -fx-padding: 10;"));
 
             updateStressStatus("Stress test stopped", UIStyles.TEXT_WARNING);
             stressStatsLabel.setText(String.format(
-                "Results: %d added, %d failed\nDuration: %.1fs | Rate: %.1f veh/s",
-                stressVehiclesAdded, stressVehiclesFailed, durationSec, rate));
-            stressStatsLabel.setStyle("-fx-text-fill: " + UIStyles.TEXT_SUCCESS + "; -fx-font-size: 11; -fx-font-family: monospace;");
+                    "Results: %d added, %d failed\nDuration: %.1fs | Rate: %.1f veh/s",
+                    stressVehiclesAdded, stressVehiclesFailed, durationSec, rate));
+            stressStatsLabel.setStyle(
+                    "-fx-text-fill: " + UIStyles.TEXT_SUCCESS + "; -fx-font-size: 11; -fx-font-family: monospace;");
 
             // Re-enable controls
             confirmBtn.setDisable(false);
             addEdgeBtn.setDisable(false);
             stressIntervalField.setDisable(false);
+            stressBatchField.setDisable(false);
         });
 
-        System.out.println(String.format("Stress test stopped. Added: %d, Failed: %d, Duration: %.1fs, Rate: %.1f veh/s",
-            stressVehiclesAdded, stressVehiclesFailed, durationSec, rate));
+        System.out
+                .println(String.format("Stress test stopped. Added: %d, Failed: %d, Duration: %.1fs, Rate: %.1f veh/s",
+                        stressVehiclesAdded, stressVehiclesFailed, durationSec, rate));
     }
 
     /**
      * Injects a single vehicle with a random route.
-     * Called periodically by the stress test timer.
      */
     private void injectRandomVehicle() {
         try {
@@ -695,7 +824,8 @@ public class VehicleAddPanel extends VBox {
      * Updates the stress test statistics display.
      */
     private void updateStressStats() {
-        if (!stressTestRunning) return;
+        if (!stressTestRunning)
+            return;
 
         long elapsed = System.currentTimeMillis() - stressTestStartTime;
         double elapsedSec = elapsed / 1000.0;
@@ -703,8 +833,8 @@ public class VehicleAddPanel extends VBox {
 
         Platform.runLater(() -> {
             stressStatsLabel.setText(String.format(
-                "Added: %d | Failed: %d | Rate: %.1f veh/s",
-                stressVehiclesAdded, stressVehiclesFailed, rate));
+                    "Added: %d | Failed: %d | Rate: %.1f veh/s",
+                    stressVehiclesAdded, stressVehiclesFailed, rate));
         });
     }
 
@@ -720,28 +850,27 @@ public class VehicleAddPanel extends VBox {
 
     /**
      * Starts the FPS counter using AnimationTimer.
-     * Tracks frame render times to calculate real-time FPS.
      */
     private void startFpsCounter() {
         frameTimeIndex = 0;
         frameTimesArrayFull = false;
-        
+
         fpsTimer = new AnimationTimer() {
             @Override
             public void handle(long now) {
                 long oldFrameTime = frameTimes[frameTimeIndex];
                 frameTimes[frameTimeIndex] = now;
                 frameTimeIndex = (frameTimeIndex + 1) % frameTimes.length;
-                
+
                 if (frameTimeIndex == 0) {
                     frameTimesArrayFull = true;
                 }
-                
+
                 if (frameTimesArrayFull) {
                     long elapsedNanos = now - oldFrameTime;
                     long elapsedNanosPerFrame = elapsedNanos / frameTimes.length;
                     double fps = 1_000_000_000.0 / elapsedNanosPerFrame;
-                    
+
                     // Color code FPS: green > 30, yellow 15-30, red < 15
                     String color;
                     if (fps >= 30) {
@@ -751,9 +880,10 @@ public class VehicleAddPanel extends VBox {
                     } else {
                         color = "#EF5350"; // Red
                     }
-                    
+
                     fpsLabel.setText(String.format("FPS: %.1f", fps));
-                    fpsLabel.setStyle("-fx-text-fill: " + color + "; -fx-font-size: 14; -fx-font-weight: bold; -fx-font-family: monospace;");
+                    fpsLabel.setStyle("-fx-text-fill: " + color
+                            + "; -fx-font-size: 14; -fx-font-weight: bold; -fx-font-family: monospace;");
                 }
             }
         };
@@ -773,7 +903,7 @@ public class VehicleAddPanel extends VBox {
     }
 
     /**
-     * Clears the current route selection, resetting start/end edges and route list.
+     * Clears the current route selection.
      */
     private void clearRoute() {
         startEdge = null;
@@ -790,7 +920,6 @@ public class VehicleAddPanel extends VBox {
 
     /**
      * Adds the configured vehicle to the SUMO simulation.
-     * Validates inputs, creates route in SUMO, adds vehicle, and resets the form.
      */
     private void addVehicle() {
         // Validation
@@ -799,9 +928,51 @@ public class VehicleAddPanel extends VBox {
             return;
         }
 
-        String vehicleId = vehicleIdField.getText().trim();
-        if (vehicleId.isEmpty()) {
+        String baseVehicleId = vehicleIdField.getText().trim();
+        if (baseVehicleId.isEmpty()) {
             showError("Vehicle ID cannot be empty!");
+            return;
+        }
+
+        int batchCount = 1;
+        String batchText = vehicleBatchField.getText().trim();
+        if (!batchText.isEmpty()) {
+            try {
+                batchCount = Integer.parseInt(batchText);
+            } catch (NumberFormatException e) {
+                showError("Invalid batch count!");
+                return;
+            }
+        }
+        if (batchCount < 1) {
+            showError("Batch count must be >= 1");
+            return;
+        }
+        if (batchCount > 1000) {
+            showError("Batch count too large (max 1000)");
+            return;
+        }
+
+        double departSpeed = 0.0;
+        String speedText = vehicleSpeedField.getText().trim();
+        if (!speedText.isEmpty()) {
+            try {
+                departSpeed = Double.parseDouble(speedText);
+            } catch (NumberFormatException e) {
+                showError("Invalid speed value!");
+                return;
+            }
+        }
+        if (!Double.isFinite(departSpeed) || departSpeed < 0.0) {
+            showError("Speed must be a non-negative number");
+            return;
+        }
+
+        Color overrideColor = null;
+        try {
+            overrideColor = parseHexColor(vehicleColorField.getText());
+        } catch (Exception e) {
+            showError(e.getMessage());
             return;
         }
 
@@ -816,16 +987,24 @@ public class VehicleAddPanel extends VBox {
                 return;
             }
 
-            // Create route ID and add to SUMO
-            String routeId = "route_" + vehicleId;
-            adapter.addRoute(routeId, selectedRoute);
-            adapter.addVehicle(vehicleId, routeId, vehicleClass);
+            for (int i = 0; i < batchCount; i++) {
+                String vehicleId = (i == 0) ? baseVehicleId : (baseVehicleId + "_" + (i + 1));
+                String routeId = "route_" + vehicleId;
+                adapter.addRoute(routeId, selectedRoute);
+                adapter.addVehicle(vehicleId, routeId, vehicleClass, departSpeed);
 
-            statusLabel.setText("✓ Vehicle '" + vehicleId + "' added successfully!");
+                if (overrideColor != null) {
+                    Vehicle.setColorOverride(vehicleId, overrideColor);
+                }
+            }
+
+            statusLabel.setText(batchCount == 1
+                    ? ("Vehicle '" + baseVehicleId + "' added successfully!")
+                    : ("Added " + batchCount + " vehicles starting with '" + baseVehicleId + "'"));
             statusLabel.setStyle("-fx-text-fill: " + UIStyles.TEXT_SUCCESS + "; -fx-font-weight: bold; -fx-font-size: 11;");
 
             // Increment counter for next vehicle
-            vehicleCounter++;
+            vehicleCounter += batchCount;
 
             // Resume simulation
             if (runner != null && runner.isPaused()) {
@@ -837,12 +1016,15 @@ public class VehicleAddPanel extends VBox {
             updateVehicleId();
 
             // Notify that vehicle was added
-            if (onVehicleAdded != null) onVehicleAdded.run();
+            if (onVehicleAdded != null)
+                onVehicleAdded.run();
 
-            // System.out.println("Added vehicle: " + vehicleId + " with route: " + selectedRoute);
+            // System.out.println("Added vehicle: " + vehicleId + " with route: " +
+            // selectedRoute);
 
         } catch (Exception e) {
-            showError("Failed to add vehicle: " + e.getMessage()); // This might happne if having conflicting vehicle IDs or route selection issues
+            showError("Failed to add vehicle: " + e.getMessage()); // This might happne if having conflicting vehicle
+                                                                   // IDs or route selection issues
             e.printStackTrace();
         }
     }
@@ -860,21 +1042,22 @@ public class VehicleAddPanel extends VBox {
      * Updates an edge label with consistent styling.
      * 
      * @param label The label to update
-     * @param text The new text
+     * @param text  The new text
      * @param color The text color
-     * @param bold Whether to apply bold styling
+     * @param bold  Whether to apply bold styling
      */
     private void updateEdgeLabelStyle(Label label, String text, String color, boolean bold) {
         label.setText(text);
         String style = "-fx-text-fill: " + color + "; -fx-font-size: 11;";
-        if (bold) style += " -fx-font-weight: bold;";
+        if (bold)
+            style += " -fx-font-weight: bold;";
         label.setStyle(style);
     }
 
     /**
      * Updates the status label with colored text.
      * 
-     * @param text The status message
+     * @param text  The status message
      * @param color The text color
      */
     private void updateStatusLabel(String text, String color) {
@@ -885,7 +1068,7 @@ public class VehicleAddPanel extends VBox {
     /**
      * Updates the instruction label with colored text.
      * 
-     * @param text The instruction message
+     * @param text  The instruction message
      * @param color The text color
      */
     private void updateInstructionLabel(String text, String color) {

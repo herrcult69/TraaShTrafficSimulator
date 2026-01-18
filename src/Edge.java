@@ -4,47 +4,35 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Represents a directed road edge (segment) between two junctions.
- * 
- * <p>An edge is a one-way road segment containing multiple lanes. Key features:
- * <ul>
- *   <li>Directional: Each physical road typically has two edges (one per direction)</li>
- *   <li>Contains 1+ lanes positioned perpendicular to the edge centerline</li>
- *   <li>Clipped at junction boundaries to avoid visual overlaps</li>
- *   <li>Rendered with proper lane markings (center line and dividers)</li>
- * </ul>
- * 
- * <p>Rendering includes:
- * <ul>
- *   <li>Road surface as a thick line</li>
- *   <li>Yellow center line (drawn only for positive edge IDs to avoid duplication)</li>
- *   <li>White dashed lane dividers between lanes</li>
- *   <li>Proper clipping at source and destination junctions</li>
- * </ul>
+ * Represents a directed road segment between two junctions.
+ * Contains multiple lanes and handles rendering with lane markings.
  *
  * @author M A T^2 H Team
- * @version 2.0 
- * @see Lane
- * @see Junction
- * @see NetworkParser.Edge
- * @see TrafficManager
+ * @version 2.0
+ * @see Renderable
  */
-public class Edge {
+public class Edge extends Renderable {
     private NetworkParser.Edge networkEdge;
     private double fromX, fromY, toX, toY; // World coordinates
     private Junction fromJunction;
     private Junction toJunction;
     private List<Lane> lanes;
+    
+    // Congestion tracking fields
+    private double edgeLength;
+    private int vehicleCount;
+    private double totalSpeed;
+    private int speedSampleCount;
 
     /**
      * Constructs a new visual Edge from parsed network data.
      * Automatically creates visual Lane objects for each lane in the network edge.
      * 
-     * @param networkEdge The parsed edge data from SUMO network file
-     * @param from The source junction network data
-     * @param to The destination junction network data
-     * @param fromJunc The visual source junction object
-     * @param toJunc The visual destination junction object
+     * @param networkEdge Parsed edge data
+     * @param from Source junction data
+     * @param to Destination junction data
+     * @param fromJunc Source junction object
+     * @param toJunc Destination junction object
      */
     public Edge(NetworkParser.Edge networkEdge, NetworkParser.Junction from, NetworkParser.Junction to,
             Junction fromJunc, Junction toJunc) {
@@ -56,28 +44,32 @@ public class Edge {
         this.fromJunction = fromJunc;
         this.toJunction = toJunc;
         this.lanes = new ArrayList<>();
+        
+        // Calculate edge length
+        double dx = toX - fromX;
+        double dy = toY - fromY;
+        this.edgeLength = Math.sqrt(dx * dx + dy * dy);
+        this.vehicleCount = 0;
+        this.totalSpeed = 0.0;
+        this.speedSampleCount = 0;
 
         createLanes();
     }
 
-    /**
-     * Creates visual Lane objects for all lanes in this edge.
-     * Calculates each lane's offset from the edge centerline based on cumulative lane widths.
-     */
     private void createLanes() {
         // Create lanes directly from SUMO network data
         // SUMO already handles directionality with positive/negative edge IDs
         // Each edge contains only the lanes for that specific direction
-        
+
         double cumulativeOffset = 0;
         for (int i = 0; i < networkEdge.lanes.size(); i++) {
             NetworkParser.Lane sumoLane = networkEdge.lanes.get(i);
             double laneWidth = sumoLane.width;
-            
+
             // Calculate offset from edge centerline
             // Lanes are ordered from right to left in SUMO
             double offset = cumulativeOffset + laneWidth / 2.0;
-            
+
             // Use SUMO's actual lane ID
             String laneId = sumoLane.id;
             Lane lane = new Lane(laneId, this, laneWidth, i, offset);
@@ -88,10 +80,9 @@ public class Edge {
 
     /**
      * Returns the lane at the specified screen coordinates, or null if none.
-     * Used for hit detection when clicking on the edge.
      * 
-     * @param screenX The X coordinate in screen space
-     * @param screenY The Y coordinate in screen space
+     * @param screenX   The X coordinate in screen space
+     * @param screenY   The Y coordinate in screen space
      * @param transform The coordinate transformation
      * @return The lane at that position, or null
      */
@@ -106,18 +97,11 @@ public class Edge {
 
     /**
      * Renders the edge including road surface and lane markings.
-     * <p>
-     * The rendering process:
-     * <ol>
-     *   <li>Calculates junction-clipped endpoints</li>
-     *   <li>Draws road surface as a thick line</li>
-     *   <li>Draws yellow center line (one direction only)</li>
-     *   <li>Draws white dashed lane dividers</li>
-     * </ol>
      * 
-     * @param g The graphics context to draw on
+     * @param g         The graphics context to draw on
      * @param transform The coordinate transformation
      */
+    @Override
     public void render(GraphicsContext g, CoordinateTransform transform) {
         // Calculate edge direction
         double dx = toX - fromX;
@@ -162,7 +146,7 @@ public class Edge {
         // Calculate actual width from lanes (one direction only)
         double totalWidth = networkEdge.getTotalWidth();
         double screenWidth = transform.worldToScreenSize(totalWidth);
-        
+
         // Offset the edge centerline by half its width to position it correctly
         double halfWidth = totalWidth / 2.0;
         double offsetStartX = startX + halfWidth * perpX;
@@ -174,11 +158,10 @@ public class Edge {
         g.setStroke(Color.rgb(55, 60, 65));
         g.setLineWidth(screenWidth);
         g.strokeLine(
-            transform.worldToScreenX(offsetStartX), 
-            transform.worldToScreenY(offsetStartY),
-            transform.worldToScreenX(offsetEndX), 
-            transform.worldToScreenY(offsetEndY)
-        );
+                transform.worldToScreenX(offsetStartX),
+                transform.worldToScreenY(offsetStartY),
+                transform.worldToScreenX(offsetEndX),
+                transform.worldToScreenY(offsetEndY));
 
         // Draw lane markings using clipped coordinates
         renderLaneMarkings(g, transform, startX, startY, endX, endY);
@@ -197,7 +180,8 @@ public class Edge {
 
         int numLanes = networkEdge.lanes.size();
 
-        // Draw center line (yellow) - only for positive edge IDs to avoid double drawing
+        // Draw center line (yellow) - only for positive edge IDs to avoid double
+        // drawing
         if (!networkEdge.id.startsWith("-")) {
             g.setStroke(Color.rgb(255, 220, 50));
             g.setLineWidth(Math.max(1, transform.worldToScreenSize(0.5)));
@@ -303,13 +287,79 @@ public class Edge {
     }
 
     /**
-     * Highlights this edge with a colored overlay.
-     * Used during route selection to show selected edges.
+     * Updates the vehicle count on this edge.
      * 
-     * @param g The graphics context to draw on
-     * @param transform The coordinate transformation
-     * @param color The highlight color
+     * @param count The number of vehicles currently on this edge
      */
+    public void setVehicleCount(int count) {
+        this.vehicleCount = count;
+    }
+    
+    /**
+     * Returns the number of vehicles currently on this edge.
+     * 
+     * @return The vehicle count
+     */
+    public int getVehicleCount() {
+        return vehicleCount;
+    }
+    
+    /**
+     * Returns the vehicle density (vehicles per kilometer) on this edge.
+     * 
+     * @return The vehicle density in vehicles/km
+     */
+    public double getVehicleDensity() {
+        if (edgeLength <= 0) return 0.0;
+        return (vehicleCount * 1000.0) / edgeLength; // Convert to vehicles per km
+    }
+    
+    /**
+     * Returns the length of this edge in meters.
+     * 
+     * @return The edge length
+     */
+    public double getEdgeLength() {
+        return edgeLength;
+    }
+    
+    /**
+     * Adds a speed sample for calculating average speed.
+     * 
+     * @param speed The speed to add (m/s)
+     */
+    public void addSpeedSample(double speed) {
+        this.totalSpeed += speed;
+        this.speedSampleCount++;
+    }
+    
+    /**
+     * Returns the average speed of vehicles on this edge.
+     * 
+     * @return The average speed in m/s, or 0 if no samples
+     */
+    public double getAverageSpeed() {
+        if (speedSampleCount == 0) return 0.0;
+        return totalSpeed / speedSampleCount;
+    }
+    
+    /**
+     * Resets the speed statistics for this edge.
+     * Should be called each simulation step before collecting new samples.
+     */
+    public void resetSpeedStatistics() {
+        this.totalSpeed = 0.0;
+        this.speedSampleCount = 0;
+    }
+    
+    /**
+     * Highlights edge during route selection.
+     * 
+     * @param g Graphics context
+     * @param transform Coordinate transform
+     * @param color Highlight color
+     */
+    @Override
     public void highlight(GraphicsContext g, CoordinateTransform transform, Color color) {
         // Calculate edge direction
         double dx = toX - fromX;
@@ -363,5 +413,11 @@ public class Edge {
         g.setStroke(Color.color(color.getRed(), color.getGreen(), color.getBlue(), 0.4));
         g.setLineWidth(screenWidth);
         g.strokeLine(x1, y1, x2, y2);
+    }
+
+    /** Not used - hit detection uses getLaneAt(). */
+    @Override
+    public boolean contains(double screenX, double screenY, CoordinateTransform transform) {
+        return false;
     }
 }

@@ -1,46 +1,40 @@
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
+import java.util.HashMap;import java.util.logging.Logger;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 
 /**
- * Manages all traffic simulation objects including junctions, edges, vehicles, and traffic lights.
- * 
- * <p>This class serves as the central manager for the visual traffic network, handling:
- * <ul>
- *   <li>Creating visual objects from parsed network data</li>
- *   <li>Updating vehicle positions from SUMO simulation data</li>
- *   <li>Updating traffic light states from SUMO</li>
- *   <li>Rendering all simulation objects in proper layered order</li>
- *   <li>Hit detection for user interaction (clicking on objects)</li>
- *   <li>Highlighting selected and hovered objects</li>
- * </ul>
- * 
- * <p>The manager maintains several collections:
- * <ul>
- *   <li>Visual junctions and edges created from network topology</li>
- *   <li>Dynamic vehicles updated each simulation step</li>
- *   <li>Traffic lights with multiple signals per junction</li>
- *   <li>Index maps for fast lookup by ID</li>
- * </ul>
+ * Manages all traffic simulation objects including junctions, edges, vehicles,
+ * and traffic lights.
+ * Handles creation from network data, updates from SUMO, rendering, and hit
+ * detection.
  * 
  * @author M A T^2 H Team
  * @version 2.0
  * @see NetworkParser
- * @see Junction
- * @see Edge
- * @see Vehicle
- * @see TrafficLight
  */
 public class TrafficManager {
+    private static final Logger logger = Logger.getLogger(TrafficManager.class.getName());
+    
     private List<Junction> junctions;
     private List<Edge> edges;
     private Map<String, Vehicle> vehicles;
     private List<TrafficLight> trafficLights; // Changed to List for multiple lights per junction
     private Map<String, NetworkParser.Junction> junctionIndex;
     private Map<String, Junction> visualJunctionIndex;
+    
+    // Congestion tracking
+    private Map<String, CongestionHotspot> congestionHotspots;
+    private boolean showCongestionOverlay;
+    
+    // Travel time tracking
+    private List<Double> completedTravelTimes;
+    private double currentSimTime;
+
+    // Travel distance tracking
+    private List<Double> completedTravelDistances;
 
     /**
      * Constructs a new TrafficManager with empty collections.
@@ -52,13 +46,17 @@ public class TrafficManager {
         this.trafficLights = new ArrayList<>(); // Initialize traffic lights
         this.junctionIndex = new HashMap<>();
         this.visualJunctionIndex = new HashMap<>();
+        this.congestionHotspots = new HashMap<>();
+        this.showCongestionOverlay = false;
+        this.completedTravelTimes = new ArrayList<>();
+        this.completedTravelDistances = new ArrayList<>();
+        this.currentSimTime = 0.0;
     }
 
     /**
-     * Initializes all visual objects from parsed network data.
-     * Creates junctions, edges, lanes, and traffic lights from SUMO network topology.
+     * Initializes visual objects from network data.
      * 
-     * @param network The parsed network data containing junctions, edges, and connections
+     * @param network Parsed network data
      */
     public void initializeFromNetwork(NetworkParser.NetworkData network) {
         // Build junction index and create visual junctions
@@ -68,7 +66,7 @@ public class TrafficManager {
             junctions.add(visualJunction);
             visualJunctionIndex.put(junction.id, visualJunction);
         }
-        System.out.println("Created " + junctions.size() + " junctions");
+        logger.info("Created " + junctions.size() + " junctions");
 
         // Create visual edges with junction references
         for (NetworkParser.Edge edge : network.edges) {
@@ -82,7 +80,7 @@ public class TrafficManager {
                 edges.add(visualEdge);
             }
         }
-        System.out.println("Created " + edges.size() + " edges");
+        logger.info("Created " + edges.size() + " edges with lanes");
 
         // Initialize traffic lights from connections
         initializeTrafficLightsFromConnections(network.connections);
@@ -90,8 +88,6 @@ public class TrafficManager {
 
     /**
      * Creates traffic light objects from network connections.
-     * Groups connections by junction and incoming edge to create separate traffic lights
-     * for each incoming road at a junction.
      * 
      * @param connections List of network connections with traffic light assignments
      */
@@ -99,7 +95,7 @@ public class TrafficManager {
         // Group connections by traffic light ID AND incoming edge
         // This creates separate TrafficLight objects for each incoming road
         Map<String, List<NetworkParser.Connection>> connectionsByEdge = new HashMap<>();
-        
+
         for (NetworkParser.Connection conn : connections) {
             if (conn.tl != null && !conn.tl.isEmpty()) {
                 // Key: "junctionId:fromEdge" - creates separate TL per incoming edge
@@ -117,7 +113,7 @@ public class TrafficManager {
 
             Junction junction = visualJunctionIndex.get(junctionId);
             if (junction == null) {
-                System.out.println("WARNING: Junction not found for traffic light: " + junctionId);
+                logger.warning("Junction not found for traffic light: " + junctionId);
                 continue;
             }
 
@@ -126,13 +122,12 @@ public class TrafficManager {
             // Create a signal for each connection from this specific edge
             for (NetworkParser.Connection conn : tlConnections) {
                 TrafficLight.Signal signal = new TrafficLight.Signal(
-                    conn.from,
-                    conn.fromLane,
-                    conn.to,
-                    conn.toLane,
-                    conn.linkIndex,
-                    conn.dir
-                );
+                        conn.from,
+                        conn.fromLane,
+                        conn.to,
+                        conn.toLane,
+                        conn.linkIndex,
+                        conn.dir);
                 trafficLight.addSignal(signal);
             }
 
@@ -141,17 +136,43 @@ public class TrafficManager {
             trafficLights.add(trafficLight);
         }
 
-        System.out.println("Initialized " + trafficLights.size() + " traffic lights (one per incoming edge) with " + 
-                         connections.stream().filter(c -> c.tl != null).count() + " total signals");
+        logger.info("Initialized " + trafficLights.size() + " traffic lights with " +
+                connections.stream().filter(c -> c.tl != null).count() + " total signals");
     }
 
     /**
      * Updates vehicle positions and states from SUMO simulation data.
-     * Creates new vehicles as they appear and removes vehicles that have left the simulation.
      * 
      * @param vehiclePositions Map from vehicle ID to array [x, y, angle, signals]
+     * @param simTime The current simulation time in seconds
      */
-    public void updateVehicles(Map<String, double[]> vehiclePositions) {
+    public void updateVehicles(Map<String, double[]> vehiclePositions, double simTime) {
+        this.currentSimTime = simTime;
+        
+        // Track which vehicles are leaving
+        List<String> leavingVehicles = new ArrayList<>();
+        for (String vehicleId : vehicles.keySet()) {
+            if (!vehiclePositions.containsKey(vehicleId)) {
+                leavingVehicles.add(vehicleId);
+            }
+        }
+        
+        // Mark exiting vehicles and record their travel times
+        for (String vehicleId : leavingVehicles) {
+            Vehicle vehicle = vehicles.get(vehicleId);
+            if (vehicle != null && !vehicle.hasExited()) {
+                vehicle.markAsExited(simTime);
+                double travelTime = vehicle.getTravelTime();
+                if (travelTime > 0) {
+                    completedTravelTimes.add(travelTime);
+                }
+                double travelDistance = vehicle.getTotalDistance();
+                if (travelDistance > 0) {
+                    completedTravelDistances.add(travelDistance);
+                }
+            }
+        }
+        
         // Update existing vehicles and create new ones
         for (Map.Entry<String, double[]> entry : vehiclePositions.entrySet()) {
             String vehicleId = entry.getKey();
@@ -159,23 +180,123 @@ public class TrafficManager {
 
             Vehicle vehicle = vehicles.get(vehicleId);
             if (vehicle == null) {
-                // Create new vehicle
+                // Create new vehicle with entry time
                 vehicle = new Vehicle(vehicleId, position[0], position[1],
-                        position.length > 2 ? position[2] : 0.0);
+                        position.length > 2 ? position[2] : 0.0, simTime);
                 vehicles.put(vehicleId, vehicle);
             } else {
-                // Update existing vehicle
+                // Update existing vehicle position and current time
                 vehicle.updatePosition(position);
+                vehicle.setCurrentTime(simTime);
             }
         }
 
         // Remove vehicles that are no longer in SUMO
         vehicles.entrySet().removeIf(entry -> !vehiclePositions.containsKey(entry.getKey()));
     }
+    
+    /**
+     * Legacy method for backward compatibility. Uses simTime = 0.0.
+     * 
+     * @param vehiclePositions Map from vehicle ID to array [x, y, angle, signals]
+     * @deprecated Use {@link #updateVehicles(Map, double)} instead
+     */
+    @Deprecated
+    public void updateVehicles(Map<String, double[]> vehiclePositions) {
+        updateVehicles(vehiclePositions, this.currentSimTime);
+    }
+    
+    /**
+     * Updates vehicle speed statistics from SUMO simulation data.
+     * 
+     * @param vehicleSpeeds Map from vehicle ID to speed in m/s
+     */
+    public void updateVehicleSpeeds(Map<String, Double> vehicleSpeeds) {
+        for (Map.Entry<String, Double> entry : vehicleSpeeds.entrySet()) {
+            String vehicleId = entry.getKey();
+            Double speed = entry.getValue();
+            
+            Vehicle vehicle = vehicles.get(vehicleId);
+            if (vehicle != null && speed != null) {
+                vehicle.updateSpeed(speed);
+            }
+        }
+    }
+    
+    /**
+     * Updates edge statistics including vehicle counts and density.
+     * 
+     * @param vehicleEdges Map from vehicle ID to edge ID
+     */
+    public void updateEdgeStatistics(Map<String, String> vehicleEdges) {
+        // Reset all edge counts
+        for (Edge edge : edges) {
+            edge.setVehicleCount(0);
+        }
+        
+        // Count vehicles on each edge
+        Map<String, Integer> edgeCounts = new java.util.HashMap<>();
+        for (String edgeId : vehicleEdges.values()) {
+            edgeCounts.put(edgeId, edgeCounts.getOrDefault(edgeId, 0) + 1);
+        }
+        
+        // Update edge vehicle counts
+        for (Map.Entry<String, Integer> entry : edgeCounts.entrySet()) {
+            Edge edge = getEdgeById(entry.getKey());
+            if (edge != null) {
+                edge.setVehicleCount(entry.getValue());
+            }
+        }
+    }
+    
+    /**
+     * Updates congestion hotspot tracking based on current traffic conditions.
+     * Analyzes vehicle density and speed on each edge to identify congestion.
+     * 
+     * @param vehicleEdges Map from vehicle ID to edge ID (for vehicle counting)
+     * @param vehicleSpeeds Map from vehicle ID to speed in m/s
+     */
+    public void updateCongestionHotspots(Map<String, String> vehicleEdges, Map<String, Double> vehicleSpeeds) {
+        // Reset speed statistics for all edges
+        for (Edge edge : edges) {
+            edge.resetSpeedStatistics();
+        }
+        
+        // Collect speed samples for each edge
+        for (Map.Entry<String, String> entry : vehicleEdges.entrySet()) {
+            String vehicleId = entry.getKey();
+            String edgeId = entry.getValue();
+            Double speed = vehicleSpeeds.get(vehicleId);
+            
+            if (speed != null) {
+                Edge edge = getEdgeById(edgeId);
+                if (edge != null) {
+                    edge.addSpeedSample(speed);
+                }
+            }
+        }
+        
+        // Update or create congestion hotspots
+        for (Edge edge : edges) {
+            String edgeId = edge.getNetworkEdge().id;
+            
+            // Get or create hotspot for this edge
+            CongestionHotspot hotspot = congestionHotspots.get(edgeId);
+            if (hotspot == null) {
+                hotspot = new CongestionHotspot(edge);
+                congestionHotspots.put(edgeId, hotspot);
+            }
+            
+            // Update metrics (retrieves speed and density directly from edge)
+            hotspot.updateMetrics();
+        }
+        
+        // Remove hotspots that are no longer congested
+        congestionHotspots.entrySet().removeIf(entry -> !entry.getValue().isCongested());
+    }
 
     /**
      * Updates traffic light states from SUMO simulation data.
-     * Only updates lights not in manual control mode.
      * 
      * @param tlData Map from junction ID to traffic light state data
      */
@@ -198,12 +319,11 @@ public class TrafficManager {
     }
 
     /**
-     * Sets manual mode for ALL traffic lights at a junction.
-     * This ensures the entire junction is synchronized in manual or automatic control.
+     * Sets manual mode for all traffic lights at a junction.
      * 
      * @param junctionId The junction ID
      * @param manualMode true for manual control, false for automatic
-     * @param state Optional state string to set (can be null)
+     * @param state      Optional state string to set
      */
     public void setJunctionManualMode(String junctionId, boolean manualMode, String state) {
         for (TrafficLight tl : trafficLights) {
@@ -217,13 +337,12 @@ public class TrafficManager {
     }
 
     /**
-     * Performs hit detection to find the simulation object at the given screen coordinates.
-     * Checks layers in order: vehicles (top), traffic lights, junctions, lanes (bottom).
+     * Finds the simulation object at the given screen coordinates.
      * 
-     * @param screenX The X coordinate in screen space
-     * @param screenY The Y coordinate in screen space
+     * @param screenX   The X coordinate in screen space
+     * @param screenY   The Y coordinate in screen space
      * @param transform The coordinate transformation
-     * @return The object at that position, or null if none
+     * @return The object at that position, or null
      */
     public Object getElementAt(double screenX, double screenY, CoordinateTransform transform) {
         // Check vehicles first (top layer)
@@ -259,45 +378,81 @@ public class TrafficManager {
 
     /**
      * Renders highlight overlays for selected and hovered objects.
-     * Selected objects are highlighted in cyan, hovered in yellow.
      * 
-     * @param g The graphics context
+     * @param g         The graphics context
      * @param transform The coordinate transformation
-     * @param selected The currently selected object (can be null)
-     * @param hovered The currently hovered object (can be null)
+     * @param selected  The currently selected object
+     * @param hovered   The currently hovered object
+     * @param vehicleFilter Optional vehicle filter for speed highlighting
      */
-    public void renderHighlight(GraphicsContext g, CoordinateTransform transform, Object selected, Object hovered) {
+    public void renderHighlight(GraphicsContext g, CoordinateTransform transform, Object selected, Object hovered, VehicleFilterPanel vehicleFilter) {
+        // Render speed-based highlights if enabled
+        if (vehicleFilter != null && vehicleFilter.isSpeedFilterEnabled()) {
+            for (Vehicle vehicle : vehicles.values()) {
+                if (vehicleFilter.isTypeVisible(vehicle.getType()) && vehicle.getCurrentSpeed() > 0.5) {
+                    Color speedColor = vehicle.getSpeedGlowColor();
+                    highlightVehicleWithGlow(g, transform, vehicle, speedColor);
+                }
+            }
+        }
+        
         if (selected != null) {
             highlightObject(g, transform, selected, Color.CYAN);
         }
         if (hovered != null && hovered != selected) {
-            highlightObject(g, transform, hovered, Color.YELLOW);
+            highlightObject(g, transform, hovered, Color.WHITE);
         }
     }
 
     private void highlightObject(GraphicsContext g, CoordinateTransform transform, Object obj, Color color) {
-        if (obj instanceof Vehicle) {
-            ((Vehicle) obj).highlight(g, transform, color);
-        } else if (obj instanceof Lane) {
-            ((Lane) obj).highlight(g, transform, color);
-        } else if (obj instanceof Junction) {
-            ((Junction) obj).highlight(g, transform, color);
-        } else if (obj instanceof TrafficLight) {
-            ((TrafficLight) obj).highlight(g, transform, color);
+        // Use polymorphism with Renderable abstract class
+        if (obj instanceof Renderable) {
+            ((Renderable) obj).highlight(g, transform, color);
         }
+    }
+    
+    private void highlightVehicleWithGlow(GraphicsContext g, CoordinateTransform transform, Vehicle vehicle, Color color) {
+        double screenX = transform.worldToScreenX(vehicle.getWorldX());
+        double screenY = transform.worldToScreenY(vehicle.getWorldY());
+        double screenLength = Math.max(transform.worldToScreenSize(vehicle.getLength()), 6);
+        double screenWidth = Math.max(transform.worldToScreenSize(vehicle.getWidth()), 3);
+        double glowRadius = Math.max(screenLength, screenWidth) * 1.8;
+        
+        g.save();
+        
+        // Draw outer glow
+        g.setFill(color.deriveColor(0, 1, 1, 0.2));
+        g.fillOval(screenX - glowRadius / 2, screenY - glowRadius / 2, glowRadius, glowRadius);
+        
+        // Draw inner glow (brighter)
+        double innerGlow = glowRadius * 0.6;
+        g.setFill(color.deriveColor(0, 1, 1, 0.4));
+        g.fillOval(screenX - innerGlow / 2, screenY - innerGlow / 2, innerGlow, innerGlow);
+        
+        // Draw highlight on vehicle
+        vehicle.highlight(g, transform, color);
+        
+        g.restore();
     }
 
     /**
-     * Renders all simulation objects in proper layered order.
-     * Order: edges (bottom), junctions, traffic lights, vehicles (top).
+     * Renders all simulation objects in layered order.
      * 
-     * @param g The graphics context
+     * @param g         The graphics context
      * @param transform The coordinate transformation
+     * @param vehicleFilter Optional vehicle filter (null to show all)
      */
-    public void render(GraphicsContext g, CoordinateTransform transform) {
+    public void render(GraphicsContext g, CoordinateTransform transform, VehicleFilterPanel vehicleFilter) {
         // Render edges
         for (Edge edge : edges) {
             edge.render(g, transform);
+        }
+        
+        // Render congestion overlays if enabled
+        if (showCongestionOverlay) {
+            for (CongestionHotspot hotspot : congestionHotspots.values()) {
+                hotspot.render(g, transform);
+            }
         }
 
         // Render junctions
@@ -310,9 +465,11 @@ public class TrafficManager {
             trafficLight.render(g, transform);
         }
 
-        // Render vehicles
+        // Render vehicles (with filtering)
         for (Vehicle vehicle : vehicles.values()) {
-            vehicle.render(g, transform);
+            if (vehicleFilter == null || vehicleFilter.isTypeVisible(vehicle.getType())) {
+                vehicle.render(g, transform);
+            }
         }
     }
 
@@ -352,15 +509,14 @@ public class TrafficManager {
     public List<TrafficLight> getTrafficLights() {
         return trafficLights;
     }
-    
+
     /**
      * Returns the network edge ID at the given screen position.
-     * Used for route selection when clicking on edges.
      * 
-     * @param screenX Screen X coordinate
-     * @param screenY Screen Y coordinate
+     * @param screenX   Screen X coordinate
+     * @param screenY   Screen Y coordinate
      * @param transform Coordinate transformation
-     * @return The edge ID, or null if no edge at that position
+     * @return The edge ID, or null
      */
     public String getEdgeIdAt(double screenX, double screenY, CoordinateTransform transform) {
         for (Edge edge : edges) {
@@ -372,12 +528,12 @@ public class TrafficManager {
         }
         return null;
     }
-    
+
     /**
      * Returns the Edge object at the given screen position.
      * 
-     * @param screenX Screen X coordinate
-     * @param screenY Screen Y coordinate
+     * @param screenX   Screen X coordinate
+     * @param screenY   Screen Y coordinate
      * @param transform Coordinate transformation
      * @return The Edge object, or null if none at that position
      */
@@ -390,7 +546,7 @@ public class TrafficManager {
         }
         return null;
     }
-    
+
     /**
      * Finds an edge by its network ID.
      * 
@@ -405,4 +561,78 @@ public class TrafficManager {
         }
         return null;
     }
+    
+    /**
+     * Returns the map of all congestion hotspots currently tracked.
+     * 
+     * @return Map from edge ID to CongestionHotspot
+     */
+    public Map<String, CongestionHotspot> getCongestionHotspots() {
+        return congestionHotspots;
+    }
+    
+    /**
+     * Toggles the congestion overlay visualization.
+     * 
+     * @param show true to show congestion overlays, false to hide
+     */
+    public void setShowCongestionOverlay(boolean show) {
+        this.showCongestionOverlay = show;
+    }
+    
+    /**
+     * Returns whether congestion overlay is currently visible.
+     * 
+     * @return true if congestion overlay is enabled
+     */
+    public boolean isShowCongestionOverlay() {
+        return showCongestionOverlay;
+    }
+    
+    /**
+     * Returns the top N most congested edges sorted by severity.
+     * 
+     * @param n Number of top hotspots to return
+     * @return List of top congestion hotspots
+     */
+    public List<CongestionHotspot> getTopCongestionHotspots(int n) {
+        return congestionHotspots.values().stream()
+            .filter(CongestionHotspot::isCongested)
+            .sorted((a, b) -> Double.compare(b.getCongestionScore(), a.getCongestionScore()))
+            .limit(n)
+            .collect(java.util.stream.Collectors.toList());
+    }
+    
+    /**
+     * Returns the list of all completed travel times (in seconds).
+     * 
+     * @return List of travel times for vehicles that have exited the simulation
+     */
+    public List<Double> getCompletedTravelTimes() {
+        return new ArrayList<>(completedTravelTimes);
+    }
+    
+    /**
+     * Clears the travel time history.
+     */
+    public void clearTravelTimeHistory() {
+        completedTravelTimes.clear();
+    }
+    
+    /**
+     * Returns the list of all completed travel distances (in meters).
+     * 
+     * @return List of travel distances for vehicles that have exited the simulation
+     */
+    public List<Double> getCompletedTravelDistances() {
+        return new ArrayList<>(completedTravelDistances);
+    }
+
+    /**
+     * Clears the travel distance history.
+     */
+    public void clearTravelDistanceHistory() {
+        completedTravelDistances.clear();
+    }
+
 }

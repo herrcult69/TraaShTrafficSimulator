@@ -45,14 +45,14 @@ CONFIG_FILE="$RESOURCE_DIR/simulation.sumocfg"
 SIMULATION_TIME=3600  # 1 hour in seconds
 
 # Network parameters (RANDOM NETWORK)
-RAND_ITERATIONS=50     # Number of random network iterations (set to at least 200 for stress testing)
+RAND_ITERATIONS=35     # Number of random network iterations (set to at least 200 for stress testing)
 RAND_MAX_DISTANCE=110   # Maximum edge length in meters (set to at least 300 for stress testing)
 RAND_MIN_DISTANCE=50    # Minimum edge length in meters
 DEFAULT_SPEED=10.89      # m/s
 NUM_TRIES=150 
 # Traffic density (seconds between vehicles)
 # Lower values = more vehicles spawned
-CAR_PERIOD=5          # Cars every 5 seconds (was 100)
+CAR_PERIOD=10          # Cars every 5 seconds (was 100)
 TRUCK_PERIOD=40       # Trucks every 40 seconds (was 6000)
 MOTORCYCLE_PERIOD=15  # Motorcycles every 15 seconds (was 1000)
 BUS_PERIOD=30         # Buses every 30 seconds (was 650)
@@ -213,7 +213,7 @@ cat > "$CONFIG_FILE" << EOF
     </time>
     
     <processing>
-        <step-length value="1.0"/>
+        <step-length value="0.5"/>
         <time-to-teleport value="300"/>
         <max-depart-delay value="900"/>
     </processing>

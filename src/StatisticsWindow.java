@@ -1,0 +1,426 @@
+import javafx.scene.Scene;
+import javafx.scene.chart.*;
+import javafx.scene.control.Button;
+// import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
+import javafx.geometry.Insets;
+import javafx.animation.Timeline;
+import javafx.animation.KeyFrame;
+import javafx.util.Duration;
+import java.util.Map;
+import java.util.List;
+// import javafx.scene.control.Alert;
+import javafx.scene.image.WritableImage;
+import javafx.scene.SnapshotParameters;
+import javafx.embed.swing.SwingFXUtils;
+// import javafx.stage.FileChooser;
+// import java.io.File;
+
+
+/**
+ * Statistics window displaying real-time traffic analysis charts.
+ * Shows four charts: Average Speed, Vehicle Count, Travel Time Distribution, and Distance Distribution.
+ */
+public class StatisticsWindow extends Stage {
+    
+    private SimulationRunner runner;
+    private TrafficManager trafficManager;
+    
+    // Chart 1: Average Speed
+    private LineChart<Number, Number> speedChart;
+    private XYChart.Series<Number, Number> speedSeries;
+    
+    // Chart 2: Vehicle Count by Type
+    private BarChart<String, Number> vehicleCountChart;
+    private XYChart.Series<String, Number> vehicleCountSeries;
+    
+    // Chart 3: Travel Time Distribution
+    private BarChart<String, Number> travelTimeChart;
+    private XYChart.Series<String, Number> travelTimeSeries;
+
+    // Chart 4: Distance Travelled Distribution
+    private BarChart<String, Number> distanceTravelChart;
+    private XYChart.Series<String, Number> distanceTravelSeries;
+    
+    // Layout container for PDF export
+    private VBox root;
+    
+    private Timeline updateTimeline;
+    private int maxDataPoints = 240;  // Show last 120 seconds (at 2 updates/sec)
+    
+    /**
+     * Creates a new statistics window.
+     * Data is already filtered by SimulationRunner based on VehicleFilterPanel settings.
+     */
+    public StatisticsWindow(SimulationRunner runner, TrafficManager trafficManager) {
+        this.runner = runner;
+        this.trafficManager = trafficManager;
+        
+        setTitle("Live Traffic Statistics");
+        createLayout();
+        startUpdates();
+    }
+    
+    private void createLayout() {
+        root = new VBox(0);
+        root.setPadding(new Insets(0));
+        root.setStyle("-fx-background-color: white;");
+        
+        // Create the charts
+        speedChart = createSpeedChart();
+        vehicleCountChart = createVehicleCountChart();
+        travelTimeChart = createTravelTimeChart();
+        distanceTravelChart = createDistanceTravelChart();
+        
+        // Make charts grow to fill available space
+        VBox.setVgrow(speedChart, javafx.scene.layout.Priority.ALWAYS);
+        VBox.setVgrow(vehicleCountChart, javafx.scene.layout.Priority.ALWAYS);
+        VBox.setVgrow(travelTimeChart, javafx.scene.layout.Priority.ALWAYS);
+        VBox.setVgrow(distanceTravelChart, javafx.scene.layout.Priority.ALWAYS);
+        
+        root.getChildren().addAll(speedChart, vehicleCountChart, travelTimeChart, distanceTravelChart);
+        
+        // Export Button
+        Button exportButton = new Button("Export to PDF");
+        exportButton.setStyle(
+            "-fx-font-size: 14px;" +
+            "-fx-padding: 10px 20px;" +
+            "-fx-background-color: #3498db;" +
+            "-fx-text-fill: white;" +
+            "-fx-cursor: hand;"
+        );
+        exportButton.setOnAction(e -> exportToPDF());
+        
+        HBox buttonBox = new HBox(exportButton);
+        buttonBox.setAlignment(javafx.geometry.Pos.CENTER);
+        buttonBox.setPadding(new Insets(10));
+        buttonBox.setStyle("-fx-background-color: #f0f0f0;");
+
+        BorderPane mainLayout = new BorderPane();
+    
+        ScrollPane scrollPane = new ScrollPane(root);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setStyle("-fx-background-color: white;");
+        mainLayout.setCenter(scrollPane);
+        mainLayout.setBottom(buttonBox);
+        Scene scene = new Scene(mainLayout, 1000, 700);
+        setScene(scene);
+        setResizable(true); // Allow user to resize the window
+    }
+    
+    private LineChart<Number, Number> createSpeedChart() {
+        NumberAxis xAxis = new NumberAxis();
+        NumberAxis yAxis = new NumberAxis();
+        xAxis.setLabel("Time (s)");
+        yAxis.setLabel("Speed (m/s)");
+        xAxis.setAutoRanging(false);
+        yAxis.setAutoRanging(true);
+        
+        // Bold black axis styling
+        xAxis.setStyle("-fx-tick-label-font-size: 12px; -fx-font-weight: bold; -fx-tick-label-fill: black;");
+        yAxis.setStyle("-fx-tick-label-font-size: 12px; -fx-font-weight: bold; -fx-tick-label-fill: black;");
+        
+        LineChart<Number, Number> speedLineChart = new LineChart<>(xAxis, yAxis);
+        speedLineChart.setTitle("Average Speed Over Time");
+        speedLineChart.setCreateSymbols(false);
+        speedLineChart.setAnimated(false);
+        speedLineChart.setLegendVisible(false);
+        
+        speedLineChart.setStyle(
+            "-fx-background-color: white;" +
+            "-fx-padding: 20px;"
+        );
+        
+        // Apply additional CSS styling
+        speedLineChart.lookup(".chart-title").setStyle(
+            "-fx-font-size: 20px;" +
+            "-fx-font-weight: 900;" +
+            "-fx-font-family: 'Arial';" +
+            "-fx-text-fill: black;"
+        );
+        
+        speedLineChart.getStylesheets().add("data:text/css," +
+            ".chart-plot-background { -fx-background-color: white; }" +
+            ".chart-vertical-grid-lines { -fx-stroke: #E0E0E0; }" +
+            ".chart-horizontal-grid-lines { -fx-stroke: #E0E0E0; }" +
+            ".chart-vertical-zero-line { -fx-stroke: black; -fx-stroke-width: 1.5px; }" +
+            ".chart-horizontal-zero-line { -fx-stroke: black; -fx-stroke-width: 1.5px; }" +
+            ".axis { -fx-stroke: black; -fx-stroke-width: 2px; }" +
+            ".axis-label { -fx-font-size: 14px; -fx-font-weight: bold; -fx-font-family: Arial; -fx-text-fill: black; }" +
+            ".chart-series-line { -fx-stroke: #E67E22; -fx-stroke-width: 3px; }"
+        );
+        
+        speedSeries = new XYChart.Series<>();
+        speedSeries.setName("Average Speed");
+        speedLineChart.getData().add(speedSeries);
+        return speedLineChart;
+    }
+    private BarChart<String, Number> createVehicleCountChart() {
+        CategoryAxis xAxis = new CategoryAxis();
+        NumberAxis yAxis = new NumberAxis();
+        xAxis.setLabel("Vehicle Type");
+        yAxis.setLabel("Vehicle Count");
+        yAxis.setAutoRanging(false);
+        yAxis.setMinorTickVisible(false);
+        yAxis.setTickUnit(10);
+        yAxis.setLowerBound(0);
+        yAxis.setUpperBound(50);
+        
+        // Bold black axis styling
+        xAxis.setStyle("-fx-tick-label-font-size: 12px; -fx-font-weight: bold; -fx-tick-label-fill: black;");
+        yAxis.setStyle("-fx-tick-label-font-size: 12px; -fx-font-weight: bold; -fx-tick-label-fill: black;");
+
+        BarChart<String, Number> vehicleBarChart = new BarChart<>(xAxis, yAxis);
+        vehicleBarChart.setTitle("Current Vehicle Count by Type");
+        vehicleBarChart.setAnimated(false);
+        vehicleBarChart.setLegendVisible(false);
+        vehicleBarChart.setCategoryGap(30);
+        vehicleBarChart.setBarGap(5);
+
+        //Create single series with all vehicle types
+        vehicleCountSeries = new XYChart.Series<>();
+        vehicleCountSeries.getData().add(new XYChart.Data<>("Cars", 0));
+        vehicleCountSeries.getData().add(new XYChart.Data<>("Trucks", 0));
+        vehicleCountSeries.getData().add(new XYChart.Data<>("Buses", 0));
+        vehicleCountSeries.getData().add(new XYChart.Data<>("Motorcycles", 0));
+        vehicleCountSeries.getData().add(new XYChart.Data<>("Emergency", 0));
+
+        vehicleBarChart.getData().add(vehicleCountSeries);
+
+        vehicleBarChart.setStyle(
+            "-fx-background-color: white;" +
+            "-fx-padding: 20px;"
+        );
+        
+        // Make title bold
+        vehicleBarChart.lookup(".chart-title").setStyle(
+            "-fx-font-size: 20px;" +
+            "-fx-font-weight: 900;" +
+            "-fx-font-family: 'Arial';" +
+            "-fx-text-fill: black;"
+        );
+        
+        // Set bar color to blue
+        vehicleBarChart.getStylesheets().add("data:text/css," +
+            ".chart-bar { -fx-bar-fill: #3498DB; }" +
+            ".chart-plot-background { -fx-background-color: white; }"
+        );
+        return vehicleBarChart;
+    }
+    
+    private BarChart<String, Number> createTravelTimeChart() {
+        CategoryAxis xAxis = new CategoryAxis();
+        NumberAxis yAxis = new NumberAxis();
+        xAxis.setLabel("Travel Time (seconds)");
+        yAxis.setLabel("Number of Vehicles");
+        
+        // Bold black axis styling
+        xAxis.setStyle("-fx-tick-label-font-size: 12px; -fx-font-weight: bold; -fx-tick-label-fill: black;");
+        yAxis.setStyle("-fx-tick-label-font-size: 12px; -fx-font-weight: bold; -fx-tick-label-fill: black;");
+        
+        BarChart<String, Number> travelTimeBarChart = new BarChart<>(xAxis, yAxis);
+        travelTimeBarChart.setTitle("Travel Time Distribution");
+        travelTimeBarChart.setAnimated(false);
+        travelTimeBarChart.setLegendVisible(false);
+        
+        travelTimeBarChart.setStyle(
+            "-fx-background-color: white;" +
+            "-fx-padding: 20px;"
+        );
+        
+        // Make title bold
+        travelTimeBarChart.lookup(".chart-title").setStyle(
+            "-fx-font-size: 20px;" +
+            "-fx-font-weight: 900;" +
+            "-fx-font-family: 'Arial';" +
+            "-fx-text-fill: black;"
+        );
+        
+        // Set bar color to purple
+        travelTimeBarChart.getStylesheets().add("data:text/css," +
+            ".chart-bar { -fx-bar-fill: #9B59B6; }" +
+            ".chart-plot-background { -fx-background-color: white; }"
+        );
+        
+        travelTimeSeries = new XYChart.Series<>();
+        travelTimeSeries.setName("Travel Times");
+        
+        // Initialize bins (0-30s, 30-60s, 60-90s, 90-120s, 120-150s, 150+s)
+        travelTimeSeries.getData().add(new XYChart.Data<>("0-30", 0));
+        travelTimeSeries.getData().add(new XYChart.Data<>("30-60", 0));
+        travelTimeSeries.getData().add(new XYChart.Data<>("60-90", 0));
+        travelTimeSeries.getData().add(new XYChart.Data<>("90-120", 0));
+        travelTimeSeries.getData().add(new XYChart.Data<>("120-150", 0));
+        travelTimeSeries.getData().add(new XYChart.Data<>("150+", 0));
+        
+        travelTimeBarChart.getData().add(travelTimeSeries);
+        
+        return travelTimeBarChart;
+    }
+
+    private BarChart<String, Number> createDistanceTravelChart() {
+        CategoryAxis xAxis = new CategoryAxis();
+        NumberAxis yAxis = new NumberAxis();
+        xAxis.setLabel("Distance Traveled (meters)");
+        yAxis.setLabel("Number of Vehicles");
+        
+        // Bold black axis styling
+        xAxis.setStyle("-fx-tick-label-font-size: 12px; -fx-font-weight: bold; -fx-tick-label-fill: black;");
+        yAxis.setStyle("-fx-tick-label-font-size: 12px; -fx-font-weight: bold; -fx-tick-label-fill: black;");
+        
+        BarChart<String, Number> distanceBarChart = new BarChart<>(xAxis, yAxis);
+        distanceBarChart.setTitle("Distance Traveled Distribution");
+        distanceBarChart.setAnimated(false);
+        distanceBarChart.setLegendVisible(false);
+        
+        distanceBarChart.setStyle(
+            "-fx-background-color: white;" +
+            "-fx-padding: 20px;"
+        );
+        
+        // Make title bold
+        distanceBarChart.lookup(".chart-title").setStyle(
+            "-fx-font-size: 20px;" +
+            "-fx-font-weight: 900;" +
+            "-fx-font-family: 'Arial';" +
+            "-fx-text-fill: black;"
+        );
+        
+        // Set bar color to orange
+        distanceBarChart.getStylesheets().add("data:text/css," +
+            ".chart-bar { -fx-bar-fill: #E67E22; }" +
+            ".chart-plot-background { -fx-background-color: white; }"
+        );
+        
+        distanceTravelSeries = new XYChart.Series<>();
+        distanceTravelSeries.setName("Distance Traveled");
+        
+        // Initialize bins with more realistic distances (0-200m, 200-400m, 400-600m, 600-800m, 800-1000m, 1000m+)
+        distanceTravelSeries.getData().add(new XYChart.Data<>("0-200", 0));
+        distanceTravelSeries.getData().add(new XYChart.Data<>("200-400", 0));
+        distanceTravelSeries.getData().add(new XYChart.Data<>("400-600", 0));
+        distanceTravelSeries.getData().add(new XYChart.Data<>("600-800", 0));
+        distanceTravelSeries.getData().add(new XYChart.Data<>("800-1000", 0));
+        distanceTravelSeries.getData().add(new XYChart.Data<>("1000+", 0));
+        
+        distanceBarChart.getData().add(distanceTravelSeries);
+        
+        return distanceBarChart;
+    }
+    
+    private void startUpdates() {
+        updateTimeline = new Timeline(new KeyFrame(Duration.millis(500), e -> updateCharts()));
+        updateTimeline.setCycleCount(Timeline.INDEFINITE);
+        updateTimeline.play();
+    }
+    
+    private void updateCharts() {
+        double simTime = runner.getSimulationTime();
+        Map<String, Double> speeds = runner.getVehicleSpeeds();
+        // Update Chart 1: Average Speed (data already filtered by runner)
+        double avgSpeed = 0;
+        if (speeds.isEmpty()) {
+            avgSpeed = 0.0;
+        } else {
+            double sum = 0.0;
+            for (Double speed : speeds.values()) {
+                sum += speed;
+            }
+            avgSpeed = sum / speeds.size();
+        }
+        speedSeries.getData().add(new XYChart.Data<>(simTime, avgSpeed));
+        if (speedSeries.getData().size() > maxDataPoints) {
+            speedSeries.getData().remove(0);
+        }
+        // Update x-axis sliding window for speed chart
+        NumberAxis speedXAxis = (NumberAxis) speedChart.getXAxis();
+        double windowSize = 120; // Show last 120 seconds
+        double lowerBound = Math.max(0, simTime - windowSize);
+        double upperBound = lowerBound + windowSize;
+        speedXAxis.setLowerBound(lowerBound);
+        speedXAxis.setUpperBound(upperBound);
+        speedXAxis.setTickUnit(30);
+        
+        // Update Chart 2: Vehicle Counts (data already filtered by runner)
+        Map<String, Integer> counts = runner.getVehicleCountsByType();
+        int cars = counts.getOrDefault("car", 0);
+        int trucks = counts.getOrDefault("truck", 0);
+        int buses = counts.getOrDefault("bus", 0);
+        int motos = counts.getOrDefault("moto", 0);
+        int emergency = counts.getOrDefault("emergency", 0);
+        
+        vehicleCountSeries.getData().get(0).setYValue(cars);
+        vehicleCountSeries.getData().get(1).setYValue(trucks);
+        vehicleCountSeries.getData().get(2).setYValue(buses);
+        vehicleCountSeries.getData().get(3).setYValue(motos);
+        vehicleCountSeries.getData().get(4).setYValue(emergency);
+        
+        // Update Chart 3: Travel Time Distribution
+        List<Double> travelTimes = trafficManager.getCompletedTravelTimes();
+        
+        // Count vehicles in each time bin
+        int[] timeBins = new int[6]; // 0-30, 30-60, 60-90, 90-120, 120-150, 150+
+        
+        for (Double time : travelTimes) {
+            if (time < 30) {
+                timeBins[0]++;
+            } else if (time < 60) {
+                timeBins[1]++;
+            } else if (time < 90) {
+                timeBins[2]++;
+            } else if (time < 120) {
+                timeBins[3]++;
+            } else if (time < 150) {
+                timeBins[4]++;
+            } else {
+                timeBins[5]++;
+            }
+        }
+        
+        // Update chart data
+        travelTimeSeries.getData().get(0).setYValue(timeBins[0]);
+        travelTimeSeries.getData().get(1).setYValue(timeBins[1]);
+        travelTimeSeries.getData().get(2).setYValue(timeBins[2]);
+        travelTimeSeries.getData().get(3).setYValue(timeBins[3]);
+        travelTimeSeries.getData().get(4).setYValue(timeBins[4]);
+        travelTimeSeries.getData().get(5).setYValue(timeBins[5]);
+        
+        // Update Chart 4: Distance Travelled Distribution
+        List<Double> distances = trafficManager.getCompletedTravelDistances();
+        
+        // Count vehicles in each distance bin (0-200, 200-400, 400-600, 600-800, 800-1000, 1000+)
+        int[] distanceBins = new int[6];
+        
+        for (Double distance : distances) {
+            if (distance < 200) {
+                distanceBins[0]++;
+            } else if (distance < 400) {
+                distanceBins[1]++;
+            } else if (distance < 600) {
+                distanceBins[2]++;
+            } else if (distance < 800) {
+                distanceBins[3]++;
+            } else if (distance < 1000) {
+                distanceBins[4]++;
+            } else {
+                distanceBins[5]++;
+            }
+        }
+        // Update chart data
+        distanceTravelSeries.getData().get(0).setYValue(distanceBins[0]);
+        distanceTravelSeries.getData().get(1).setYValue(distanceBins[1]);
+        distanceTravelSeries.getData().get(2).setYValue(distanceBins[2]);
+        distanceTravelSeries.getData().get(3).setYValue(distanceBins[3]);
+        distanceTravelSeries.getData().get(4).setYValue(distanceBins[4]);
+        distanceTravelSeries.getData().get(5).setYValue(distanceBins[5]);
+    }
+    private void exportToPDF() {
+        WritableImage snapshot = root.snapshot(new SnapshotParameters(), null);
+        java.awt.image.BufferedImage bufferedImage = SwingFXUtils.fromFXImage(snapshot, null);
+        TrafficDataExporter.exportToPDF(bufferedImage, this);
+    }
+}

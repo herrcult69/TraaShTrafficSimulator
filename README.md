@@ -28,10 +28,11 @@ Real-time SUMO traffic visualization application with JavaFX. This application p
 ### Software Dependencies
 
 - **Java**: JDK 17
-- **JavaFX**: Version 17.0.17
+- **JavaFX**: Version 17.0.17 (including javafx-swing module)
 - **Maven**: Version 3.6.0+
 - **SUMO**: Version 1.24.0
 - **TraaS Library**: 1.0 (included in `lib/`)
+- **Apache PDFBox**: 2.0.30 (managed by Maven)
 
 ### Operating Systems
 
@@ -53,14 +54,20 @@ TraaShTrafficSimulator/
 │   ├── ControlPanel.java               # UI controls (play/pause/zoom)
 │   ├── TrafficLightControlPanel.java   # Traffic light management UI
 │   ├── VehicleAddPanel.java            # Vehicle spawning UI
+│   ├── VehicleFilterPanel.java         # Vehicle type filtering UI
 │   ├── DashBoard.java                  # Statistics display panel
+│   ├── StatisticsWindow.java           # Advanced analytics window
+│   ├── CongestionMonitorPanel.java     # Congestion monitoring UI
+│   ├── TrafficDataExporter.java        # CSV and PDF export utilities
 │   ├── UIStyles.java                   # UI styling constants
 │   ├── TrafficManager.java             # Scene graph manager
 │   ├── Edge.java                       # Road segment renderer
 │   ├── Lane.java                       # Individual lane renderer
 │   ├── Junction.java                   # Intersection renderer
 │   ├── Vehicle.java                    # Vehicle object and renderer
-│   └── TrafficLight.java               # Traffic signal renderer
+│   ├── TrafficLight.java               # Traffic signal renderer
+│   ├── CongestionHotspot.java          # Congestion detection and scoring
+│   └── VehicleTypeHelper.java          # Vehicle type detection utility
 ├── lib/
 │   ├── javafx/                         # JavaFX SDK libraries
 │   └── TraaS.jar                       # SUMO TraCI Java library
@@ -137,6 +144,27 @@ TraaShTrafficSimulator/
 - Components: Labels for metrics, `LineChart` for speed visualization
 - Update Frequency: 2 times per second (0.5s intervals)
 
+**StatisticsWindow**
+
+- Extends: `Stage`
+- Responsibilities: Advanced traffic analytics with multiple synchronized charts
+- Components: 4 charts (speed over time, vehicle count by type, travel time distribution, distance distribution)
+- Features: Real-time updates, PDF export, resizable window
+- Update Frequency: 2 times per second (0.5s intervals)
+
+**VehicleFilterPanel**
+
+- Responsibilities: Vehicle type visibility controls, speed-based color filtering
+- Components: Checkboxes for each vehicle type, speed filter toggle
+- Integration: Filters apply to visualization and statistics
+
+**CongestionMonitorPanel**
+
+- Extends: `VBox`
+- Responsibilities: Display congestion hotspots, overlay controls
+- Components: Top hotspot ranking list, severity indicators, toggle overlay button
+- Features: Real-time congestion tracking, color-coded severity levels
+
 ### Rendering Layer
 
 **TrafficManager**
@@ -173,6 +201,26 @@ TraaShTrafficSimulator/
 
 - Responsibilities: Traffic signal state visualization
 - Status: Partially implemented
+
+**CongestionHotspot**
+
+- Responsibilities: Congestion detection, severity calculation, visual overlay rendering
+- Algorithm: Density and speed-based scoring (0-100 scale)
+- Properties: Severity level (1-5), congestion score, duration, average speed, vehicle density
+- Key Methods: `updateMetrics()`, `render()`, `getSeverityColor()`, `getSeverityDescription()`
+
+**TrafficDataExporter**
+
+- Static utility class
+- Responsibilities: Export simulation data to CSV and PDF formats
+- Key Methods: `exportToCSV()`, `exportPDF()`
+- Features: File chooser integration, formatted PDF output with charts
+
+**VehicleTypeHelper**
+
+- Static utility class
+- Responsibilities: Vehicle type detection from vehicle ID
+- Key Methods: `getVehicleType()`
 
 ## Installation
 
@@ -304,14 +352,14 @@ make compile
 
 ```cmd
 if not exist bin mkdir bin
-javac -cp "lib\*;lib\javafx\*" -d bin src\*.java
+javac -cp "lib\TraaS.jar;lib\pdfbox-2.0.30.jar;lib\fontbox-2.0.30.jar;lib\commons-logging-1.2.jar;lib\javafx\*" -d bin src\*.java
 ```
 
 **Linux / macOS:**
 
 ```bash
 mkdir -p bin
-javac -cp ".:lib/*:lib/javafx/*" -d bin src/*.java
+javac -cp "lib/TraaS.jar:lib/pdfbox-2.0.30.jar:lib/fontbox-2.0.30.jar:lib/commons-logging-1.2.jar:lib/javafx/*" -d bin src/*.java
 ```
 
 ## Running the Application
@@ -342,17 +390,17 @@ make run
 
 ```cmd
 java --module-path "lib\javafx" ^
-     --add-modules javafx.controls,javafx.fxml,javafx.graphics ^
-     -cp "lib\TraaS.jar;bin" ^
+     --add-modules javafx.controls,javafx.fxml,javafx.graphics,javafx.swing ^
+     -cp "lib\TraaS.jar;lib\pdfbox-2.0.30.jar;lib\fontbox-2.0.30.jar;lib\commons-logging-1.2.jar;bin" ^
      TrafficSimulatorApp
 ```
 
 **Linux / macOS:**
 
 ```bash
-java -cp "bin:lib/javafx/*:lib/TraaS.jar" \
+java -cp "bin:lib/TraaS.jar:lib/pdfbox-2.0.30.jar:lib/fontbox-2.0.30.jar:lib/commons-logging-1.2.jar:lib/javafx/*" \
      --module-path lib/javafx \
-     --add-modules javafx.controls,javafx.fxml \
+     --add-modules javafx.controls,javafx.fxml,javafx.swing \
      TrafficSimulatorApp
 ```
 
@@ -360,19 +408,46 @@ java -cp "bin:lib/javafx/*:lib/TraaS.jar" \
 
 ### Network Files
 
-Place custom SUMO files in `resource/` directory:
+Place custom SUMO files in `SumoConfig/` directory:
 
 - `network.net.xml` - Road network (created with netedit or netgenerate)
 - `simulation.sumocfg` - Main configuration file
 - `*.rou.xml` - Route files for different vehicle types
+
+**If network or route files do not exist**, use the provided script to generate them:
+
+**Linux / macOS:**
+
+```bash
+cd tools
+./createMap.sh
+```
+
+**Windows (Git Bash):**
+
+```bash
+cd tools
+bash createMap.sh
+```
+
+This script will automatically:
+- Generate a random road network with traffic lights
+- Create route files for all vehicle types (cars, trucks, buses, motorcycles, emergency)
+- Generate the SUMO configuration file
+- Set up the complete simulation environment in `SumoConfig/` directory
+
+**Script Parameters** (optional, edit in `createMap.sh`):
+- `RAND_ITERATIONS`: Network complexity (default: 35)
+- `RAND_MAX_DISTANCE`: Maximum edge length (default: 110m)
+- `CAR_PERIOD`, `TRUCK_PERIOD`, etc.: Vehicle spawn frequency in seconds
 
 ### Application Settings
 
 Edit constants in `TrafficSimulatorApp.java`:
 
 ```java
-private static final String NETWORK_FILE = "resource/network.net.xml";
-private static final String CONFIG_FILE = "resource/simulation.sumocfg";
+private static final String NETWORK_FILE = "SumoConfig/network.net.xml";
+private static final String CONFIG_FILE = "SumoConfig/simulation.sumocfg";
 ```
 
 Edit view settings in `ViewManager.java`:
@@ -395,8 +470,10 @@ private static final double MAX_ZOOM = 10.0;
 - **[\>] Play**: Resume simulation
 - **|\=| Pause**: Pause simulation (navigation still active)
 - **[\#] Stop**: Stop simulation and exit application
-- **[\@] Add Vehicle**: Vehicle Injection
-- **+ Zoom In**: Zoom toward screen center
+- **[\@] Add Vehicle**: Vehicle Injection- ** View Statistics**: Open advanced analytics window with live charts
+- ** Export Data**: Export current simulation data to CSV file
+- ** Vehicle Filter**: Toggle visibility and filtering for vehicle types
+- ** Congestion Monitor**: View congestion hotspots and overlay controls- **+ Zoom In**: Zoom toward screen center
 - **− Zoom Out**: Zoom away from screen center
 - **⟲ Reset View**: Fit entire network to window
 
@@ -407,6 +484,28 @@ private static final double MAX_ZOOM = 10.0;
 - Average speed (m/s)
 - Vehicle type breakdown (cars, trucks, buses, motorcycles, emergency)
 - Real-time speed chart (60-second window)
+
+### Statistics Window
+
+- **Average Speed Over Time**: Line chart with 120-second sliding window
+- **Vehicle Count by Type**: Bar chart showing current distribution
+- **Travel Time Distribution**: Histogram with 30-second bins (0-30s, 30-60s, 60-90s, 90-120s, 120-150s, 150+s)
+- **Distance Traveled Distribution**: Histogram with 200-meter bins (0-200m, 200-400m, 400-600m, 600-800m, 800-1000m, 1000m+)
+- **Export to PDF**: Save all charts to formatted PDF document
+
+### Vehicle Filter Panel
+
+- **Type Filters**: Toggle visibility for cars, trucks, buses, motorcycles, and emergency vehicles
+- **Speed Filter**: Enable speed-based color coding (Green=Slow, Yellow=Medium, Red=Fast)
+- Filters apply to both visualization and statistics data
+
+### Congestion Monitor
+
+- **Top Hotspots List**: Shows top 5 worst congestion points with detailed metrics
+- **Severity Levels**: Light (green), Moderate (yellow-green), Heavy (yellow), Severe (orange), Critical (red)
+- **Metrics Displayed**: Edge ID, congestion score, average speed, vehicle density, duration
+- **Overlay Toggle**: Show/hide color-coded congestion overlays on the map
+- **Active Hotspot Count**: Total number of congested edges
 
 ## Technical Specifications
 
@@ -421,15 +520,34 @@ private static final double MAX_ZOOM = 10.0;
 - **Render Rate**: 60 FPS (JavaFX AnimationTimer)
 - **Simulation Update**: 20 Hz (50ms intervals)
 - **Dashboard Update**: 2 Hz (0.5s intervals)
+- **Statistics Window Update**: 2 Hz (0.5s intervals)
+- **Congestion Detection**: Real-time with each render cycle
 - **Threading**: Separate threads for UI and simulation
+
+### Congestion Detection Algorithm
+
+- **Density Thresholds**: 
+  - High: 35 vehicles/km
+  - Moderate: 10 vehicles/km
+- **Speed Thresholds**:
+  - Low: 5 m/s (18 km/h)
+  - Moderate: 10 m/s (36 km/h)
+- **Minimum Vehicle Count**: 3 vehicles (prevents false positives)
+- **Scoring Formula**: Weighted combination (40% speed factor, 60% density factor)
+- **Severity Levels**:
+  - Level 1 (Light): Score 10-20
+  - Level 2 (Moderate): Score 20-40
+  - Level 3 (Heavy): Score 40-60
+  - Level 4 (Severe): Score 60-80
+  - Level 5 (Critical): Score 80-100
 
 ### Vehicle Detection
 
 Vehicle types determined by ID prefix:
 
 - `car*` → Car (4.5m × 1.8m, red)
-- `truck*` → Truck (8m × 2.5m, blue)
-- `bus*` → Bus (10m × 2.5m, green)
+- `truck*` → Truck (6m × 2.5m, blue)
+- `bus*` → Bus (8m × 2.5m, green)
 - `moto*` → Motorcycle (2m × 0.8m, orangie-yellow)
 - `ambu*` → Emergency (6m × 2.5m, greyish-white)
 
@@ -438,7 +556,20 @@ Vehicle types determined by ID prefix:
 Currently _lanes_, _junctions_ and _vehicles_ are all interactable.
 
 - They will provide their information upon click in the terminal
-- `Note*` that the vehile's hitbox is a circle at its HEAD in the direction of travel.
+- `Note*` that the vehicle's hitbox is a circle at its HEAD in the direction of travel.
+
+### Data Export Formats
+
+**CSV Export** includes:
+- Simulation time
+- Total vehicle count
+- Vehicle counts by type (cars, trucks, buses, motorcycles, emergency)
+- Average speed (m/s)
+
+**PDF Export** includes:
+- All four statistics charts on A4 page
+- Formatted title header
+- Automatically scaled to fit page while maintaining aspect ratio
 
 ## Troubleshooting
 
@@ -466,7 +597,7 @@ Error: Could not connect to SUMO
 ### Network File Not Found
 
 ```
-Error: resource/network.net.xml not found
+Error: SumoConfig/network.net.xml not found
 ```
 
 **Solution**: Ensure network file exists and path in `TrafficSimulatorApp.java` is correct
@@ -482,7 +613,12 @@ Error: resource/network.net.xml not found
 **Solution**:
 
 1.  **Preferred**: Extract the JavaFX SDK to the `lib\javafx\` directory in the project root. The scripts are configured to look there.
-2.  **Alternative**: Edit `compile.bat` and `run.bat` to point to your specific JavaFX installation path (e.g., replace `lib\javafx` with `C:\Path\To\JavaFX\lib`).
+2.  **Ensure all required JARs are present** in `lib/` directory:
+    - `TraaS.jar`
+    - `pdfbox-2.0.30.jar`
+    - `fontbox-2.0.30.jar`
+    - `commons-logging-1.2.jar`
+3.  **Alternative**: Edit `compile.bat` and `run.bat` to point to your specific JavaFX installation path (e.g., replace `lib\javafx` with `C:\Path\To\JavaFX\lib`).
 
 ### Poor Performance
 

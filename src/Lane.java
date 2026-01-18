@@ -2,29 +2,14 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 
 /**
- * Represents a single lane within a road edge in the traffic network.
- * 
- * <p>A lane is a traffic flow channel within an edge. Each lane has its own:
- * <ul>
- *   <li>Unique identifier from SUMO (e.g., "edge1_0")</li>
- *   <li>Width (3.2 meters as default in SUMO)</li>
- *   <li>Perpendicular offset from the edge centerline</li>
- *   <li>Geometry calculated from parent edge endpoints</li>
- * </ul>
- * 
- * <p>Lanes support:
- * <ul>
- *   <li>Hit detection for user interaction (clicking to select)</li>
- *   <li>Visual highlighting during route selection</li>
- *   <li>Proper clipping at junction boundaries</li>
- * </ul>
+ * Represents a single lane within a road edge.
+ * Handles hit detection and highlighting for route selection.
  *
  * @author M A T^2 H Team
- * @version 2.0 
- * @see Edge
- * @see Junction
+ * @version 2.0
+ * @see Renderable
  */
-public class Lane {
+public class Lane extends Renderable {
     private String id;
     private Edge parentEdge;
     private double x1, y1, x2, y2; // Lane center line in world coordinates
@@ -33,13 +18,13 @@ public class Lane {
     private double offsetFromCenter; // Distance from road center line
 
     /**
-     * Constructs a new lane with the specified properties.
+     * Constructs a lane with specified properties.
      * 
-     * @param id The unique SUMO lane identifier (e.g., "edge1_0")
-     * @param parentEdge The edge containing this lane
-     * @param width The lane width in meters (typically 3.2m)
-     * @param index The 0-based index of this lane within the parent edge
-     * @param offsetFromCenter The perpendicular distance from the edge centerline in meters
+     * @param id Lane identifier
+     * @param parentEdge Containing edge
+     * @param width Lane width in meters
+     * @param index 0-based lane index
+     * @param offsetFromCenter Distance from edge centerline
      */
     public Lane(String id, Edge parentEdge, double width, int index, double offsetFromCenter) {
         this.id = id;
@@ -50,10 +35,6 @@ public class Lane {
         calculateCenterLine();
     }
 
-    /**
-     * Calculates the lane's center line coordinates based on parent edge geometry.
-     * Applies the perpendicular offset to position the lane relative to the edge centerline.
-     */
     private void calculateCenterLine() {
         double dx = parentEdge.getToX() - parentEdge.getFromX();
         double dy = parentEdge.getToY() - parentEdge.getFromY();
@@ -73,11 +54,12 @@ public class Lane {
     /**
      * Checks if a screen point falls within this lane's boundaries.
      * 
-     * @param screenX The X coordinate in screen space
-     * @param screenY The Y coordinate in screen space
-     * @param transform The coordinate transformation to convert screen to world coordinates
-     * @return true if the point is within the lane boundaries
+     * @param screenX X coordinate in screen space
+     * @param screenY Y coordinate in screen space
+     * @param transform Coordinate transform
+     * @return True if point is within lane
      */
+    @Override
     public boolean contains(double screenX, double screenY, CoordinateTransform transform) {
         // Convert screen coordinates to world coordinates
         double worldX = transform.screenToWorldX(screenX);
@@ -99,7 +81,7 @@ public class Lane {
      * 
      * @param worldX The X coordinate in world space
      * @param worldY The Y coordinate in world space
-     * @return true if the point is along the lane (not before start or after end)
+     * @return true if the point is along the lane
      */
     private boolean isAlongLane(double worldX, double worldY) {
         // Check if point projection falls within lane start/end bounds
@@ -116,12 +98,12 @@ public class Lane {
 
     /**
      * Draws a highlighted rectangle overlay on this lane.
-     * Used during route selection or when the lane is selected.
      * 
-     * @param g The graphics context to draw on
+     * @param g         The graphics context to draw on
      * @param transform The coordinate transformation
-     * @param color The highlight color (with transparency applied)
+     * @param color     The highlight color
      */
+    @Override
     public void highlight(GraphicsContext g, CoordinateTransform transform, Color color) {
         // Get edge endpoints
         double edgeFromX = parentEdge.getFromX();
@@ -219,65 +201,43 @@ public class Lane {
         return parentEdge;
     }
 
-    /**
-     * Returns the lane width in meters.
-     * 
-     * @return The lane width (typically 3.2m)
-     */
+    /** Returns lane width in meters. */
     public double getWidth() {
         return width;
     }
 
-    /**
-     * Returns the 0-based index of this lane within the parent edge.
-     * 
-     * @return The lane index
-     */
+    /** Returns lane index. */
     public int getIndex() {
         return index;
     }
 
-    /**
-     * Returns the perpendicular offset from the edge centerline.
-     * 
-     * @return The offset distance in meters
-     */
+    /** Returns offset from edge centerline. */
     public double getOffsetFromCenter() {
         return offsetFromCenter;
     }
 
-    /**
-     * Returns the starting X coordinate of the lane center line in world space.
-     * 
-     * @return The X coordinate in meters
-     */
+    /** Returns starting X coordinate in meters. */
     public double getCenterX1() {
         return x1;
     }
 
-    /**
-     * Returns the starting Y coordinate of the lane center line in world space.
-     * 
-     * @return The Y coordinate in meters
-     */
+    /** Returns starting Y coordinate in meters. */
     public double getCenterY1() {
         return y1;
     }
 
-    /**
-     * Returns the ending X coordinate of the lane center line in world space.
-     * 
-     * @return The X coordinate in meters
-     */
+    /** Not used - lanes are rendered by Edge. */
+    @Override
+    public void render(GraphicsContext g, CoordinateTransform transform) {
+        // Lanes are rendered by Edge.render(), not individually
+    }
+
+    /** Returns ending X coordinate in meters. */
     public double getCenterX2() {
         return x2;
     }
 
-    /**
-     * Returns the ending Y coordinate of the lane center line in world space.
-     * 
-     * @return The Y coordinate in meters
-     */
+    /** Returns ending Y coordinate in meters. */
     public double getCenterY2() {
         return y2;
     }
