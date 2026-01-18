@@ -378,44 +378,9 @@ public class ControlPanel {
         Button exportCSV = UIStyles.createStyledButton("Export to CSV");
 
         viewStatsButton.setOnAction(e -> showStatisticsWindow());
-        exportCSV.setOnAction(e -> exportCSVData());
+        exportCSV.setOnAction(e -> TrafficDataExporter.exportToCSV(runner));
 
         controlPanel.getChildren().addAll(statsLabel, viewStatsButton, exportCSV);
-    }
-    private void exportCSVData() {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Export Simulation Data");
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
-        fileChooser.setInitialFileName("Simulation_data.csv");
-        
-        File file = fileChooser.showSaveDialog(null);
-        if (file != null) {
-            try {
-                String filePath = file.getAbsolutePath();
-                if (!filePath.toLowerCase().endsWith(".csv")) {
-                    filePath += ".csv";
-                }
-                TrafficDataExporter.exportToCSV(filePath, runner);
-                System.out.println("Simulation data exported to: " + filePath);
-                
-                // Show success alert
-                javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
-                alert.setTitle("Success");
-                alert.setHeaderText(null);
-                alert.setContentText("CSV exported successfully to:\n" + file.getName());
-                alert.showAndWait();
-            } catch (java.io.IOException ex) {
-                System.err.println("Error exporting CSV: " + ex.getMessage());
-                ex.printStackTrace();
-                
-                // Show error alert
-                javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.ERROR);
-                alert.setTitle("Export Failed");
-                alert.setHeaderText(null);
-                alert.setContentText("Failed to export CSV:\n" + ex.getMessage());
-                alert.showAndWait();
-            }
-        }
     }
     private void showStatisticsWindow() {
         if (statsWindow == null || !statsWindow.isShowing()) {

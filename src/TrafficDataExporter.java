@@ -29,45 +29,79 @@ import javafx.scene.control.Alert;
  */
 public class TrafficDataExporter {
     /**
-     * Exports current simulation data to a CSV file.
+     * Exports current simulation data to a CSV file with file chooser dialog.
      * Data is already filtered by SimulationRunner based on VehicleFilterPanel settings.
+     * Shows success or error alerts after export attempt.
      * 
-     * @param csvPath The file path where CSV should be saved
-     * @param runner The simulation runner to get current simulation time
-     * @throws IOException if file writing fails
+     * @param runner The simulation runner to get current simulation data
      */
-    public static void exportToCSV(String csvPath, SimulationRunner runner) throws IOException {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(csvPath))) {
-            writer.write("simulation_time, total_vehicles, cars, trucks, buses, motorcycles, emergency, avg_speed\n ");
-            //Get current simulation data 
-            double simTime;
-            if (runner != null){
-                simTime = runner.getSimulationTime();
+    public static void exportToCSV(SimulationRunner runner) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Export Simulation Data");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
+        fileChooser.setInitialFileName("Simulation_data.csv");
+        
+        File file = fileChooser.showSaveDialog(null);
+        if (file != null) {
+            try {
+                String filePath = file.getAbsolutePath();
+                if (!filePath.toLowerCase().endsWith(".csv")) {
+                    filePath += ".csv";
+                }
+                
+                // Write CSV file
+                try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+                    writer.write("simulation_time, total_vehicles, cars, trucks, buses, motorcycles, emergency, avg_speed\n ");
+                    //Get current simulation data 
+                    double simTime;
+                    if (runner != null){
+                        simTime = runner.getSimulationTime();
+                    }
+                    else { simTime = 0.0;}
+
+                    //Get vehicle speeds from runner
+
+                    // Get vehicle data (already filtered by SimulationRunner)
+                    java.util.Map<String, Double> speeds = runner.getVehicleSpeeds();
+                    java.util.Map<String, Integer> counts = runner.getVehicleCountsByType();
+                    
+                    int totalVehicles = speeds.size();
+                    int cars = counts.getOrDefault("car", 0);
+                    int trucks = counts.getOrDefault("truck", 0);
+                    int buses = counts.getOrDefault("bus", 0);
+                    int motorcycles = counts.getOrDefault("moto", 0);
+                    int emergency = counts.getOrDefault("emergency", 0);
+                    
+                    // Calculate average speed
+                    double totalSpeed = speeds.values().stream().mapToDouble(Double::doubleValue).sum();
+                    double avgSpeed = totalVehicles > 0 ? totalSpeed / totalVehicles : 0.0;
+                    
+                    // Write data row
+                    writer.write(String.format("%.2f,%d,%d,%d,%d,%d,%d,%.2f\n",
+                        simTime, totalVehicles, cars, trucks, buses, motorcycles, emergency, avgSpeed));
+                    
+                    writer.flush();
+                }
+                
+                System.out.println("Simulation data exported to: " + filePath);
+                
+                // Show success alert
+                Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                alert.setTitle("Success");
+                alert.setHeaderText(null);
+                alert.setContentText("CSV exported successfully!");
+                alert.showAndWait();
+            } catch (IOException ex) {
+                System.err.println("Error exporting CSV: " + ex.getMessage());
+                ex.printStackTrace();
+                
+                // Show error alert
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("Export Failed");
+                alert.setHeaderText(null);
+                alert.setContentText("Failed to export CSV:\n" + ex.getMessage());
+                alert.showAndWait();
             }
-            else { simTime = 0.0;}
-
-            //Get vehicle speeds from runner
-
-            // Get vehicle data (already filtered by SimulationRunner)
-            java.util.Map<String, Double> speeds = runner.getVehicleSpeeds();
-            java.util.Map<String, Integer> counts = runner.getVehicleCountsByType();
-            
-            int totalVehicles = speeds.size();
-            int cars = counts.getOrDefault("car", 0);
-            int trucks = counts.getOrDefault("truck", 0);
-            int buses = counts.getOrDefault("bus", 0);
-            int motorcycles = counts.getOrDefault("moto", 0);
-            int emergency = counts.getOrDefault("emergency", 0);
-            
-            // Calculate average speed
-            double totalSpeed = speeds.values().stream().mapToDouble(Double::doubleValue).sum();
-            double avgSpeed = totalVehicles > 0 ? totalSpeed / totalVehicles : 0.0;
-            
-            // Write data row
-            writer.write(String.format("%.2f,%d,%d,%d,%d,%d,%d,%.2f\n",
-                simTime, totalVehicles, cars, trucks, buses, motorcycles, emergency, avgSpeed));
-            
-            writer.flush();
         }
     }
     
