@@ -689,7 +689,7 @@ public class TrafficLightControlPanel {
             HBox buttonBox = new HBox(10);
             buttonBox.setAlignment(Pos.CENTER);
 
-            Button applyBtn = new Button("✓ Apply & Resume");
+            Button applyBtn = new Button("Apply & Resume");
             applyBtn.setPrefWidth(150);
             applyBtn.setStyle(AUTO_STYLE);
             applyBtn.setOnMouseEntered(e -> applyBtn.setStyle(AUTO_HOVER));
@@ -1125,7 +1125,7 @@ public class TrafficLightControlPanel {
                             "You can close this dialog and continue using the application.");
                     statusLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-size: 16;");
                 } else {
-                    statusLabel.setText("✓ BEFORE metrics captured\n\n" +
+                    statusLabel.setText("BEFORE metrics captured\n\n" +
                             "Ready to apply timing change.\n" +
                             "Edit phase duration and the system will automatically\n" +
                             "measure the AFTER performance.");
@@ -1188,13 +1188,13 @@ public class TrafficLightControlPanel {
      */
     private String getRecommendation(double speedDiff, int queueDiff, double waitDiff) {
         if (speedDiff > 0.5 && queueDiff < -1 && waitDiff < -2) {
-            return "✓ IMPROVED: Timing changes reduced congestion significantly!";
+            return "IMPROVED: Timing changes reduced congestion significantly!";
         } else if (speedDiff > 0.2 && (queueDiff <= 0 || waitDiff < 0)) {
-            return "✓ IMPROVED: Traffic flow slightly better with new timing.";
+            return "IMPROVED: Traffic flow slightly better with new timing.";
         } else if (speedDiff < -0.5 || queueDiff > 2 || waitDiff > 5) {
-            return "✗ WORSENED: Consider reverting timing changes.";
+            return "WORSENED: Consider reverting timing changes.";
         } else {
-            return "~ NEUTRAL: Minor impact. Try longer observation period.";
+            return "NEUTRAL: Minor impact. Try longer observation period.";
         }
     }
 

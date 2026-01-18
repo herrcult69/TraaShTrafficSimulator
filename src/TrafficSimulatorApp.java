@@ -452,14 +452,14 @@ public class TrafficSimulatorApp extends Application {
                 g.setFill(Color.LIMEGREEN);
                 g.fillText("[>] Click START edge (shown in GREEN)", x + 10, y + 45);
             } else if (endEdge == null) {
-                g.fillText("✓ Start: " + startEdge, x + 10, y + 40);
+                g.fillText("Start: " + startEdge, x + 10, y + 40);
                 g.setFill(Color.ORANGERED);
                 g.fillText("[>] Click END edge (shown in RED)", x + 10, y + 60);
             } else {
                 g.setFill(Color.LIMEGREEN);
-                g.fillText("✓ Start: " + startEdge, x + 10, y + 40);
+                g.fillText("Start: " + startEdge, x + 10, y + 40);
                 g.setFill(Color.ORANGERED);
-                g.fillText("✓ End: " + endEdge, x + 10, y + 55);
+                g.fillText("End: " + endEdge, x + 10, y + 55);
                 g.setFill(Color.CYAN);
                 g.fillText("Route: " + vehicleAddPanel.getSelectedRoute().size() + " edges",
                         x + 10, y + 75);

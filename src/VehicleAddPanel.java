@@ -266,7 +266,7 @@ public class VehicleAddPanel extends VBox {
         statusLabel.setWrapText(true);
 
         // Confirm/Cancel buttons
-        confirmBtn = UIStyles.createAccentButton("✓ Add Vehicle");
+        confirmBtn = UIStyles.createAccentButton("Add Vehicle");
         confirmBtn.setOnAction(e -> addVehicle());
 
         cancelBtn = UIStyles.createStyledButton("✕ Cancel");
@@ -450,7 +450,7 @@ public class VehicleAddPanel extends VBox {
             updateStatusLabel("Simulation paused for route selection", UIStyles.TEXT_WARNING);
         }
 
-        addEdgeBtn.setText("✓ Done Selecting");
+        addEdgeBtn.setText("Done Selecting");
         addEdgeBtn.setStyle("-fx-background-color: #415A77; -fx-text-fill: white; -fx-font-size: 11; -fx-padding: 8;");
 
         if (startEdge == null) {
@@ -561,7 +561,7 @@ public class VehicleAddPanel extends VBox {
                 routeListView.getItems().clear();
                 routeListView.getItems().addAll(route);
 
-                statusLabel.setText("✓ Route found: " + route.size() + " edges");
+                statusLabel.setText("Route found: " + route.size() + " edges");
                 statusLabel.setStyle(
                         "-fx-text-fill: " + UIStyles.TEXT_SUCCESS + "; -fx-font-weight: bold; -fx-font-size: 11;");
                 updateInstructionLabel("Route ready! Click 'Add Vehicle' or change edges.", UIStyles.TEXT_SUCCESS);
@@ -999,8 +999,8 @@ public class VehicleAddPanel extends VBox {
             }
 
             statusLabel.setText(batchCount == 1
-                    ? ("✓ Vehicle '" + baseVehicleId + "' added successfully!")
-                    : ("✓ Added " + batchCount + " vehicles starting with '" + baseVehicleId + "'"));
+                    ? ("Vehicle '" + baseVehicleId + "' added successfully!")
+                    : ("Added " + batchCount + " vehicles starting with '" + baseVehicleId + "'"));
             statusLabel.setStyle("-fx-text-fill: " + UIStyles.TEXT_SUCCESS + "; -fx-font-weight: bold; -fx-font-size: 11;");
 
             // Increment counter for next vehicle

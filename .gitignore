@@ -34,11 +34,11 @@ replay_pid*
 lib/javafx/
 
 # SUMO simulation files
-resource/*.rou.xml
-resource/*.net.xml
-resource/*.sumocfg
-SumoConfig/*.xml
-SumoConfig/*.sumocfg
+# resource/*.rou.xml
+# resource/*.net.xml
+# resource/*.sumocfg
+# SumoConfig/*.xml
+# SumoConfig/*.sumocfg
 
 # Maven
 target/

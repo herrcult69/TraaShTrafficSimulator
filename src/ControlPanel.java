@@ -18,8 +18,6 @@ import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.util.Duration;
 
-import javafx.stage.FileChooser;
-import java.io.File;
 
 /**
  * Main control panel for simulation control, view manipulation, and dashboard
