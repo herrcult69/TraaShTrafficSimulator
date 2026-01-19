@@ -74,9 +74,6 @@ public class VehicleAddPanel extends VBox {
 
     // FPS counter
     private AnimationTimer fpsTimer;
-    private long[] frameTimes = new long[100];
-    private int frameTimeIndex = 0;
-    private boolean frameTimesArrayFull = false;
 
     // Route data
     private List<String> selectedRoute;
@@ -850,40 +847,47 @@ public class VehicleAddPanel extends VBox {
 
     /**
      * Starts the FPS counter using AnimationTimer.
+     * Measures actual frame delivery rate and shows vehicle count.
      */
     private void startFpsCounter() {
-        frameTimeIndex = 0;
-        frameTimesArrayFull = false;
 
         fpsTimer = new AnimationTimer() {
+            private long lastUpdateTime = 0;
+            private int frameCount = 0;
+            private double currentFps = 0;
+            
             @Override
             public void handle(long now) {
-                long oldFrameTime = frameTimes[frameTimeIndex];
-                frameTimes[frameTimeIndex] = now;
-                frameTimeIndex = (frameTimeIndex + 1) % frameTimes.length;
-
-                if (frameTimeIndex == 0) {
-                    frameTimesArrayFull = true;
-                }
-
-                if (frameTimesArrayFull) {
-                    long elapsedNanos = now - oldFrameTime;
-                    long elapsedNanosPerFrame = elapsedNanos / frameTimes.length;
-                    double fps = 1_000_000_000.0 / elapsedNanosPerFrame;
+                frameCount++;
+                
+                // Update FPS display every 500ms for stability
+                if (now - lastUpdateTime >= 500_000_000L) { // 500ms in nanoseconds
+                    double elapsedSeconds = (now - lastUpdateTime) / 1_000_000_000.0;
+                    currentFps = frameCount / elapsedSeconds;
+                    frameCount = 0;
+                    lastUpdateTime = now;
+                    
+                    // Get current vehicle count from runner
+                    int vehicleCount = 0;
+                    if (runner != null) {
+                        vehicleCount = runner.getVehiclePositions().size();
+                    }
 
                     // Color code FPS: green > 30, yellow 15-30, red < 15
                     String color;
-                    if (fps >= 30) {
+                    if (currentFps >= 30) {
                         color = "#00E676"; // Green
-                    } else if (fps >= 15) {
+                    } else if (currentFps >= 15) {
                         color = "#FFA726"; // Orange
                     } else {
                         color = "#EF5350"; // Red
                     }
 
-                    fpsLabel.setText(String.format("FPS: %.1f", fps));
+                    final double fps = currentFps;
+                    final int vehCount = vehicleCount;
+                    fpsLabel.setText(String.format("FPS: %.0f | Vehicles: %d", fps, vehCount));
                     fpsLabel.setStyle("-fx-text-fill: " + color
-                            + "; -fx-font-size: 14; -fx-font-weight: bold; -fx-font-family: monospace;");
+                            + "; -fx-font-size: 13; -fx-font-weight: bold; -fx-font-family: monospace;");
                 }
             }
         };
