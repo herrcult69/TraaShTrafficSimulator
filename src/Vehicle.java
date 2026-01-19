@@ -96,23 +96,29 @@ public class Vehicle extends Renderable implements Updatable {
     }
 
     private void determineTypeFromId() {
-        if (id.startsWith("car")) {
+        // Handle stress test prefix (format: "stress_<type>_...")
+        String idToCheck = id;
+        if (id.startsWith("stress_")) {
+            idToCheck = id.substring(7); // Remove "stress_" prefix
+        }
+        
+        if (idToCheck.startsWith("car")) {
             type = "car";
             length = 4.5;
             width = 1.8;
-        } else if (id.startsWith("truck")) {
+        } else if (idToCheck.startsWith("truck")) {
             type = "truck";
             length = 6.0;
             width = 2.5;
-        } else if (id.startsWith("bus")) {
+        } else if (idToCheck.startsWith("bus")) {
             type = "bus";
             length = 8.0;
             width = 2.5;
-        } else if (id.startsWith("moto")) {
+        } else if (idToCheck.startsWith("moto") || idToCheck.startsWith("motorcycle")) {
             type = "motorcycle";
             length = 2.0;
             width = 0.8;
-        } else if (id.startsWith("ambu")) {
+        } else if (idToCheck.startsWith("ambu") || idToCheck.startsWith("emergency")) {
             type = "emergency";
             length = 5.0;
             width = 2.5;
